@@ -1,0 +1,71 @@
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { format } from 'date-fns'
+import { de } from 'date-fns/locale'
+import { RefreshCw } from 'lucide-react'
+import type { Transaction } from '@/types'
+import { MerchantLogo } from './MerchantLogo'
+import { AmountDisplay } from '@/components/ui/AmountDisplay'
+import { CategoryBadge } from '@/components/ui/CategoryBadge'
+import { CategoryPicker } from '@/components/ui/CategoryPicker'
+
+interface Props {
+  transaction: Transaction
+  onCategoryChange?: (id: string, cat: Transaction['categoryId']) => void
+  index?: number
+}
+
+export function TransactionCard({ transaction: tx, onCategoryChange, index = 0 }: Props) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1], delay: Math.min(index * 0.04, 0.3) }}
+        className="flex items-center gap-3 p-3 rounded-card_sm bg-white/[0.03] border border-white/[0.06] active:bg-white/[0.07] transition-colors duration-100"
+      >
+        <MerchantLogo merchantKey={tx.merchantKey} categoryId={tx.categoryId} size={42} />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-white/90 truncate leading-tight">
+                {tx.counterparty || tx.description || '–'}
+              </p>
+              <p className="text-xs text-white/40 truncate mt-0.5 leading-tight">
+                {tx.description !== tx.counterparty ? tx.description : ''}
+              </p>
+            </div>
+            <AmountDisplay amount={tx.amount} size="sm" className="shrink-0 mt-0.5" />
+          </div>
+
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-[10px] text-white/30">
+              {format(tx.date, 'dd. MMM', { locale: de })}
+            </span>
+            <CategoryBadge
+              categoryId={tx.categoryId}
+              size="sm"
+              onClick={onCategoryChange ? () => setPickerOpen(true) : undefined}
+            />
+            {tx.isRecurring && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-purple-400/70 rounded-pill border border-purple-500/20 bg-purple-500/10 px-1.5 py-0.5">
+                <RefreshCw size={9} />
+                Wiederkehrend
+              </span>
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+      <CategoryPicker
+        open={pickerOpen}
+        current={tx.categoryId}
+        onSelect={cat => onCategoryChange?.(tx.id, cat)}
+        onClose={() => setPickerOpen(false)}
+      />
+    </>
+  )
+}
