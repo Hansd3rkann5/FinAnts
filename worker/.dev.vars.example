@@ -1,8 +1,10 @@
 # Kopiere diese Datei als .dev.vars und trage deine Werte ein.
 # .dev.vars wird von .gitignore ausgeschlossen und nie commitet.
 
-FINTS_IBAN=DE89200411001234567890
-FINTS_USERNAME=dein_benutzername
+# BLZ deiner Commerzbank-Filiale (8 Stellen), z.B. 20041100 für Hamburg
+FINTS_BLZ=20041100
+# Deine Commerzbank Teilnehmernummer
+FINTS_USERNAME=deine_teilnehmernummer
 FINTS_PIN=dein_pin
 API_KEY=test-key-lokal-32zeichen-xxxx
 ALLOWED_ORIGIN=http://localhost:5173

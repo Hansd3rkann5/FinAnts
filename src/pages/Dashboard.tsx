@@ -1,22 +1,26 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { TrendingDown, TrendingUp, RefreshCw } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { TrendingDown, TrendingUp, RefreshCw, ChevronDown, ChevronUp, Landmark } from 'lucide-react'
 import type { TimeFilter } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions, useBalanceSummary } from '@/hooks/useFilteredTransactions'
+import { useAccounts } from '@/hooks/useAccounts'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { CategoryPieChart } from '@/components/charts/CategoryPieChart'
 import { BalanceBar } from '@/components/charts/BalanceBar'
 import { TransactionList } from '@/components/transactions/TransactionList'
+import { AccountCard } from '@/components/ui/AccountCard'
 
-function formatEur(v: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
+function formatEur(v: number, maximumFractionDigits = 0) {
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
 }
 
 export function Dashboard() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month')
+  const [showAccounts, setShowAccounts] = useState(false)
   const { transactions, recurringGroups, updateCategory } = useTransactionsCtx()
+  const { accounts, toggleIncluded, totalWealth } = useAccounts()
   const filtered = useFilteredTransactions(transactions, timeFilter)
   const summary = useBalanceSummary(filtered)
 
@@ -25,8 +29,65 @@ export function Dashboard() {
       {/* Time filter */}
       <TimeFilterBar value={timeFilter} onChange={setTimeFilter} />
 
-      {/* Balance hero card */}
-      <GlassCard glow="purple">
+      {/* Gesamtvermögen card – only shown when accounts are available */}
+      {accounts.length > 0 && (
+        <GlassCard glow="purple">
+          <div className="flex items-center gap-2 mb-1">
+            <Landmark size={14} className="text-purple-400" />
+            <p className="text-xs text-white/40">Gesamtvermögen</p>
+            <motion.button
+              type="button"
+              onClick={() => setShowAccounts(v => !v)}
+              className="ml-auto text-white/30 hover:text-white/60 flex items-center gap-1 text-[10px]"
+              whileTap={{ scale: 0.95 }}
+            >
+              {accounts.length} Konten
+              {showAccounts ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            </motion.button>
+          </div>
+
+          <motion.p
+            key={totalWealth}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            className={`text-3xl font-bold mb-3 ${totalWealth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+          >
+            {formatEur(totalWealth, 2)}
+          </motion.p>
+
+          <AnimatePresence>
+            {showAccounts && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-col gap-2 pt-1">
+                  {accounts.map(a => (
+                    <AccountCard
+                      key={a.iban}
+                      account={a}
+                      onToggle={toggleIncluded}
+                      showToggle
+                    />
+                  ))}
+                  {accounts.some(a => !a.included) && (
+                    <p className="text-[10px] text-white/25 text-center pt-1">
+                      Ausgeblendete Konten fließen nicht ins Gesamtvermögen ein
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </GlassCard>
+      )}
+
+      {/* Period balance hero card */}
+      <GlassCard glow={accounts.length === 0 ? 'purple' : undefined}>
         <p className="text-xs text-white/40 mb-1">Saldo im Zeitraum</p>
         <motion.p
           key={`${timeFilter}-${summary.balance}`}

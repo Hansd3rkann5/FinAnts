@@ -5,6 +5,9 @@ Dark-Mode PWA für iPhone optimiert. Importiert Commerzbank-Buchungen, kategoris
 ## Features
 
 - Automatischer Sync per Cloudflare Worker (FinTS/HBCI)
+- Mehrere Konten (Giro, Sparkonto, Depot …) mit Gesamtvermögen-Übersicht
+- Anmeldung mit Teilnehmernummer + PhotoTAN / pushTAN Support
+- Konten einzeln ein-/ausblendbar für die Gesamtbilanz
 - CSV/MT940-Import (manueller Commerzbank-Export)
 - Auto-Kategorisierung (15 Kategorien, 50+ Händler)
 - Logos bekannter Händler (REWE, Spotify, Netflix …)
@@ -56,8 +59,8 @@ npm install
 #    z.B. ALLOWED_ORIGIN = "https://dein_user.github.io"
 
 # 5. Secrets setzen (du wirst jeweils nach dem Wert gefragt)
-wrangler secret put FINTS_IBAN        # z.B. DE89200411001234567890
-wrangler secret put FINTS_USERNAME    # Commerzbank OnlineBanking-Benutzername
+wrangler secret put FINTS_BLZ         # Commerzbank BLZ, z.B. 20041100
+wrangler secret put FINTS_USERNAME    # Commerzbank Teilnehmernummer
 wrangler secret put FINTS_PIN         # Commerzbank OnlineBanking-PIN
 wrangler secret put API_KEY           # Selbst gewählter geheimer Schlüssel (z.B. 32 Zufallszeichen)
 

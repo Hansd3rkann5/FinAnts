@@ -39,6 +39,20 @@ export interface Transaction {
   recurringGroupId?: string
 }
 
+export interface Account {
+  iban: string
+  blz: string
+  accountNumber: string
+  owner: string
+  description: string
+  type: 'giro' | 'savings' | 'depot' | 'loan' | 'other'
+  currency: string
+  balance: number
+  balanceDate: string
+  /** Whether this account is counted toward Gesamtvermögen. */
+  included: boolean
+}
+
 export interface RecurringGroup {
   id: string
   merchantKey: string
