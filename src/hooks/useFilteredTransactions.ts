@@ -24,12 +24,13 @@ export function useFilteredTransactions(transactions: Transaction[], filter: Tim
 
 export function useBalanceSummary(transactions: Transaction[]): BalanceSummary {
   return useMemo(() => {
-    const totalIncome = transactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
-    const totalExpenses = Math.abs(transactions.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0))
+    const booked = transactions.filter(t => !t.isPending)
+    const totalIncome = booked.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
+    const totalExpenses = Math.abs(booked.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0))
     const balance = totalIncome - totalExpenses
 
     const categoryMap = new Map<string, number>()
-    for (const t of transactions.filter(t => t.amount < 0)) {
+    for (const t of booked.filter(t => t.amount < 0)) {
       categoryMap.set(t.categoryId, (categoryMap.get(t.categoryId) ?? 0) + Math.abs(t.amount))
     }
 
@@ -37,7 +38,7 @@ export function useBalanceSummary(transactions: Transaction[]): BalanceSummary {
       .map(([categoryId, total]) => ({
         categoryId: categoryId as Transaction['categoryId'],
         total,
-        count: transactions.filter(t => t.categoryId === categoryId && t.amount < 0).length,
+        count: booked.filter(t => t.categoryId === categoryId && t.amount < 0).length,
         percentage: totalExpenses > 0 ? (total / totalExpenses) * 100 : 0,
       }))
       .sort((a, b) => b.total - a.total)

@@ -43,14 +43,20 @@ export function TransactionCard({ transaction: tx, onCategoryChange, index = 0 }
 
           <div className="flex items-center gap-2 mt-2">
             <span className="text-[10px] text-white/30">
-              {format(tx.date, 'dd. MMM', { locale: de })}
+              {tx.isPending ? 'Ausstehend' : format(tx.date, 'dd. MMM', { locale: de })}
             </span>
-            <CategoryBadge
-              categoryId={tx.categoryId}
-              size="sm"
-              onClick={onCategoryChange ? () => setPickerOpen(true) : undefined}
-            />
-            {tx.isRecurring && (
+            {tx.isPending ? (
+              <span className="inline-flex items-center text-[10px] text-amber-400/80 rounded-pill border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5">
+                Ausstehend
+              </span>
+            ) : (
+              <CategoryBadge
+                categoryId={tx.categoryId}
+                size="sm"
+                onClick={onCategoryChange ? () => setPickerOpen(true) : undefined}
+              />
+            )}
+            {tx.isRecurring && !tx.isPending && (
               <span className="inline-flex items-center gap-1 text-[10px] text-purple-400/70 rounded-pill border border-purple-500/20 bg-purple-500/10 px-1.5 py-0.5">
                 <RefreshCw size={9} />
                 Wiederkehrend

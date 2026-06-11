@@ -37,6 +37,7 @@ export interface Transaction {
   merchantKey?: string
   isRecurring?: boolean
   recurringGroupId?: string
+  isPending?: boolean
 }
 
 export interface Account {

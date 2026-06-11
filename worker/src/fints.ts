@@ -69,13 +69,19 @@ function fintsDateToISO(s: string): string {
 // ─── HTTP transport ───────────────────────────────────────────────────────────
 
 export async function httpPost(url: string, body: string): Promise<string> {
+  // FinTS over HTTPS: both request and response are Base64-encoded (RFC 2045)
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/octet-stream' },
-    body: new TextEncoder().encode(body),
+    body: btoa(body),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status} vom FinTS-Server`)
-  return new TextDecoder('iso-8859-1').decode(await res.arrayBuffer())
+  const raw = await res.text()
+  try {
+    return atob(raw.replace(/[\r\n]/g, ''))
+  } catch {
+    return raw
+  }
 }
 
 // ─── Response parsing ─────────────────────────────────────────────────────────
@@ -408,6 +414,7 @@ export async function syncAll(
         `HKSYN:4:3+0'`,
       )
       const anonResp = await httpPost(url, anonMsg)
+      console.log('[FinTS] anon raw response len:', anonResp.length, '| preview:', JSON.stringify(anonResp.slice(0, 120)))
       const anonSegs = parseResponse(anonResp)
       const anonId = getDialogId(anonSegs)
       console.log('[FinTS] anon dialog segments:', anonSegs.map(s => s.name).join(' '))
@@ -450,7 +457,14 @@ export async function syncAll(
   ]
 
   const authMsg = buildMessage(dialogId, 1, ...authSegs)
-  const authResp = await httpPost(url, authMsg)
+  let authResp: string
+  try {
+    authResp = await httpPost(url, authMsg)
+  } catch (e) {
+    console.error('[FinTS] auth httpPost threw:', String(e))
+    throw e
+  }
+  console.log('[FinTS] auth raw response len:', authResp.length, '| preview:', JSON.stringify(authResp.slice(0, 120)))
   const authSegs2 = parseResponse(authResp)
 
   console.log('[FinTS] auth response segments:', authSegs2.map(s => `${s.name}:${s.version}`).join(' '))

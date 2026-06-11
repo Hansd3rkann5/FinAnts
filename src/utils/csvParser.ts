@@ -9,8 +9,11 @@ function parseGermanDate(str: string): Date {
     const [day, month, year] = parts
     return new Date(Number(year), Number(month) - 1, Number(day))
   }
-  return new Date(str)
+  // ISO date fallback (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}/.test(cleaned)) return new Date(cleaned)
+  return new Date(NaN)
 }
+
 
 function parseGermanAmount(str: string): number {
   const cleaned = str.trim().replace(/"/g, '').replace(/\./g, '').replace(',', '.')
@@ -21,11 +24,11 @@ function cleanField(str: string): string {
   return str.trim().replace(/^"|"$/g, '')
 }
 
-// Commerzbank CSV format (semicolon separated, latin1 or utf-8)
+// Commerzbank CSV format — supports both semicolon-separated and tab-separated exports
 export function parseCommerzbankCSV(text: string): Transaction[] {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
 
-  // Find header line (contains "Buchungstag" or "Wertstellung")
+  // Find header line
   let headerIndex = -1
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].toLowerCase().includes('buchungstag') || lines[i].toLowerCase().includes('wertstellung')) {
@@ -38,36 +41,61 @@ export function parseCommerzbankCSV(text: string): Transaction[] {
     throw new Error('Kein gültiges Commerzbank-CSV-Format erkannt. Bitte exportiere die Datei aus dem Commerzbank OnlineBanking.')
   }
 
-  const headers = lines[headerIndex].split(';').map(cleanField).map(h => h.toLowerCase())
+  // Auto-detect separator: tab or semicolon
+  const headerLine = lines[headerIndex]
+  const sep = headerLine.includes('\t') ? '\t' : ';'
+
+  const headers = headerLine.split(sep).map(cleanField).map(h => h.toLowerCase())
   const dataLines = lines.slice(headerIndex + 1)
 
-  const colDate = headers.findIndex(h => h.includes('buchungstag') || h.includes('wertstellung'))
-  const colAmount = headers.findIndex(h => h.includes('betrag'))
-  const colDescription = headers.findIndex(h => h.includes('buchungstext') || h.includes('verwendungszweck'))
-  const colCounterparty = headers.findIndex(h => h.includes('auftraggeber') || h.includes('empfänger') || h.includes('beguenstigter'))
-  const colIban = headers.findIndex(h => h.includes('iban') || h.includes('kontonummer'))
+  const colBuchungstag = headers.findIndex(h => h.includes('buchungstag'))
+  const colWertstellung = headers.findIndex(h => h.includes('wertstellung'))
+  const colAmount      = headers.findIndex(h => h === 'betrag' || h.includes('betrag'))
+  const colDescription = headers.findIndex(h => h.includes('buchungstext'))
+  const colReference   = headers.findIndex(h => h.includes('verwendungszweck'))
+  const colSender      = headers.findIndex(h => h === 'sender' || h.includes('auftraggeber'))
+  const colRecipient   = headers.findIndex(h => h === 'empfänger' || h.includes('beguenstigter') || h.includes('begünstigter'))
+  const colIban        = headers.findIndex(h => h.includes('iban kontoinhaber') || (h.includes('iban') && !h.includes('empfänger') && !h.includes('sender')))
 
   const transactions: Transaction[] = []
 
   for (const line of dataLines) {
     if (!line || line.startsWith('"Kontonummer') || line.startsWith('Kontonummer')) continue
 
-    const cols = line.split(';')
+    const cols = line.split(sep)
     if (cols.length < 3) continue
 
-    const rawAmount = colAmount >= 0 ? cleanField(cols[colAmount] || '') : ''
+    const rawAmount = colAmount >= 0 ? cleanField(cols[colAmount] ?? '') : ''
     if (!rawAmount) continue
 
     const amount = parseGermanAmount(rawAmount)
     if (isNaN(amount)) continue
 
-    const dateStr = colDate >= 0 ? cleanField(cols[colDate] || '') : ''
-    const date = parseGermanDate(dateStr)
-    if (isNaN(date.getTime())) continue
+    // Description fields (needed for date fallback too)
+    const buchungstext     = colDescription >= 0 ? cleanField(cols[colDescription] ?? '') : ''
+    const verwendungszweck = colReference   >= 0 ? cleanField(cols[colReference]   ?? '') : ''
+    const description = [buchungstext, verwendungszweck].filter(Boolean).join(' · ')
 
-    const description = colDescription >= 0 ? cleanField(cols[colDescription] || '') : ''
-    const counterparty = colCounterparty >= 0 ? cleanField(cols[colCounterparty] || '') : ''
-    const iban = colIban >= 0 ? cleanField(cols[colIban] || '') : undefined
+    const buchungstag  = colBuchungstag  >= 0 ? cleanField(cols[colBuchungstag]  ?? '') : ''
+    const wertstellung = colWertstellung >= 0 ? cleanField(cols[colWertstellung] ?? '') : ''
+
+    // Empty Buchungstag = pending (authorized but not yet booked)
+    const isPending = !buchungstag
+
+    let date = parseGermanDate(buchungstag)
+    if (isNaN(date.getTime())) date = parseGermanDate(wertstellung)
+    if (isNaN(date.getTime())) {
+      // Extract authorization date from description text for display
+      const m = (buchungstext + ' ' + verwendungszweck).match(/(\d{2})\.(\d{2})\.(\d{4})/)
+      date = m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])) : new Date()
+    }
+
+    // Use Sender for incoming, Empfänger for outgoing (whichever is filled)
+    const sender    = colSender >= 0    ? cleanField(cols[colSender] ?? '')    : ''
+    const recipient = colRecipient >= 0 ? cleanField(cols[colRecipient] ?? '') : ''
+    const counterparty = sender || recipient
+
+    const iban = colIban >= 0 ? cleanField(cols[colIban] ?? '') || undefined : undefined
 
     const type = amount >= 0 ? 'income' : 'expense'
     const merchant = findMerchant(`${description} ${counterparty}`)
@@ -83,10 +111,16 @@ export function parseCommerzbankCSV(text: string): Transaction[] {
       iban,
       categoryId,
       merchantKey: merchant?.merchantKey,
+      isPending: isPending || undefined,
     })
   }
 
-  return transactions.sort((a, b) => b.date.getTime() - a.date.getTime())
+  // Pending first, then descending by date
+  return transactions.sort((a, b) => {
+    if (a.isPending && !b.isPending) return -1
+    if (!a.isPending && b.isPending) return 1
+    return b.date.getTime() - a.date.getTime()
+  })
 }
 
 // Alternative: MT940 format (SWIFT standard used by many German banks)
