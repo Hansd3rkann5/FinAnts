@@ -14,13 +14,21 @@ export function unesc(v: string): string {
   return v.replace(/\?(.)/g, '$1')
 }
 
-/** Split by unescaped '+'. */
+/** Split by unescaped '+', skipping over @len@ binary blobs. */
 function splitDE(s: string): string[] {
-  const r: string[] = []; let c = ''
-  for (let i = 0; i < s.length; i++) {
-    if (s[i] === '?' && i + 1 < s.length) { c += s[++i]; continue }
-    if (s[i] === '+') { r.push(c); c = ''; continue }
-    c += s[i]
+  const r: string[] = []; let c = ''; let i = 0
+  while (i < s.length) {
+    const ch = s[i]
+    if (ch === '?' && i + 1 < s.length) { c += s[++i]; i++; continue }
+    if (ch === '@') {
+      const at2 = s.indexOf('@', i + 1)
+      if (at2 > i) {
+        const len = parseInt(s.slice(i + 1, at2))
+        if (!isNaN(len)) { c += s.slice(i, at2 + 1 + len); i = at2 + 1 + len; continue }
+      }
+    }
+    if (ch === '+') { r.push(c); c = ''; i++; continue }
+    c += ch; i++
   }
   r.push(c); return r
 }
@@ -260,12 +268,47 @@ function parseHITAN(segs: FinTSSegment[]): Omit<TanChallenge, 'dialogId' | 'secR
 
 // ─── MT940 parser ─────────────────────────────────────────────────────────────
 
-function parseMT940(data: string, accountIban: string): RawTransaction[] {
+interface MT940Result {
+  transactions: RawTransaction[]
+  iban: string
+  closingBalance: number | null
+  closingDate: string | null
+  currency: string
+}
+
+function parseMT940(data: string, defaultAccountIban: string): MT940Result {
   const txs: RawTransaction[] = []
   const lines = data.split(/\r?\n/)
+  let accountIban = defaultAccountIban
+  let closingBalance: number | null = null
+  let closingDate: string | null = null
+  let currency = 'EUR'
   let i = 0
   while (i < lines.length) {
     const line = lines[i].trim()
+
+    // :25: account IBAN
+    if (line.startsWith(':25:')) {
+      const raw = line.slice(4).split('/')[0].replace(/\s/g, '')
+      if (raw.length >= 15) accountIban = raw
+      i++; continue
+    }
+
+    // :62F: or :62M: closing booked balance  →  CDyymmddCURamount,cents
+    if (line.startsWith(':62F:') || line.startsWith(':62M:')) {
+      const m = line.slice(5).match(/^([CD])(\d{6})([A-Z]{3})(\d+),(\d*)/)
+      if (m) {
+        const [, cd, yymmdd, cur, intPart, decPart] = m
+        const yy = parseInt(yymmdd.slice(0, 2))
+        const fullYear = yy + (yy >= 70 ? 1900 : 2000)
+        closingDate = `${fullYear}-${yymmdd.slice(2, 4)}-${yymmdd.slice(4, 6)}`
+        currency = cur
+        const amt = parseFloat(`${intPart}.${decPart || '00'}`)
+        closingBalance = cd === 'D' ? -amt : amt
+      }
+      i++; continue
+    }
+
     if (line.startsWith(':61:')) {
       const m = line.slice(4).match(/^(\d{2})(\d{2})(\d{2})(\d{4})?([CD])R?[A-Z]{0,3}(\d+),(\d*)/)
       if (!m) { i++; continue }
@@ -305,7 +348,7 @@ function parseMT940(data: string, accountIban: string): RawTransaction[] {
     }
     i++
   }
-  return txs
+  return { transactions: txs, iban: accountIban, closingBalance, closingDate, currency }
 }
 
 // ─── FinTS dialog helpers ─────────────────────────────────────────────────────
@@ -367,8 +410,8 @@ export async function syncAll(
       const anonResp = await httpPost(url, anonMsg)
       const anonSegs = parseResponse(anonResp)
       const anonId = getDialogId(anonSegs)
+      console.log('[FinTS] anon dialog segments:', anonSegs.map(s => s.name).join(' '))
 
-      // Extract lowest supported security function from HIPINS
       const hipins = findSeg(anonSegs, 'HIPINS')
       if (hipins) {
         for (let f = 4; f < hipins.fields.length; f++) {
@@ -377,13 +420,14 @@ export async function syncAll(
           if (!isNaN(c) && c >= 900 && c <= 999) { resolvedSecFun = String(c); break }
         }
       }
+      console.log('[FinTS] secFun resolved:', resolvedSecFun, hipins ? '(from HIPINS)' : '(default)')
 
       if (anonId !== '0') {
         await httpPost(url, buildMessage(anonId, 2, `HKEND:2:1+${anonId}'`))
           .catch(() => {})
       }
-    } catch {
-      // non-fatal, use default secFun
+    } catch (e) {
+      console.warn('[FinTS] anon dialog failed (non-fatal):', String(e))
     }
   }
 
@@ -394,28 +438,38 @@ export async function syncAll(
   const fromStr = fmtDate(fromDate)
   const toStr   = fmtDate(toDate)
 
+  console.log('[FinTS] auth dialog → secFun:', resolvedSecFun, 'from:', fromStr, 'to:', toStr)
+
   const authSegs: string[] = [
     buildSecHdr(2, resolvedSecFun, secRefStr, blz, name),
     `HKIDN:3:2+280:${blz}+${esc(name)}+0+1'`,
     `HKVVB:4:3+0+0+0+FinAnts+1.0'`,
-    `HKTAN:5:6+${resolvedSecFun}+J'`,
-    // Request balances for all accounts (no IBAN = Alle Konten)
-    `HKSAL:6:7++DE+N'`,
-    // Request transactions for all accounts
-    `HKKAZ:7:7++DE+${fromStr}+${toStr}+N'`,
-    buildSecFtr(8, secRefStr, cfg.pin, tan),
+    `HKSAL:5:7+::${blz}+J+'`,
+    `HKKAZ:6:7+::${blz}+J+${fromStr}+${toStr}++'`,
+    buildSecFtr(7, secRefStr, cfg.pin, tan),
   ]
 
   const authMsg = buildMessage(dialogId, 1, ...authSegs)
   const authResp = await httpPost(url, authMsg)
   const authSegs2 = parseResponse(authResp)
 
+  console.log('[FinTS] auth response segments:', authSegs2.map(s => `${s.name}:${s.version}`).join(' '))
+
+  // Log HIRMG/HIRMS codes for visibility
+  for (const s of authSegs2.filter(s => s.name === 'HIRMG' || s.name === 'HIRMS')) {
+    for (const f of s.fields) {
+      const p = splitDEG(f)
+      console.log(`[FinTS] ${s.name} code ${p[0]}: ${unesc(p[2] ?? '')}`)
+    }
+  }
+
   // Check for TAN challenge (HITAN)
   const challengeData = parseHITAN(authSegs2)
   const authDialogId = getDialogId(authSegs2)
 
+  console.log('[FinTS] HITAN found:', !!challengeData, challengeData ? `method=${challengeData.method} orderRef=${challengeData.orderRef}` : '')
+
   if (challengeData && !tan) {
-    // Bank wants a TAN — return challenge to caller
     return {
       accounts: [],
       transactions: [],
@@ -428,45 +482,74 @@ export async function syncAll(
     }
   }
 
-  // If we got here, no challenge or TAN was provided — check for errors
   assertNoError(authSegs2)
 
   // ── Parse accounts from HIUPD ─────────────────────────────────────────────
   const accountPartials = parseHIUPD(authSegs2)
   const balances = parseHISAL(authSegs2)
+  console.log('[FinTS] HIUPD accounts:', accountPartials.length, '| HISAL entries:', balances.size)
 
-  const accounts: FinTSAccount[] = accountPartials.map(a => {
-    const bal = balances.get(a.iban ?? '') ?? { balance: 0, date: new Date().toISOString().slice(0, 10) }
-    return {
-      iban: a.iban ?? '',
-      blz: a.blz ?? '',
-      accountNumber: a.accountNumber ?? '',
-      owner: a.owner ?? '',
-      description: a.description ?? '',
-      type: a.type ?? 'other',
-      currency: a.currency ?? 'EUR',
-      balance: bal.balance,
-      balanceDate: bal.date,
-    }
-  })
-
-  // ── Parse transactions from HIKAZ blobs ──────────────────────────────────
+  // ── Parse transactions from HIKAZ blobs; collect MT940-derived balances ──
   const allTxs: RawTransaction[] = []
+  const mt940Balances = new Map<string, { balance: number; date: string; currency: string }>()
+
   for (const seg of findSegs(authSegs2, 'HIKAZ')) {
-    // Determine which account this HIKAZ belongs to via its reference segment
-    // Field 0 of HIKAZ response contains IBAN
-    const accountIban = (splitDEG(seg.fields[0] ?? '')[0] ?? '').replace(/\s/g, '')
+    const segIban = (splitDEG(seg.fields[0] ?? '')[0] ?? '').replace(/\s/g, '')
     for (const field of seg.fields) {
       for (const blob of extractBlobs(field)) {
-        allTxs.push(...parseMT940(blob, accountIban))
+        const result = parseMT940(blob, segIban)
+        allTxs.push(...result.transactions)
+        if (result.closingBalance !== null && result.iban) {
+          mt940Balances.set(result.iban, {
+            balance: result.closingBalance,
+            date: result.closingDate ?? new Date().toISOString().slice(0, 10),
+            currency: result.currency,
+          })
+        }
       }
     }
   }
 
+  // Build account list: HIUPD if available, else infer from MT940
+  let accounts: FinTSAccount[]
+
+  if (accountPartials.length > 0) {
+    accounts = accountPartials.map(a => {
+      const hisal = balances.get(a.iban ?? '')
+      const mt940 = mt940Balances.get(a.iban ?? '')
+      const bal = hisal ?? (mt940 ? { balance: mt940.balance, date: mt940.date } : { balance: 0, date: new Date().toISOString().slice(0, 10) })
+      return {
+        iban: a.iban ?? '',
+        blz: a.blz ?? '',
+        accountNumber: a.accountNumber ?? '',
+        owner: a.owner ?? '',
+        description: a.description ?? '',
+        type: a.type ?? 'other',
+        currency: mt940?.currency ?? a.currency ?? 'EUR',
+        balance: bal.balance,
+        balanceDate: bal.date,
+      }
+    })
+  } else {
+    // No HIUPD — build minimal account entries from MT940 data
+    accounts = Array.from(mt940Balances.entries()).map(([iban, bal]) => ({
+      iban,
+      blz,
+      accountNumber: '',
+      owner: name,
+      description: '',
+      type: 'giro' as const,
+      currency: bal.currency,
+      balance: bal.balance,
+      balanceDate: bal.date,
+    }))
+  }
+
+  console.log('[FinTS] result: accounts:', accounts.length, 'transactions:', allTxs.length)
+
   // ── End dialog ────────────────────────────────────────────────────────────
   if (authDialogId !== '0') {
     const secRef2 = secRef + 1
-    const now = new Date()
     await httpPost(url, buildMessage(authDialogId, 2,
       buildSecHdr(2, resolvedSecFun, String(secRef2), blz, name),
       `HKEND:3:1+${authDialogId}'`,
