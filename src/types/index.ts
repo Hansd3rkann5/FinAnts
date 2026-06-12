@@ -42,6 +42,14 @@ export interface Transaction {
   customIcon?: string  // emoji or data URL
 }
 
+export interface MerchantProfile {
+  id: string
+  matchString: string
+  matchMode: 'exact' | 'contains'
+  label?: string
+  customIcon?: string
+}
+
 export interface Account {
   iban: string
   blz: string
