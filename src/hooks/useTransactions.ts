@@ -46,11 +46,19 @@ export function useTransactions() {
   }, [])
 
   const importTransactions = useCallback((raw: Transaction[]) => {
-    const { transactions: annotated, groups } = detectRecurring(raw)
+    const existingMap = new Map(transactions.map(t => [t.id, t]))
+
+    const merged = raw.map(t => {
+      const prev = existingMap.get(t.id)
+      if (!prev) return t
+      return { ...t, categoryId: prev.categoryId, customLabel: prev.customLabel, customIcon: prev.customIcon }
+    })
+
+    const { transactions: annotated, groups } = detectRecurring(merged)
     setTransactions(annotated)
     setRecurringGroups(groups)
     saveToStorage(annotated, groups)
-  }, [])
+  }, [transactions])
 
   const updateCategory = useCallback((id: string, categoryId: Transaction['categoryId']) => {
     setTransactions(prev => {
