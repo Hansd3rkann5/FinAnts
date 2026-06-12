@@ -274,7 +274,7 @@ export function Settings() {
             <PillButton
               variant="secondary"
               size="sm"
-              disabled={!configSaved || cloudStatus === 'pushing' || cloudStatus === 'pulling'}
+              disabled={cloudStatus === 'pushing' || cloudStatus === 'pulling'}
               icon={<CloudUpload size={13} className={cloudStatus === 'pushing' ? 'animate-pulse' : ''} />}
               onClick={cloudPush}
             >
@@ -283,7 +283,7 @@ export function Settings() {
             <PillButton
               variant="secondary"
               size="sm"
-              disabled={!configSaved || cloudStatus === 'pushing' || cloudStatus === 'pulling'}
+              disabled={cloudStatus === 'pushing' || cloudStatus === 'pulling'}
               icon={<CloudDownload size={13} className={cloudStatus === 'pulling' ? 'animate-pulse' : ''} />}
               onClick={cloudPull}
             >
