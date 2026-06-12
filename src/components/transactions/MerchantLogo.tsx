@@ -47,6 +47,7 @@ export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }:
   }
 
   if (merchantKey && !error) {
+    const url = getLogoUrl(merchantKey)
     return (
       <div
         {...BASE}
@@ -54,11 +55,12 @@ export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }:
         style={{ width: size, height: size }}
       >
         <img
-          src={getLogoUrl(merchantKey)}
+          src={url}
           alt=""
           className="object-contain"
           style={{ width: size - 8, height: size - 8 }}
-          onError={() => setError(true)}
+          onLoad={() => console.log('[MerchantLogo] loaded:', url)}
+          onError={() => { console.warn('[MerchantLogo] failed:', url); setError(true) }}
           loading="lazy"
         />
       </div>

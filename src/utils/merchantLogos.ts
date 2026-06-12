@@ -87,6 +87,7 @@ export interface MerchantMatch {
 }
 
 const LOGOS_TOKEN = import.meta.env.VITE_LOGOS_TOKEN ?? ''
+console.log('[logos.dev] token present:', !!LOGOS_TOKEN, LOGOS_TOKEN ? `(${LOGOS_TOKEN.slice(0, 6)}…)` : '(missing)')
 
 export function findMerchant(text: string): MerchantMatch | null {
   const lower = text.toLowerCase()
