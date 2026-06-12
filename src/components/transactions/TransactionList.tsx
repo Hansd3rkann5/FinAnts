@@ -51,7 +51,7 @@ export function TransactionList({ transactions, onCategoryChange, onTransactionC
   let globalIndex = 0
 
   return (
-    <div className="flex flex-col gap-4">
+    <div data-component="tx-list" className="flex flex-col gap-4">
       {groups.map(({ label, items }) => (
         <motion.div
           key={label}

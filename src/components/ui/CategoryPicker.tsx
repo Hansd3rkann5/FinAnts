@@ -24,13 +24,14 @@ export function CategoryPicker({ open, current, onSelect, onClose }: Props) {
             onClick={onClose}
           />
           <motion.div
+            id="modal-cat-picker"
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[28px] bg-[#1a1a28] border-t border-white/10 pb-safe"
           >
-            <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+            <div id="cat-picker-header" className="p-4 border-b border-white/[0.06] flex items-center justify-between">
               <h3 className="text-white font-semibold">Kategorie wählen</h3>
               <button onClick={onClose} className="text-white/40 hover:text-white/80 p-1 rounded-full">
                 <X size={18} />

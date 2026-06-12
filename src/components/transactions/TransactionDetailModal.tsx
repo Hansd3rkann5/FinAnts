@@ -156,6 +156,7 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
         <>
           <motion.div
             key="tx-backdrop"
+            id="modal-tx-backdrop"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-40 bg-black/60 backdrop-blur-md"
@@ -163,6 +164,7 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
           />
           <motion.div
             key="tx-sheet"
+            id="modal-tx-sheet"
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
             onClick={e => e.stopPropagation()}

@@ -9,6 +9,8 @@ interface Props {
   size?: number
 }
 
+const BASE = { 'data-component': 'merchant-logo' } as const
+
 export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }: Props) {
   const [error, setError] = useState(false)
   const { allMap } = useAllCategories()
@@ -17,6 +19,7 @@ export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }:
   if (customIcon?.startsWith('data:') || customIcon?.startsWith('http')) {
     return (
       <div
+        {...BASE}
         className="shrink-0 rounded-card_sm overflow-hidden flex items-center justify-center"
         style={{ width: size, height: size }}
       >
@@ -28,6 +31,7 @@ export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }:
   if (customIcon) {
     return (
       <div
+        {...BASE}
         className="shrink-0 rounded-card_sm flex items-center justify-center"
         style={{
           width: size,
@@ -45,6 +49,7 @@ export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }:
   if (merchantKey && !error) {
     return (
       <div
+        {...BASE}
         className="shrink-0 rounded-card_sm overflow-hidden bg-white flex items-center justify-center"
         style={{ width: size, height: size }}
       >
@@ -62,6 +67,7 @@ export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }:
 
   return (
     <div
+      {...BASE}
       className="shrink-0 rounded-card_sm flex items-center justify-center text-lg"
       style={{
         width: size,

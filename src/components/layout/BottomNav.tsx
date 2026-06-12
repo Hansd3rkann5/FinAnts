@@ -11,23 +11,23 @@ const TABS = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 pb-safe">
-      {/* Blurred glass backdrop — same width as pill, rounded top, fills safe area */}
+    <nav id="bottom-nav" className="fixed bottom-0 left-0 right-0 z-30 pb-safe">
       <div
+        id="nav-glass"
         className="absolute top-0 bottom-0 left-3 right-3 rounded-t-[35px] overflow-hidden"
         style={{
           background: 'rgba(8, 8, 14, 0.82)',
-          backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
         }}
       />
-      <div className="relative mx-3 mb-3 rounded-pill bg-white/[0.04] border border-white/[0.08] flex">
+      <div id="nav-pill" className="relative mx-3 mb-3 rounded-pill bg-white/[0.04] border border-white/[0.08] flex">
         {TABS.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
             className="flex-1"
+            data-nav-tab={to}
           >
             {({ isActive }) => (
               <motion.div

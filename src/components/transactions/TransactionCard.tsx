@@ -33,6 +33,8 @@ export function TransactionCard({ transaction: tx, onCategoryChange, onClick, in
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1], delay: Math.min(index * 0.04, 0.3) }}
         onClick={() => onClick?.(tx)}
+        data-component="tx-card"
+        data-tx-id={tx.id}
         className="flex items-center gap-3 p-3 rounded-card_sm bg-white/3 border border-white/6 active:bg-white/[0.07] transition-colors duration-100 cursor-pointer"
       >
         <MerchantLogo merchantKey={tx.merchantKey} categoryId={tx.categoryId} customIcon={displayIcon} size={42} />

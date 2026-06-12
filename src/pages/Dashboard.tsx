@@ -29,13 +29,11 @@ export function Dashboard() {
   const summary = useBalanceSummary(filtered)
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Time filter */}
+    <div id="page-dashboard" className="flex flex-col gap-4">
       <TimeFilterBar value={timeFilter} onChange={setTimeFilter} />
 
-      {/* Gesamtvermögen card – only shown when accounts are available */}
       {accounts.length > 0 && (
-        <GlassCard glow="purple">
+        <GlassCard id="card-wealth" glow="purple">
           <div className="flex items-center gap-2 mb-1">
             <Landmark size={14} className="text-purple-400" />
             <p className="text-xs text-white/40">Gesamtvermögen</p>
@@ -69,7 +67,7 @@ export function Dashboard() {
                 transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                 className="overflow-hidden"
               >
-                <div className="flex flex-col gap-2 pt-1">
+                <div id="accounts-list" className="flex flex-col gap-2 pt-1">
                   {accounts.map(a => (
                     <AccountCard
                       key={a.iban}
@@ -90,8 +88,7 @@ export function Dashboard() {
         </GlassCard>
       )}
 
-      {/* Period balance hero card */}
-      <GlassCard glow={accounts.length === 0 ? 'purple' : undefined}>
+      <GlassCard id="card-balance" glow={accounts.length === 0 ? 'purple' : undefined}>
         <p className="text-xs text-white/40 mb-1">Saldo im Zeitraum</p>
         <motion.p
           key={`${timeFilter}-${summary.balance}`}
@@ -105,9 +102,8 @@ export function Dashboard() {
         <BalanceBar summary={summary} />
       </GlassCard>
 
-      {/* Quick stats row */}
-      <div className="grid grid-cols-2 gap-3">
-        <GlassCard padding="sm" className="flex items-center gap-3">
+      <div id="stats-row" className="grid grid-cols-2 gap-3">
+        <GlassCard id="card-income-stat" padding="sm" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-card_sm bg-emerald-500/15 flex items-center justify-center text-emerald-400">
             <TrendingUp size={18} />
           </div>
@@ -116,7 +112,7 @@ export function Dashboard() {
             <p className="text-sm font-semibold text-emerald-400">{formatEur(summary.totalIncome)}</p>
           </div>
         </GlassCard>
-        <GlassCard padding="sm" className="flex items-center gap-3">
+        <GlassCard id="card-expense-stat" padding="sm" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-card_sm bg-red-500/10 flex items-center justify-center text-red-400">
             <TrendingDown size={18} />
           </div>
@@ -127,11 +123,11 @@ export function Dashboard() {
         </GlassCard>
       </div>
 
-      {/* Category frame */}
-      <GlassCard>
+      <GlassCard id="card-categories">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-white/70">Kategorien</h2>
           <button
+            id="btn-add-category"
             onClick={() => setCreateCatOpen(true)}
             className="w-7 h-7 rounded-full bg-white/6 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors active:scale-90"
           >
@@ -139,12 +135,13 @@ export function Dashboard() {
           </button>
         </div>
 
-        {/* Custom categories */}
         {customCategories.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
+          <div id="custom-categories-list" className="flex flex-wrap gap-1.5 mb-4">
             {customCategories.map(cat => (
               <div
                 key={cat.id}
+                data-component="custom-category-chip"
+                data-category-id={cat.id}
                 className="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-pill border text-xs"
                 style={{ backgroundColor: `${cat.color}18`, borderColor: `${cat.color}40`, color: cat.color }}
               >
@@ -164,26 +161,25 @@ export function Dashboard() {
         {summary.categories.length > 0 ? (
           <CategoryPieChart categories={summary.categories} />
         ) : (
-          <div className="flex flex-col items-center gap-2 py-8 text-white/25">
+          <div id="categories-empty-state" className="flex flex-col items-center gap-2 py-8 text-white/25">
             <span className="text-2xl">📊</span>
             <p className="text-xs">Noch keine Ausgaben im Zeitraum</p>
           </div>
         )}
       </GlassCard>
 
-      {/* Recurring standing orders */}
       {recurringGroups.length > 0 && (
-        <GlassCard glow="purple">
+        <GlassCard id="card-recurring" glow="purple">
           <div className="flex items-center gap-2 mb-3">
             <RefreshCw size={14} className="text-purple-400" />
             <h2 className="text-sm font-semibold text-white/70">Daueraufträge erkannt</h2>
             <span className="ml-auto text-xs text-white/30">{recurringGroups.length}</span>
           </div>
-          <div className="flex flex-col gap-2">
+          <div id="recurring-list" className="flex flex-col gap-2">
             {recurringGroups.slice(0, 4).map(g => (
-              <div key={g.id} className="flex items-center justify-between">
+              <div key={g.id} data-component="recurring-row" className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-white/80 truncate max-w-[180px]">{g.counterparty}</p>
+                  <p className="text-xs text-white/80 truncate max-w-45">{g.counterparty}</p>
                   <p className="text-[10px] text-purple-400/70 capitalize">{
                     { weekly: 'Wöchentlich', monthly: 'Monatlich', quarterly: 'Quartalsweise', yearly: 'Jährlich' }[g.frequency]
                   }</p>
@@ -200,8 +196,7 @@ export function Dashboard() {
         </GlassCard>
       )}
 
-      {/* Recent transactions */}
-      <div>
+      <div id="recent-transactions">
         <h2 className="text-sm font-semibold text-white/50 mb-3">Letzte Buchungen</h2>
         <TransactionList
           transactions={filtered.slice(0, 20)}

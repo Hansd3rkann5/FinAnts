@@ -37,11 +37,10 @@ export function Transactions() {
   }, [timeFiltered, filterCategory, search])
 
   return (
-    <div className="flex flex-col gap-4">
+    <div id="page-transactions" className="flex flex-col gap-4">
       <TimeFilterBar value={timeFilter} onChange={setTimeFilter} />
 
-      {/* Search bar */}
-      <div className="relative flex items-center">
+      <div id="tx-search-bar" className="relative flex items-center">
         <Search size={14} className="absolute left-3 text-white/30 pointer-events-none" />
         <input
           type="text"
@@ -79,7 +78,7 @@ export function Transactions() {
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
             className="overflow-hidden"
           >
-            <div className="flex flex-wrap gap-2 pb-1">
+            <div id="tx-filter-pills" className="flex flex-wrap gap-2 pb-1">
               <PillButton
                 size="sm"
                 variant="secondary"
@@ -108,8 +107,7 @@ export function Transactions() {
         )}
       </AnimatePresence>
 
-      {/* Result count */}
-      <p className="text-xs text-white/30">
+      <p id="tx-result-count" className="text-xs text-white/30">
         {displayed.length} Buchung{displayed.length !== 1 ? 'en' : ''}
       </p>
 

@@ -6,14 +6,13 @@ export function AppShell() {
   const location = useLocation()
 
   return (
-    <div className="h-full bg-bg-base text-white flex flex-col">
-      {/* Status-bar spacer (iPhone notch) */}
-      <div className="h-safe-top" />
+    <div id="app-shell" className="h-full bg-bg-base text-white flex flex-col">
+      <div id="safe-area-top" className="h-safe-top" />
 
-      {/* Main content */}
-      <main className="flex-1 overflow-hidden relative">
+      <main id="app-main" className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
+            id="page-scroll"
             key={location.pathname}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}

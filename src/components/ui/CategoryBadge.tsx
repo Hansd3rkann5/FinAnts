@@ -16,6 +16,8 @@ export function CategoryBadge({ categoryId, size = 'md', showLabel = true, onCli
     <button
       onClick={onClick}
       disabled={!onClick}
+      data-component="category-badge"
+      data-category-id={categoryId}
       className={clsx(
         'inline-flex items-center gap-1.5 rounded-pill border font-medium transition-all duration-150',
         size === 'sm' && 'px-2 py-0.5 text-xs',
