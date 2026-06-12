@@ -87,6 +87,8 @@ export function Settings() {
     setImportMessage('')
     try {
       const text = await file.text()
+      console.log('[Import] File:', file.name, '| size:', file.size, '| type:', file.type)
+      console.log('[Import] First 300 chars:', JSON.stringify(text.slice(0, 300)))
       const parsed = detectAndParse(text)
       if (parsed.length === 0) throw new Error('Keine Buchungen gefunden. Bitte prüfe das Dateiformat.')
       importTransactions(parsed)

@@ -26,7 +26,12 @@ function cleanField(str: string): string {
 
 // Commerzbank CSV format — supports both semicolon-separated and tab-separated exports
 export function parseCommerzbankCSV(text: string): Transaction[] {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+  const allLines = text.split('\n')
+  console.log('[CSV] Total raw lines:', allLines.length)
+  console.log('[CSV] First 3 lines:', allLines.slice(0, 3).map((l, i) => `  [${i}] ${JSON.stringify(l)}`).join('\n'))
+
+  const lines = allLines.map(l => l.trim()).filter(Boolean)
+  console.log('[CSV] Non-empty lines after trim:', lines.length)
 
   // Find header line
   let headerIndex = -1
@@ -37,6 +42,9 @@ export function parseCommerzbankCSV(text: string): Transaction[] {
     }
   }
 
+  console.log('[CSV] Header line index:', headerIndex)
+  if (headerIndex !== -1) console.log('[CSV] Header line:', JSON.stringify(lines[headerIndex]))
+
   if (headerIndex === -1) {
     throw new Error('Kein gültiges Commerzbank-CSV-Format erkannt. Bitte exportiere die Datei aus dem Commerzbank OnlineBanking.')
   }
@@ -44,9 +52,12 @@ export function parseCommerzbankCSV(text: string): Transaction[] {
   // Auto-detect separator: tab or semicolon
   const headerLine = lines[headerIndex]
   const sep = headerLine.includes('\t') ? '\t' : ';'
+  console.log('[CSV] Separator detected:', JSON.stringify(sep))
 
   const headers = headerLine.split(sep).map(cleanField).map(h => h.toLowerCase())
+  console.log('[CSV] Parsed headers:', headers)
   const dataLines = lines.slice(headerIndex + 1)
+  console.log('[CSV] Data lines:', dataLines.length)
 
   const colBuchungstag = headers.findIndex(h => h.includes('buchungstag'))
   const colWertstellung = headers.findIndex(h => h.includes('wertstellung'))
@@ -57,16 +68,19 @@ export function parseCommerzbankCSV(text: string): Transaction[] {
   const colRecipient   = headers.findIndex(h => h === 'empfänger' || h.includes('beguenstigter') || h.includes('begünstigter'))
   const colIban        = headers.findIndex(h => h.includes('iban kontoinhaber') || (h.includes('iban') && !h.includes('empfänger') && !h.includes('sender')))
 
+  console.log('[CSV] Column indices → buchungstag:', colBuchungstag, 'betrag:', colAmount, 'sender:', colSender, 'empfänger:', colRecipient)
+
   const transactions: Transaction[] = []
+  let skippedNoAmount = 0, skippedShort = 0, skippedFooter = 0
 
   for (const line of dataLines) {
-    if (!line || line.startsWith('"Kontonummer') || line.startsWith('Kontonummer')) continue
+    if (!line || line.startsWith('"Kontonummer') || line.startsWith('Kontonummer')) { skippedFooter++; continue }
 
     const cols = line.split(sep)
-    if (cols.length < 3) continue
+    if (cols.length < 3) { skippedShort++; continue }
 
     const rawAmount = colAmount >= 0 ? cleanField(cols[colAmount] ?? '') : ''
-    if (!rawAmount) continue
+    if (!rawAmount) { skippedNoAmount++; continue }
 
     const amount = parseGermanAmount(rawAmount)
     if (isNaN(amount)) continue
@@ -114,6 +128,9 @@ export function parseCommerzbankCSV(text: string): Transaction[] {
       isPending: isPending || undefined,
     })
   }
+
+  console.log('[CSV] Parsed:', transactions.length, '| skipped (no amount):', skippedNoAmount, '| skipped (short):', skippedShort, '| skipped (footer):', skippedFooter)
+  if (transactions.length > 0) console.log('[CSV] First tx:', transactions[0])
 
   // Pending first, then descending by date
   return transactions.sort((a, b) => {
