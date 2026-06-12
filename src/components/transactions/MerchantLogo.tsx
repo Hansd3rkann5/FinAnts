@@ -57,8 +57,7 @@ export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }:
         <img
           src={url}
           alt=""
-          className="object-contain"
-          style={{ width: size - 8, height: size - 8 }}
+          className="w-full h-full object-contain"
           onLoad={() => console.log('[MerchantLogo] loaded:', url)}
           onError={() => { console.warn('[MerchantLogo] failed:', url); setError(true) }}
           loading="lazy"

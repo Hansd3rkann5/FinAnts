@@ -5,6 +5,7 @@ import { de } from 'date-fns/locale'
 import { RefreshCw } from 'lucide-react'
 import type { Transaction } from '@/types'
 import { MerchantLogo } from './MerchantLogo'
+import { findMerchant } from '@/utils/merchantLogos'
 import { AmountDisplay } from '@/components/ui/AmountDisplay'
 import { CategoryBadge } from '@/components/ui/CategoryBadge'
 import { CategoryPicker } from '@/components/ui/CategoryPicker'
@@ -25,6 +26,7 @@ export function TransactionCard({ transaction: tx, onCategoryChange, onClick, in
 
   const displayLabel = tx.customLabel ?? profile?.label
   const displayIcon  = tx.customIcon  ?? profile?.customIcon
+  const merchantKey  = tx.merchantKey ?? findMerchant(`${tx.description ?? ''} ${tx.counterparty ?? ''}`)?.merchantKey
 
   return (
     <>
@@ -37,7 +39,7 @@ export function TransactionCard({ transaction: tx, onCategoryChange, onClick, in
         data-tx-id={tx.id}
         className="flex items-center gap-3 p-3 rounded-card_sm bg-white/3 border border-white/6 active:bg-white/[0.07] transition-colors duration-100 cursor-pointer"
       >
-        <MerchantLogo merchantKey={tx.merchantKey} categoryId={tx.categoryId} customIcon={displayIcon} size={42} />
+        <MerchantLogo merchantKey={merchantKey} categoryId={tx.categoryId} customIcon={displayIcon} size={42} />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">

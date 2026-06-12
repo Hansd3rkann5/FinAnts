@@ -9,6 +9,7 @@ import type { Transaction } from '@/types'
 import { CATEGORIES } from '@/data/categories'
 import { useAllCategories } from '@/hooks/useAllCategories'
 import { MerchantLogo } from './MerchantLogo'
+import { findMerchant } from '@/utils/merchantLogos'
 import { AmountDisplay } from '@/components/ui/AmountDisplay'
 import { loadWorkerConfig } from '@/hooks/useWorkerSync'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
@@ -164,8 +165,9 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
     }
   }
 
-  const displayIcon  = tx?.customIcon  ?? profile?.customIcon
-  const displayLabel = tx?.customLabel ?? profile?.label
+  const displayIcon   = tx?.customIcon  ?? profile?.customIcon
+  const displayLabel  = tx?.customLabel ?? profile?.label
+  const merchantKey   = tx?.merchantKey ?? (tx ? findMerchant(`${tx.description ?? ''} ${tx.counterparty ?? ''}`)?.merchantKey : undefined)
   const { allMap } = useAllCategories()
   const cat = tx ? (allMap[tx.categoryId] ?? CATEGORIES['other']) : null
 
@@ -205,7 +207,7 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
 
               {/* Icon + amount */}
               <div className="flex flex-col items-center gap-3 mb-6">
-                <MerchantLogo merchantKey={tx.merchantKey} categoryId={tx.categoryId} customIcon={displayIcon} size={64} />
+                <MerchantLogo merchantKey={merchantKey} categoryId={tx.categoryId} customIcon={displayIcon} size={64} />
                 <AmountDisplay amount={tx.amount} size="lg" />
                 <p className="text-base font-semibold text-white/90 text-center leading-snug">
                   {displayLabel || tx.counterparty || tx.description || '–'}

@@ -8,7 +8,7 @@ interface MerchantInfo {
 const MERCHANTS: MerchantInfo[] = [
   // Groceries
   { name: 'REWE',         domain: 'rewe.de',          keywords: ['rewe'],                           categoryOverride: 'groceries' },
-  { name: 'EDEKA',        domain: 'edeka.de',          keywords: ['edeka'],                          categoryOverride: 'groceries' },
+  { name: 'EDEKA',        domain: 'edeka.de',          keywords: ['edeka', 'edk*e', 'e center', 'edeka center'], categoryOverride: 'groceries' },
   { name: 'ALDI',         domain: 'aldi.de',           keywords: ['aldi'],                           categoryOverride: 'groceries' },
   { name: 'LIDL',         domain: 'lidl.de',           keywords: ['lidl'],                           categoryOverride: 'groceries' },
   { name: 'Penny',        domain: 'penny.de',          keywords: ['penny'],                          categoryOverride: 'groceries' },
