@@ -113,7 +113,7 @@ export function CategoryManageModal({ open, onClose }: Props) {
                   boxShadow: '0 40px 20px 20px rgba(10,10,10,0.7), 0 10px 20px 10px rgba(10,10,10,0.7)',
                 }}
               >
-                <Plus id="icon-catmgr-new" size={14} />
+                <Plus id="icon-catmgr-new" size={15} />
                 Neue Kategorie
               </button>
             </motion.div>
