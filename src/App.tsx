@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Routes, Route } from 'react-router-dom'
 import { TransactionsProvider } from './context/TransactionsContext'
 import { AppShell } from './components/layout/AppShell'
 import { Dashboard } from './pages/Dashboard'
@@ -7,7 +7,7 @@ import { Settings } from './pages/Settings'
 
 export default function App() {
   return (
-    <BrowserRouter basename="/FinAnts">
+    <HashRouter>
       <TransactionsProvider>
         <Routes>
           <Route element={<AppShell />}>
@@ -17,6 +17,6 @@ export default function App() {
           </Route>
         </Routes>
       </TransactionsProvider>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
