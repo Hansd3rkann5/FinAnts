@@ -11,7 +11,7 @@ compatibility_date = "2025-01-01"
 
 [vars]
 # Replace with your actual GitHub Pages URL after deploying
-ALLOWED_ORIGIN = "https://hansd3rkann5.github.io"
+ALLOWED_ORIGIN = "*"
 
 [[r2_buckets]]
 binding = "ICONS"

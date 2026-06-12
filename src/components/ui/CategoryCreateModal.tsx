@@ -1,4 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { useModalRegistration } from '@/hooks/useModalRegistration'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Check, RotateCcw, Upload, Loader } from 'lucide-react'
 import type { Category } from '@/types'
@@ -43,13 +45,26 @@ interface Props {
   open: boolean
   onClose: () => void
   onSave: (cat: Omit<Category, 'id'>) => void
+  editItem?: Category
+  onUpdate?: (id: string, patch: Omit<Category, 'id'>) => void
 }
 
-export function CategoryCreateModal({ open, onClose, onSave }: Props) {
+export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate }: Props) {
+  useModalRegistration(open)
   const [label, setLabel] = useState('')
   const [color, setColor] = useState(COLOR_PRESETS[6])
   const [icon, setIcon] = useState<string>('🏷️')
   const [iconTab, setIconTab] = useState<'emoji' | 'upload'>('emoji')
+
+  useEffect(() => {
+    if (open && editItem) {
+      setLabel(editItem.label)
+      setColor(editItem.color)
+      setIcon(editItem.icon)
+      setIconTab(editItem.icon.startsWith('data:') || editItem.icon.startsWith('http') ? 'upload' : 'emoji')
+      setUploadError('')
+    }
+  }, [open, editItem])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -70,7 +85,11 @@ export function CategoryCreateModal({ open, onClose, onSave }: Props) {
   function handleSave() {
     const name = label.trim()
     if (!name) return
-    onSave({ label: name, icon, color })
+    if (editItem && onUpdate) {
+      onUpdate(editItem.id, { label: name, icon, color })
+    } else {
+      onSave({ label: name, icon, color })
+    }
     reset()
     onClose()
   }
@@ -95,7 +114,7 @@ export function CategoryCreateModal({ open, onClose, onSave }: Props) {
 
   const isPhoto = icon.startsWith('data:') || icon.startsWith('http')
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -104,7 +123,7 @@ export function CategoryCreateModal({ open, onClose, onSave }: Props) {
             id="modal-cat-backdrop"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md"
+            className="absolute inset-0 z-50 bg-black/60 backdrop-blur-md"
             onClick={handleClose}
           />
           <motion.div
@@ -113,7 +132,7 @@ export function CategoryCreateModal({ open, onClose, onSave }: Props) {
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
             onClick={e => e.stopPropagation()}
-            className="fixed bottom-0 left-0 right-0 z-[51] rounded-t-4xl border-t border-white/10 pb-safe flex flex-col max-h-[88dvh]"
+            className="absolute bottom-0 left-0 right-0 z-51 rounded-t-4xl border-t border-white/10 pb-safe flex flex-col max-h-[88svh]"
             style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)' }}
           >
             <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
@@ -121,7 +140,7 @@ export function CategoryCreateModal({ open, onClose, onSave }: Props) {
             <div className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-sm font-semibold text-white/80">Neue Kategorie</h3>
+                <h3 className="text-sm font-semibold text-white/80">{editItem ? 'Kategorie bearbeiten' : 'Neue Kategorie'}</h3>
                 <button onClick={handleClose} className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
                   <X size={15} />
                 </button>
@@ -240,13 +259,14 @@ export function CategoryCreateModal({ open, onClose, onSave }: Props) {
                     onClick={handleSave}
                     disabled={!label.trim()}
                     className="flex-1 py-2.5 rounded-card bg-purple-600/80 hover:bg-purple-600 disabled:opacity-40 disabled:pointer-events-none text-sm text-white font-medium flex items-center justify-center gap-1.5 transition-colors"
-                  ><Check size={14} />Erstellen</button>
+                  ><Check size={14} />{editItem ? 'Speichern' : 'Erstellen'}</button>
                 </div>
               </div>
             </div>
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

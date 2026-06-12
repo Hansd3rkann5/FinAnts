@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import type { CategorySummary } from '@/types'
 import { useAllCategories } from '@/hooks/useAllCategories'
 
@@ -11,21 +11,6 @@ function formatEur(v: number) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
 }
 
-function CustomTooltip({ active, payload, allMap }: { active?: boolean; payload?: { payload: CategorySummary }[]; allMap: Record<string, { icon: string; label: string }> }) {
-  if (!active || !payload?.length) return null
-  const item = payload[0].payload
-  const cat = allMap[item.categoryId]
-  if (!cat) return null
-  return (
-    <div className="bg-[#1c1c28]/95 backdrop-blur-sm border border-white/10 rounded-card_sm px-3 py-2 text-xs">
-      <div className="flex items-center gap-1.5 mb-1">
-        <span>{cat.icon}</span>
-        <span className="font-medium text-white">{cat.label}</span>
-      </div>
-      <div className="text-white/60">{formatEur(item.total)} · {item.count} Buchungen</div>
-    </div>
-  )
-}
 
 export function CategoryPieChart({ categories }: Props) {
   const [activeIndex, setActiveIndex] = useState(0)
@@ -63,6 +48,8 @@ export function CategoryPieChart({ categories }: Props) {
               onClick={(_, index) => setActiveIndex(index)}
               paddingAngle={2}
               strokeWidth={0}
+              animationDuration={400}
+              animationEasing="ease-out"
             >
               {data.map((entry, i) => (
                 <Cell
@@ -73,7 +60,6 @@ export function CategoryPieChart({ categories }: Props) {
                 />
               ))}
             </Pie>
-            <Tooltip content={<CustomTooltip allMap={allMap} />} />
           </PieChart>
         </ResponsiveContainer>
 
@@ -90,10 +76,11 @@ export function CategoryPieChart({ categories }: Props) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div id="category-legend" className="flex flex-col gap-1.5" style={{ paddingBottom: '5px' }}>
         {data.slice(0, 7).map((item, i) => (
           <button
             key={item.categoryId}
+            id={`category-legend-item-${item.categoryId}`}
             onClick={() => setActiveIndex(i)}
             className="flex items-center gap-2 w-full text-left transition-opacity duration-150 active:opacity-70"
           >
@@ -111,9 +98,6 @@ export function CategoryPieChart({ categories }: Props) {
             <span className="text-xs text-white/40 w-10 text-right">{item.percentage.toFixed(0)}%</span>
           </button>
         ))}
-        {data.length > 7 && (
-          <p className="text-xs text-white/30 pl-4">+{data.length - 7} weitere Kategorien</p>
-        )}
       </div>
     </div>
   )

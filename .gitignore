@@ -23,6 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Local dev version counter
+.dev-version
+
 # Cloudflare Worker secrets (never commit)
 worker/.dev.vars
 worker/node_modules

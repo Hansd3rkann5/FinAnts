@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { TrendingDown, TrendingUp, RefreshCw, ChevronDown, ChevronUp, Landmark, Plus, X } from 'lucide-react'
+import { TrendingDown, TrendingUp, RefreshCw, ChevronDown, ChevronUp, Landmark, Pencil } from 'lucide-react'
 import type { TimeFilter, Transaction } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions, useBalanceSummary } from '@/hooks/useFilteredTransactions'
@@ -9,28 +9,38 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { CategoryPieChart } from '@/components/charts/CategoryPieChart'
 import { BalanceBar } from '@/components/charts/BalanceBar'
-import { TransactionList } from '@/components/transactions/TransactionList'
-import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
-import { CategoryCreateModal } from '@/components/ui/CategoryCreateModal'
+import { CategoryManageModal } from '@/components/ui/CategoryManageModal'
+import { CategoryBreakdownModal } from '@/components/ui/CategoryBreakdownModal'
+import { RecurringModal } from '@/components/ui/RecurringModal'
 import { AccountCard } from '@/components/ui/AccountCard'
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 
 function formatEur(v: number, maximumFractionDigits = 0) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
 }
 
 export function Dashboard() {
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('month')
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>(
+    () => (localStorage.getItem('dash-time-filter') as TimeFilter) ?? 'month'
+  )
+
+  function handleTimeFilter(v: TimeFilter) {
+    setTimeFilter(v)
+    localStorage.setItem('dash-time-filter', v)
+  }
   const [showAccounts, setShowAccounts] = useState(false)
-  const [selected, setSelected] = useState<Transaction | null>(null)
-  const [createCatOpen, setCreateCatOpen] = useState(false)
-  const { transactions, recurringGroups, updateCategory, updateTransaction, customCategories, addCustomCategory, deleteCustomCategory } = useTransactionsCtx()
+  const [catManageOpen, setCatManageOpen] = useState(false)
+  const [catBreakdownOpen, setCatBreakdownOpen] = useState(false)
+  const [recurringOpen, setRecurringOpen] = useState(false)
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
+  const { transactions, recurringGroups, updateTransaction } = useTransactionsCtx()
   const { accounts, toggleIncluded, totalWealth } = useAccounts()
   const filtered = useFilteredTransactions(transactions, timeFilter)
   const summary = useBalanceSummary(filtered)
 
   return (
     <div id="page-dashboard" className="flex flex-col gap-4">
-      <TimeFilterBar value={timeFilter} onChange={setTimeFilter} />
+      <TimeFilterBar value={timeFilter} onChange={handleTimeFilter} id="dash" />
 
       {accounts.length > 0 && (
         <GlassCard id="card-wealth" glow="purple">
@@ -127,36 +137,14 @@ export function Dashboard() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-white/70">Kategorien</h2>
           <button
-            id="btn-add-category"
-            onClick={() => setCreateCatOpen(true)}
+            id="btn-manage-categories"
+            onClick={() => setCatManageOpen(true)}
             className="w-7 h-7 rounded-full bg-white/6 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors active:scale-90"
           >
-            <Plus size={14} />
+            <Pencil size={13} />
           </button>
         </div>
 
-        {customCategories.length > 0 && (
-          <div id="custom-categories-list" className="flex flex-wrap gap-1.5 mb-4">
-            {customCategories.map(cat => (
-              <div
-                key={cat.id}
-                data-component="custom-category-chip"
-                data-category-id={cat.id}
-                className="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-pill border text-xs"
-                style={{ backgroundColor: `${cat.color}18`, borderColor: `${cat.color}40`, color: cat.color }}
-              >
-                <span>{cat.icon}</span>
-                <span className="font-medium">{cat.label}</span>
-                <button
-                  onClick={() => deleteCustomCategory(cat.id)}
-                  className="ml-0.5 w-4 h-4 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity"
-                >
-                  <X size={9} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
 
         {summary.categories.length > 0 ? (
           <CategoryPieChart categories={summary.categories} />
@@ -166,6 +154,13 @@ export function Dashboard() {
             <p className="text-xs">Noch keine Ausgaben im Zeitraum</p>
           </div>
         )}
+        <button
+          id="btn-category-breakdown"
+          onClick={() => setCatBreakdownOpen(true)}
+          className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-1 border-t border-white/6"
+        >
+          {`Alle anzeigen (${new Set(transactions.map(t => t.categoryId)).size})`}
+        </button>
       </GlassCard>
 
       {recurringGroups.length > 0 && (
@@ -189,35 +184,38 @@ export function Dashboard() {
                 </p>
               </div>
             ))}
-            {recurringGroups.length > 4 && (
-              <p className="text-xs text-white/30 text-center">+{recurringGroups.length - 4} weitere</p>
-            )}
           </div>
+          <button
+            id="btn-recurring-all"
+            onClick={() => setRecurringOpen(true)}
+            className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-2 border-t border-white/6"
+          >
+            {recurringGroups.length > 4 ? `Alle anzeigen (+${recurringGroups.length - 4})` : 'Alle anzeigen'}
+          </button>
         </GlassCard>
       )}
 
-      <div id="recent-transactions">
-        <h2 className="text-sm font-semibold text-white/50 mb-3">Letzte Buchungen</h2>
-        <TransactionList
-          transactions={filtered.slice(0, 20)}
-          onCategoryChange={updateCategory}
-          onTransactionClick={setSelected}
-        />
-      </div>
 
+      <CategoryManageModal
+        open={catManageOpen}
+        onClose={() => setCatManageOpen(false)}
+      />
+      <CategoryBreakdownModal
+        open={catBreakdownOpen}
+        onClose={() => setCatBreakdownOpen(false)}
+        onTransactionSelect={tx => { setCatBreakdownOpen(false); setSelectedTx(tx) }}
+      />
       <TransactionDetailModal
-        transaction={selected}
-        onClose={() => setSelected(null)}
+        transaction={selectedTx}
+        onClose={() => setSelectedTx(null)}
         onUpdate={(id, patch) => {
           updateTransaction(id, patch)
-          setSelected(prev => prev ? { ...prev, ...patch } : null)
+          setSelectedTx(prev => prev ? { ...prev, ...patch } : null)
         }}
       />
-
-      <CategoryCreateModal
-        open={createCatOpen}
-        onClose={() => setCreateCatOpen(false)}
-        onSave={addCustomCategory}
+      <RecurringModal
+        open={recurringOpen}
+        onClose={() => setRecurringOpen(false)}
       />
     </div>
   )

@@ -60,6 +60,15 @@ export function useTransactions() {
     })
   }, [recurringGroups])
 
+  const batchUpdateCategory = useCallback((ids: string[], categoryId: Transaction['categoryId']) => {
+    const idSet = new Set(ids)
+    setTransactions(prev => {
+      const updated = prev.map(t => idSet.has(t.id) ? { ...t, categoryId } : t)
+      saveToStorage(updated, recurringGroups)
+      return updated
+    })
+  }, [recurringGroups])
+
   const updateTransaction = useCallback((id: string, patch: Partial<Pick<Transaction, 'categoryId' | 'customLabel' | 'customIcon'>>) => {
     setTransactions(prev => {
       const updated = prev.map(t => t.id === id ? { ...t, ...patch } : t)
@@ -68,6 +77,14 @@ export function useTransactions() {
     })
   }, [recurringGroups])
 
+  const removeRecurringGroup = useCallback((id: string) => {
+    setRecurringGroups(prev => {
+      const next = prev.filter(g => g.id !== id)
+      saveToStorage(transactions, next)
+      return next
+    })
+  }, [transactions])
+
   const clearAll = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(STORAGE_GROUPS_KEY)
@@ -75,5 +92,5 @@ export function useTransactions() {
     setRecurringGroups([])
   }, [])
 
-  return { transactions, recurringGroups, isLoaded, importTransactions, updateCategory, updateTransaction, clearAll }
+  return { transactions, recurringGroups, isLoaded, importTransactions, updateCategory, batchUpdateCategory, updateTransaction, removeRecurringGroup, clearAll }
 }

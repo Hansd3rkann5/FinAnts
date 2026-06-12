@@ -93,7 +93,7 @@ export function findMerchant(text: string): MerchantMatch | null {
       return {
         merchantKey: m.domain,
         name: m.name,
-        logoUrl: `https://logo.clearbit.com/${m.domain}`,
+        logoUrl: `https://img.logo.dev/${m.domain}?size=128&format=png`,
         categoryOverride: m.categoryOverride,
       }
     }
@@ -102,5 +102,5 @@ export function findMerchant(text: string): MerchantMatch | null {
 }
 
 export function getLogoUrl(domain: string): string {
-  return `https://logo.clearbit.com/${domain}`
+  return `https://img.logo.dev/${domain}?size=128&format=png`
 }

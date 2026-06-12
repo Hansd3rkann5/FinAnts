@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, List, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { clsx } from 'clsx'
+import { useModalContext } from '@/context/ModalContext'
 
 const TABS = [
   { to: '/',             label: 'Übersicht',    Icon: LayoutDashboard },
@@ -10,21 +11,31 @@ const TABS = [
 ]
 
 export function BottomNav() {
+  const { anyModalOpen } = useModalContext()
   return (
-    <nav id="bottom-nav" className="fixed bottom-0 left-0 right-0 z-30 pb-safe">
+    <motion.nav
+      id="bottom-nav"
+      className="absolute bottom-0 w-full z-30"
+      style={{ paddingBottom: 0 }}
+      initial={{ y: 0 }}
+      animate={{ y: anyModalOpen ? '100%' : 0 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+    >
       <div
         id="nav-glass"
-        className="absolute top-0 bottom-0 left-3 right-3 rounded-t-[35px] overflow-hidden"
+        className="absolute top-0 bottom-0 left-4 right-4 rounded-t-[35px]"
         style={{
-          background: 'rgba(8, 8, 14, 0.82)',
-          backdropFilter: 'blur(1px)',
-          WebkitBackdropFilter: 'blur(1px)',
+          backdropFilter: 'blur(5px)',
+          WebkitBackdropFilter: 'blur(5px)',
         }}
       />
-      <div id="nav-pill" className="relative mx-3 mb-3 rounded-pill bg-white/[0.04] border border-white/[0.08] flex"
+      <div id="nav-pill" className="relative mb-4 rounded-pill bg-white/[0.04] border border-white/[0.08] flex"
         style={{
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
+          backgroundColor: 'rgba(30, 30, 30, 0.7)',
+          backdropFilter: 'blur(1px)',
+          WebkitBackdropFilter: 'blur(1px)',
+          marginInline: '14px',
+          boxShadow: '0 4px 24px 10px rgba(10,10,10,0.8), 0 1px 80px 10px rgba(10,10,10,0.8)',
         }}
       >
         {TABS.map(({ to, label, Icon }) => (
@@ -60,6 +71,6 @@ export function BottomNav() {
           </NavLink>
         ))}
       </div>
-    </nav>
+    </motion.nav>
   )
 }

@@ -1,28 +1,33 @@
+import { useLocation } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
-import { Outlet, useLocation } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { Dashboard } from '@/pages/Dashboard'
+import { Transactions } from '@/pages/Transactions'
+import { Settings } from '@/pages/Settings'
+
+const TABS = [
+  { path: '/',             Component: Dashboard,    scrollId: 'page-scroll-dashboard'    },
+  { path: '/transactions', Component: Transactions, scrollId: 'page-scroll-transactions' },
+  { path: '/settings',     Component: Settings,     scrollId: 'page-scroll-settings'     },
+]
 
 export function AppShell() {
-  const location = useLocation()
+  const { pathname } = useLocation()
 
   return (
-    <div id="app-shell" className="h-full bg-bg-base text-white flex flex-col">
+    <div id="app-shell" className="flex-1 min-h-0 bg-bg-base text-white flex flex-col">
       <div id="safe-area-top" className="h-safe-top" />
 
-      <main id="app-main" className="flex-1 overflow-hidden relative">
-        <AnimatePresence initial={false}>
-          <motion.div
-            id="page-scroll"
-            key={location.pathname}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1, zIndex: 1 }}
-            exit={{ opacity: 0, zIndex: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+      <main id="app-main" className="flex-1 overflow-hidden relative" style={{ height: '100vh' }}>
+        {TABS.map(({ path, Component, scrollId }) => (
+          <div
+            key={path}
+            id={scrollId}
             className="absolute inset-0 overflow-y-auto overscroll-contain px-4 pt-4 pb-24"
+            style={{ display: pathname === path ? 'block' : 'none' }}
           >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+            <Component />
+          </div>
+        ))}
       </main>
 
       <BottomNav />

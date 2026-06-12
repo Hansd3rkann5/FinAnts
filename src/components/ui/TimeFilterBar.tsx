@@ -11,9 +11,10 @@ const OPTIONS: { label: string; value: TimeFilter }[] = [
 interface Props {
   value: TimeFilter
   onChange: (v: TimeFilter) => void
+  id?: string
 }
 
-export function TimeFilterBar({ value, onChange }: Props) {
+export function TimeFilterBar({ value, onChange, id = 'default' }: Props) {
   return (
     <div className="relative flex rounded-pill bg-white/[0.05] border border-white/[0.08] p-1 gap-0.5">
       {OPTIONS.map(opt => (
@@ -25,7 +26,7 @@ export function TimeFilterBar({ value, onChange }: Props) {
         >
           {value === opt.value && (
             <motion.span
-              layoutId="time-filter-pill"
+              layoutId={`time-filter-pill-${id}`}
               className="absolute inset-0 rounded-pill bg-gradient-to-r from-purple-600/70 to-blue-600/70 border border-purple-500/30"
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
             />

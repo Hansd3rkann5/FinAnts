@@ -1,4 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { useModalRegistration } from '@/hooks/useModalRegistration'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
@@ -68,7 +70,8 @@ interface Props {
 }
 
 export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: Props) {
-  const { merchantProfiles, upsertProfile, transactions } = useTransactionsCtx()
+  useModalRegistration(tx !== null)
+  const { merchantProfiles, upsertProfile, transactions, batchUpdateCategory } = useTransactionsCtx()
   const profile = tx ? resolveProfile(tx, merchantProfiles) : null
 
   const [editing, setEditing] = useState(false)
@@ -108,6 +111,11 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
 
   function cancelEdit() { setEditing(false) }
 
+  function handleClose() {
+    setEditing(false)
+    onClose()
+  }
+
   function save() {
     if (!tx) return
     const ms = matchString.trim()
@@ -116,6 +124,17 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
         label: label.trim() || undefined,
         customIcon: icon,
       })
+      // Apply category to all existing matching transactions
+      const m = ms.toLowerCase()
+      const matchingIds = transactions
+        .filter(t => {
+          const text = `${t.counterparty} ${t.description}`.toLowerCase()
+          return matchMode === 'exact'
+            ? t.counterparty.toLowerCase() === m
+            : text.includes(m)
+        })
+        .map(t => t.id)
+      batchUpdateCategory(matchingIds, category)
     }
     // Clear per-transaction overrides — profile now drives display
     onUpdate(tx.id, { customLabel: undefined, customIcon: undefined, categoryId: category })
@@ -150,7 +169,7 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
   const { allMap } = useAllCategories()
   const cat = tx ? (allMap[tx.categoryId] ?? CATEGORIES['other']) : null
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {tx && (
         <>
@@ -159,8 +178,8 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
             id="modal-tx-backdrop"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-md"
-            onClick={onClose}
+            className="absolute inset-0 z-40 bg-black/60 backdrop-blur-md"
+            onClick={handleClose}
           />
           <motion.div
             key="tx-sheet"
@@ -168,10 +187,10 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
             onClick={e => e.stopPropagation()}
-            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-4xl border-t border-white/10 pb-safe flex flex-col max-h-[92dvh]"
+            className="absolute bottom-0 left-0 right-0 z-50 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[92svh]"
             style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)' }}
           >
-            <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
+            <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-0 shrink-0" />
 
             <div className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
               {/* Header */}
@@ -179,7 +198,7 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
                 <span className="text-xs text-white/30 uppercase tracking-wider">
                   {tx.isPending ? 'Ausstehend' : format(tx.date, 'EEEE, dd. MMMM yyyy', { locale: de })}
                 </span>
-                <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
+                <button onClick={handleClose} className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
                   <X size={15} />
                 </button>
               </div>
@@ -214,18 +233,39 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
               </div>
 
               {/* Edit button */}
-              {!editing && (
-                <button
-                  onClick={openEdit}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-card border border-white/10 bg-white/4 text-sm text-white/70 hover:text-white/90 hover:bg-white/[0.07] transition-colors active:scale-[0.98]"
-                >
-                  <Pencil size={14} />
-                  Bearbeiten
-                </button>
-              )}
+              <AnimatePresence initial={false}>
+                {!editing && (
+                  <motion.button
+                    key="edit-btn"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    onClick={openEdit}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-card border border-white/10 bg-white/4 text-sm text-white/70 hover:text-white/90 hover:bg-white/[0.07] active:scale-[0.98]"
+                  >
+                    <Pencil size={14} />
+                    Bearbeiten
+                  </motion.button>
+                )}
+              </AnimatePresence>
 
               {/* ── Edit form ── */}
+              <AnimatePresence initial={false}>
               {editing && (
+                <motion.div
+                  key="edit-form"
+                  initial={{ height: 0 }}
+                  animate={{ height: 'auto' }}
+                  exit={{ height: 0 }}
+                  transition={{ duration: 0.68, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  className="overflow-hidden"
+                >
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.45, delay: 0.15 }}
+                >
                 <div className="flex flex-col gap-5">
                   {/* Label */}
                   <div>
@@ -371,11 +411,15 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
                     ><Check size={14} />Speichern</button>
                   </div>
                 </div>
+                </motion.div>
+                </motion.div>
               )}
+              </AnimatePresence>
             </div>
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

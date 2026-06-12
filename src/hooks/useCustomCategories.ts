@@ -33,6 +33,17 @@ export function useCustomCategories() {
     })
   }, [])
 
+  const upsertCategory = useCallback((id: string, patch: Omit<Category, 'id'>) => {
+    setCustomCategories(prev => {
+      const exists = prev.some(c => c.id === id)
+      const next = exists
+        ? prev.map(c => c.id === id ? { ...c, ...patch } : c)
+        : [...prev, { id, ...patch }]
+      save(next)
+      return next
+    })
+  }, [])
+
   const deleteCustomCategory = useCallback((id: string) => {
     setCustomCategories(prev => {
       const next = prev.filter(c => c.id !== id)
@@ -41,5 +52,5 @@ export function useCustomCategories() {
     })
   }, [])
 
-  return { customCategories, addCustomCategory, updateCustomCategory, deleteCustomCategory }
+  return { customCategories, addCustomCategory, updateCustomCategory, upsertCategory, deleteCustomCategory }
 }

@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useAllCategories } from '@/hooks/useAllCategories'
+import { useModalRegistration } from '@/hooks/useModalRegistration'
 
 interface Props {
   open: boolean
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function CategoryPicker({ open, current, onSelect, onClose }: Props) {
+  useModalRegistration(open)
   const { allList } = useAllCategories()
   return (
     <AnimatePresence>

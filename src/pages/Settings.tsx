@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
+import { DEV_VERSION } from 'virtual:dev-version'
 import { Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw, Wifi, Eye, EyeOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
@@ -339,7 +340,9 @@ export function Settings() {
         <GlassCard padding="sm">
           <p className="text-xs text-white/20 text-center">
             FinAnts · Deine Finanzen, lokal & privat
-            <span className="ml-2 text-white/10">v{__APP_VERSION__}</span>
+            <span className="ml-2 text-white/10">
+              {import.meta.env.DEV ? `V${DEV_VERSION}` : __APP_VERSION__}
+            </span>
           </p>
         </GlassCard>
       </div>

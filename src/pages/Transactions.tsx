@@ -9,6 +9,7 @@ import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { TransactionList } from '@/components/transactions/TransactionList'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { PillButton } from '@/components/ui/PillButton'
+import { PullToRefresh } from '@/components/ui/PullToRefresh'
 
 export function Transactions() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month')
@@ -37,8 +38,9 @@ export function Transactions() {
   }, [timeFiltered, filterCategory, search])
 
   return (
+    <PullToRefresh onRefresh={() => window.location.reload()}>
     <div id="page-transactions" className="flex flex-col gap-4">
-      <TimeFilterBar value={timeFilter} onChange={setTimeFilter} />
+      <TimeFilterBar value={timeFilter} onChange={setTimeFilter} id="tx" />
 
       <div id="tx-search-bar" className="relative flex items-center">
         <Search size={14} className="absolute left-3 text-white/30 pointer-events-none" />
@@ -47,7 +49,7 @@ export function Transactions() {
           placeholder="Suchen…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full rounded-pill bg-white/[0.05] border border-white/[0.08] pl-8 pr-4 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-purple-500/40 focus:bg-white/[0.07] transition-all duration-200"
+          className="w-full rounded-pill bg-white/5 border border-white/8 pl-8 pr-4 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-purple-500/40 focus:bg-white/[0.07] transition-all duration-200"
         />
         <div className="absolute right-2 flex items-center gap-1">
           {search && (
@@ -127,5 +129,6 @@ export function Transactions() {
         }}
       />
     </div>
+    </PullToRefresh>
   )
 }

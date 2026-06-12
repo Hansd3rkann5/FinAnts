@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useModalRegistration } from '@/hooks/useModalRegistration'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Smartphone, MessageSquare, Shield } from 'lucide-react'
 import { PillButton } from './PillButton'
@@ -26,6 +27,7 @@ const METHOD_ICON: Record<TanChallenge['method'], React.ReactNode> = {
 }
 
 export function PhotoTanModal({ challenge, onSubmit, onDismiss, loading = false }: Props) {
+  useModalRegistration(true)
   const [tan, setTan] = useState('')
 
   function handleSubmit(e: React.FormEvent) {
