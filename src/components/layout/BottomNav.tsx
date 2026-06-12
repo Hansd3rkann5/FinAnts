@@ -11,8 +11,17 @@ const TABS = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 pb-safe bg-bg-base">
-      <div className="mx-3 mb-3 rounded-pill bg-[#16161f]/90 backdrop-blur-glass border border-white/[0.1] flex">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 pb-safe">
+      {/* Blurred glass backdrop — same width as pill, rounded top, fills safe area */}
+      <div
+        className="absolute top-0 bottom-0 left-3 right-3 rounded-t-[28px] overflow-hidden"
+        style={{
+          background: 'rgba(8, 8, 14, 0.82)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+        }}
+      />
+      <div className="relative mx-3 mb-3 rounded-pill bg-white/[0.04] border border-white/[0.08] flex">
         {TABS.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
