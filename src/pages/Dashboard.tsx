@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TrendingDown, TrendingUp, RefreshCw, ChevronDown, ChevronUp, Landmark } from 'lucide-react'
-import type { TimeFilter } from '@/types'
+import type { TimeFilter, Transaction } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions, useBalanceSummary } from '@/hooks/useFilteredTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -10,6 +10,7 @@ import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { CategoryPieChart } from '@/components/charts/CategoryPieChart'
 import { BalanceBar } from '@/components/charts/BalanceBar'
 import { TransactionList } from '@/components/transactions/TransactionList'
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { AccountCard } from '@/components/ui/AccountCard'
 
 function formatEur(v: number, maximumFractionDigits = 0) {
@@ -19,7 +20,8 @@ function formatEur(v: number, maximumFractionDigits = 0) {
 export function Dashboard() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month')
   const [showAccounts, setShowAccounts] = useState(false)
-  const { transactions, recurringGroups, updateCategory } = useTransactionsCtx()
+  const [selected, setSelected] = useState<Transaction | null>(null)
+  const { transactions, recurringGroups, updateCategory, updateTransaction } = useTransactionsCtx()
   const { accounts, toggleIncluded, totalWealth } = useAccounts()
   const filtered = useFilteredTransactions(transactions, timeFilter)
   const summary = useBalanceSummary(filtered)
@@ -166,8 +168,18 @@ export function Dashboard() {
         <TransactionList
           transactions={filtered.slice(0, 20)}
           onCategoryChange={updateCategory}
+          onTransactionClick={setSelected}
         />
       </div>
+
+      <TransactionDetailModal
+        transaction={selected}
+        onClose={() => setSelected(null)}
+        onUpdate={(id, patch) => {
+          updateTransaction(id, patch)
+          setSelected(prev => prev ? { ...prev, ...patch } : null)
+        }}
+      />
     </div>
   )
 }

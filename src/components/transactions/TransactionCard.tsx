@@ -12,10 +12,11 @@ import { CategoryPicker } from '@/components/ui/CategoryPicker'
 interface Props {
   transaction: Transaction
   onCategoryChange?: (id: string, cat: Transaction['categoryId']) => void
+  onClick?: (tx: Transaction) => void
   index?: number
 }
 
-export function TransactionCard({ transaction: tx, onCategoryChange, index = 0 }: Props) {
+export function TransactionCard({ transaction: tx, onCategoryChange, onClick, index = 0 }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false)
 
   return (
@@ -24,18 +25,21 @@ export function TransactionCard({ transaction: tx, onCategoryChange, index = 0 }
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1], delay: Math.min(index * 0.04, 0.3) }}
-        className="flex items-center gap-3 p-3 rounded-card_sm bg-white/[0.03] border border-white/[0.06] active:bg-white/[0.07] transition-colors duration-100"
+        onClick={() => onClick?.(tx)}
+        className="flex items-center gap-3 p-3 rounded-card_sm bg-white/3 border border-white/6 active:bg-white/[0.07] transition-colors duration-100 cursor-pointer"
       >
-        <MerchantLogo merchantKey={tx.merchantKey} categoryId={tx.categoryId} size={42} />
+        <MerchantLogo merchantKey={tx.merchantKey} categoryId={tx.categoryId} customIcon={tx.customIcon} size={42} />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-sm font-medium text-white/90 truncate leading-tight">
-                {tx.counterparty || tx.description || '–'}
+                {tx.customLabel || tx.counterparty || tx.description || '–'}
               </p>
               <p className="text-xs text-white/40 truncate mt-0.5 leading-tight">
-                {tx.description !== tx.counterparty ? tx.description : ''}
+                {tx.customLabel
+                  ? (tx.counterparty || tx.description || '')
+                  : (tx.description !== tx.counterparty ? tx.description : '')}
               </p>
             </div>
             <AmountDisplay amount={tx.amount} size="sm" className="shrink-0 mt-0.5" />

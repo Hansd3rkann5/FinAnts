@@ -38,6 +38,8 @@ export interface Transaction {
   isRecurring?: boolean
   recurringGroupId?: string
   isPending?: boolean
+  customLabel?: string
+  customIcon?: string  // emoji or data URL
 }
 
 export interface Account {

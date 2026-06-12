@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
 import { Search, X, SlidersHorizontal } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { TimeFilter, CategoryId } from '@/types'
+import type { TimeFilter, CategoryId, Transaction } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions } from '@/hooks/useFilteredTransactions'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { TransactionList } from '@/components/transactions/TransactionList'
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { CATEGORY_LIST } from '@/data/categories'
 import { PillButton } from '@/components/ui/PillButton'
 
@@ -14,7 +15,8 @@ export function Transactions() {
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState<CategoryId | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
-  const { transactions, updateCategory } = useTransactionsCtx()
+  const [selected, setSelected] = useState<Transaction | null>(null)
+  const { transactions, updateCategory, updateTransaction } = useTransactionsCtx()
 
   const timeFiltered = useFilteredTransactions(transactions, timeFilter)
 
@@ -110,7 +112,21 @@ export function Transactions() {
         {displayed.length} Buchung{displayed.length !== 1 ? 'en' : ''}
       </p>
 
-      <TransactionList transactions={displayed} onCategoryChange={updateCategory} />
+      <TransactionList
+        transactions={displayed}
+        onCategoryChange={updateCategory}
+        onTransactionClick={setSelected}
+      />
+
+      <TransactionDetailModal
+        transaction={selected}
+        onClose={() => setSelected(null)}
+        onUpdate={(id, patch) => {
+          updateTransaction(id, patch)
+          // Keep modal open with updated data
+          setSelected(prev => prev ? { ...prev, ...patch } : null)
+        }}
+      />
     </div>
   )
 }

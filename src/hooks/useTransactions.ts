@@ -60,6 +60,14 @@ export function useTransactions() {
     })
   }, [recurringGroups])
 
+  const updateTransaction = useCallback((id: string, patch: Partial<Pick<Transaction, 'categoryId' | 'customLabel' | 'customIcon'>>) => {
+    setTransactions(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, ...patch } : t)
+      saveToStorage(updated, recurringGroups)
+      return updated
+    })
+  }, [recurringGroups])
+
   const clearAll = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(STORAGE_GROUPS_KEY)
@@ -67,5 +75,5 @@ export function useTransactions() {
     setRecurringGroups([])
   }, [])
 
-  return { transactions, recurringGroups, isLoaded, importTransactions, updateCategory, clearAll }
+  return { transactions, recurringGroups, isLoaded, importTransactions, updateCategory, updateTransaction, clearAll }
 }
