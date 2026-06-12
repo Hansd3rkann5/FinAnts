@@ -2,11 +2,43 @@ import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { X, Pencil, Check, RotateCcw, Upload } from 'lucide-react'
+import { X, Pencil, Check, RotateCcw, Upload, Loader } from 'lucide-react'
 import type { Transaction, CategoryId } from '@/types'
 import { CATEGORIES, CATEGORY_LIST } from '@/data/categories'
 import { MerchantLogo } from './MerchantLogo'
 import { AmountDisplay } from '@/components/ui/AmountDisplay'
+import { loadWorkerConfig } from '@/hooks/useWorkerSync'
+
+async function resizeToWebP(file: File, maxPx = 192): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const objUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      const scale = Math.min(maxPx / img.width, maxPx / img.height, 1)
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(objUrl)
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/webp', 0.88)
+    }
+    img.onerror = reject
+    img.src = objUrl
+  })
+}
+
+async function uploadIcon(blob: Blob, workerUrl: string, apiKey: string): Promise<string> {
+  const res = await fetch(`${workerUrl.replace(/\/$/, '')}/upload-icon`, {
+    method: 'POST',
+    headers: { 'Content-Type': blob.type, 'X-Api-Key': apiKey },
+    body: blob,
+  })
+  if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
+  const data = await res.json() as { url: string }
+  return data.url
+}
 
 const EMOJI_PRESETS = [
   '🛒','🍕','🍔','🍣','🍜','🥐','☕','🍷','🥤',
@@ -32,6 +64,8 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
   const [category, setCategory] = useState<CategoryId>('other')
   const [icon, setIcon] = useState<string | undefined>(undefined)
   const [iconTab, setIconTab] = useState<'emoji' | 'upload'>('emoji')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   function openEdit() {
@@ -56,15 +90,29 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
     setEditing(false)
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      setIcon(ev.target?.result as string)
-    }
-    reader.readAsDataURL(file)
     e.target.value = ''
+    setUploadError('')
+    setUploading(true)
+    try {
+      const blob = await resizeToWebP(file)
+      const cfg = loadWorkerConfig()
+      if (cfg?.workerUrl && cfg?.apiKey) {
+        const url = await uploadIcon(blob, cfg.workerUrl, cfg.apiKey)
+        setIcon(url)
+      } else {
+        // No worker configured — fall back to base64 in localStorage
+        const reader = new FileReader()
+        reader.onload = ev => setIcon(ev.target?.result as string)
+        reader.readAsDataURL(blob)
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload fehlgeschlagen')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const cat = tx ? CATEGORIES[tx.categoryId] : null
@@ -236,7 +284,12 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
 
                     {iconTab === 'upload' && (
                       <div className="flex flex-col items-center gap-3">
-                        {icon?.startsWith('data:') ? (
+                        {uploading ? (
+                          <div className="flex flex-col items-center gap-2 p-6 text-white/40">
+                            <Loader size={20} className="animate-spin" />
+                            <span className="text-xs">Wird hochgeladen…</span>
+                          </div>
+                        ) : (icon?.startsWith('data:') || icon?.startsWith('http')) ? (
                           <div className="relative">
                             <img src={icon} alt="" className="w-20 h-20 rounded-card object-cover" />
                             <button
@@ -254,6 +307,9 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
                             <Upload size={20} />
                             <span className="text-xs">Bild auswählen</span>
                           </button>
+                        )}
+                        {uploadError && (
+                          <p className="text-xs text-red-400/80 text-center">{uploadError}</p>
                         )}
                         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                       </div>
