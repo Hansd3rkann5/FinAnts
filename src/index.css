@@ -53,21 +53,18 @@
   }
 
   html {
-    /* fill entire screen including areas behind notch + home indicator on iOS */
-    height: 100%;
-    height: -webkit-fill-available;
-    width: 100%;
-    overflow: hidden;
     background: #0a0a0f;
   }
 
   body {
+    /* position:fixed + inset:0 anchors body to the true viewport on iOS Safari,
+       bypassing the ambiguous 100%/dvh calculations that leave gaps */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     margin: 0;
-    height: 100%;
-    /* dvh shrinks/grows as Safari chrome hides/shows; fill-available covers older iOS */
-    min-height: 100dvh;
-    min-height: -webkit-fill-available;
-    width: 100%;
     overflow: hidden;
     background: #0a0a0f;
     color: #fff;
@@ -78,10 +75,8 @@
   }
 
   #root {
-    height: 100%;
-    min-height: 100dvh;
-    min-height: -webkit-fill-available;
     width: 100%;
+    height: 100%;
     overflow: hidden;
     display: flex;
     flex-direction: column;

@@ -6,7 +6,7 @@ export function AppShell() {
   const location = useLocation()
 
   return (
-    <div id="app-shell" className="h-full min-h-dvh bg-bg-base text-white flex flex-col">
+    <div id="app-shell" className="h-full bg-bg-base text-white flex flex-col">
       <div id="safe-area-top" className="h-safe-top" />
 
       <main id="app-main" className="flex-1 overflow-hidden relative">
