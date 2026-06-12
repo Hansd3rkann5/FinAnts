@@ -20,7 +20,11 @@ export function BottomNav() {
           WebkitBackdropFilter: 'blur(14px)',
         }}
       />
-      <div id="nav-pill" className="relative mx-3 mb-3 rounded-pill bg-white/[0.04] border border-white/[0.08] flex">
+      <div id="nav-pill" className="relative mx-3 mb-3 rounded-pill bg-white/[0.04] border border-white/[0.08] flex"
+      style={{
+          WebkitBackdropFilter: 'blur(14px)',
+        }}
+      >
         {TABS.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
