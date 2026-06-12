@@ -118,7 +118,7 @@ export function CategoryCreateModal({ open, onClose, onSave }: Props) {
           >
             <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
 
-            <div className="overflow-y-auto flex-1 px-5 pt-3 pb-6">
+            <div className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-sm font-semibold text-white/80">Neue Kategorie</h3>

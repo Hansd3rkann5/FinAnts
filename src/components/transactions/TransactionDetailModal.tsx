@@ -173,7 +173,7 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
           >
             <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
 
-            <div className="overflow-y-auto flex-1 px-5 pt-3 pb-6">
+            <div className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-5">
                 <span className="text-xs text-white/30 uppercase tracking-wider">
