@@ -369,6 +369,7 @@ export function Settings() {
         <GlassCard padding="sm">
           <p className="text-xs text-white/20 text-center">
             FinAnts · Deine Finanzen, lokal & privat
+            <span className="ml-2 text-white/10">v{__APP_VERSION__}</span>
           </p>
         </GlassCard>
       </div>
