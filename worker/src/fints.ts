@@ -363,11 +363,11 @@ const DEFAULT_URL = 'https://fints.commerzbank.de/fints'
 
 function buildSecHdr(pos: number, secFun: string, secRef: string, blz: string, name: string): string {
   const now = new Date()
-  return `HNSHK:${pos}:4+998+${secFun}+${secRef}+1+1+1::0+1+1:${fmtDate(now)}:${fmtTime(now)}+1:999:1+1:999:1+280:${blz}+${esc(name)}+J'`
+  return `HNSHK:${pos}:4+998:${secFun}+${secRef}+1+1+1::0+1+1:${fmtDate(now)}:${fmtTime(now)}+1:999:1+6:10:16+280:${blz}:${esc(name)}:V:0:0'`
 }
 
 function buildSecFtr(pos: number, secRef: string, pin: string, tan?: string): string {
-  return `HNSHA:${pos}:2+${secRef}++${esc(pin)}${tan ? '+' + esc(tan) : ''}'`
+  return `HNSHA:${pos}:2+${secRef}++${esc(pin)}${tan ? ':' + esc(tan) : ''}'`
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
