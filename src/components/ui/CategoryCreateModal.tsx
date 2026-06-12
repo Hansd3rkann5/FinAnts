@@ -2,14 +2,20 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalRegistration } from '@/hooks/useModalRegistration'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Check, RotateCcw, Upload, Loader } from 'lucide-react'
+import { X, Check, RotateCcw, Upload, Loader, Pipette } from 'lucide-react'
 import type { Category } from '@/types'
 
-const COLOR_PRESETS = [
+const COLOR_PRESETS_ROW1 = [
   '#f87171', '#fb923c', '#fbbf24', '#a3e635',
   '#34d399', '#22d3ee', '#60a5fa', '#a78bfa',
   '#f472b6', '#94a3b8',
 ]
+
+const COLOR_PRESETS_ROW2 = [
+  '#e879f9', '#2dd4bf', '#818cf8', '#fcd34d', '#f43f5e',
+]
+
+const ALL_PRESETS = [...COLOR_PRESETS_ROW1, ...COLOR_PRESETS_ROW2]
 
 const EMOJI_PRESETS = [
   '🏷️','⭐','🔖','🎯','💎','🌟','🔥','💡','🎁','🌈',
@@ -52,7 +58,7 @@ interface Props {
 export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate }: Props) {
   useModalRegistration(open)
   const [label, setLabel] = useState('')
-  const [color, setColor] = useState(COLOR_PRESETS[6])
+  const [color, setColor] = useState(COLOR_PRESETS_ROW1[6])
   const [icon, setIcon] = useState<string>('🏷️')
   const [iconTab, setIconTab] = useState<'emoji' | 'upload'>('emoji')
 
@@ -68,10 +74,13 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const colorInputRef = useRef<HTMLInputElement>(null)
+
+  const isCustomColor = !ALL_PRESETS.includes(color)
 
   function reset() {
     setLabel('')
-    setColor(COLOR_PRESETS[6])
+    setColor(COLOR_PRESETS_ROW1[6])
     setIcon('🏷️')
     setIconTab('emoji')
     setUploadError('')
@@ -176,19 +185,60 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
                 {/* Color */}
                 <div>
                   <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-2">Farbe</label>
-                  <div className="flex flex-wrap gap-2">
-                    {COLOR_PRESETS.map(c => (
-                      <button
-                        key={c}
-                        onClick={() => setColor(c)}
-                        className="w-8 h-8 rounded-full transition-all active:scale-90"
-                        style={{
-                          backgroundColor: c,
-                          boxShadow: color === c ? `0 0 0 2px rgba(0,0,0,0.4), 0 0 0 4px ${c}` : undefined,
-                          transform: color === c ? 'scale(1.15)' : undefined,
-                        }}
-                      />
-                    ))}
+                  <div className="flex flex-col gap-2">
+                    <div className="grid grid-cols-5 gap-2">
+                      {COLOR_PRESETS_ROW1.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => setColor(c)}
+                          className="w-8 h-8 rounded-full transition-all active:scale-90"
+                          style={{
+                            backgroundColor: c,
+                            boxShadow: color === c ? `0 0 0 2px rgba(0,0,0,0.4), 0 0 0 4px ${c}` : undefined,
+                            transform: color === c ? 'scale(1.15)' : undefined,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      {COLOR_PRESETS_ROW2.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => setColor(c)}
+                          className="w-8 h-8 rounded-full transition-all active:scale-90"
+                          style={{
+                            backgroundColor: c,
+                            boxShadow: color === c ? `0 0 0 2px rgba(0,0,0,0.4), 0 0 0 4px ${c}` : undefined,
+                            transform: color === c ? 'scale(1.15)' : undefined,
+                          }}
+                        />
+                      ))}
+                      {/* Custom color picker */}
+                      <div className="relative">
+                        <button
+                          onClick={() => colorInputRef.current?.click()}
+                          className="w-8 h-8 rounded-full transition-all active:scale-90 flex items-center justify-center overflow-hidden"
+                          style={{
+                            background: isCustomColor
+                              ? color
+                              : 'conic-gradient(from 0deg, #f87171, #fbbf24, #a3e635, #34d399, #60a5fa, #a78bfa, #f472b6, #f87171)',
+                            boxShadow: isCustomColor ? `0 0 0 2px rgba(0,0,0,0.4), 0 0 0 4px ${color}` : undefined,
+                            transform: isCustomColor ? 'scale(1.15)' : undefined,
+                          }}
+                        >
+                          {!isCustomColor && (
+                            <Pipette size={13} className="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]" />
+                          )}
+                        </button>
+                        <input
+                          ref={colorInputRef}
+                          type="color"
+                          value={color}
+                          onChange={e => setColor(e.target.value)}
+                          className="absolute inset-0 opacity-0 pointer-events-none w-0 h-0"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
