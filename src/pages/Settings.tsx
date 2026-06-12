@@ -269,36 +269,6 @@ export function Settings() {
           </GlassCard>
         )}
 
-        {/* ── Einrichtung ──────────────────────────────────────────────────── */}
-        <GlassCard>
-          <h2 className="text-sm font-semibold text-white/80 mb-3">Worker einrichten</h2>
-          <ol className="flex flex-col gap-2 text-xs text-white/50">
-            {[
-              'Cloudflare-Konto anlegen auf cloudflare.com (kostenlos)',
-              'Node.js installieren, dann: npm install -g wrangler',
-              'wrangler login  (öffnet Browser für Anmeldung)',
-              'In den worker/ Ordner des Projekts wechseln',
-              'npm install  (Worker-Abhängigkeiten installieren)',
-              'Secrets setzen (Befehle im README)',
-              'wrangler deploy  → Worker-URL erscheint',
-              'URL + API Key hier eintragen und „Speichern"',
-            ].map((step, i) => (
-              <li key={i} className="flex items-start gap-2">
-                <span className="w-4 h-4 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[10px] flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-                {step}
-              </li>
-            ))}
-          </ol>
-
-          <div className="mt-3 p-3 rounded-card_sm bg-black/20 border border-white/6 font-mono text-[10px] text-white/40 leading-5">
-            <p className="text-white/20 mb-1"># Secrets setzen (im worker/ Ordner ausführen):</p>
-            <p>wrangler secret put FINTS_BLZ</p>
-            <p>wrangler secret put FINTS_USERNAME</p>
-            <p>wrangler secret put FINTS_PIN</p>
-            <p>wrangler secret put API_KEY</p>
-          </div>
-        </GlassCard>
-
         {/* ── CSV-Import ─────────────────────────────────────────────────── */}
         <GlassCard>
           <h2 className="text-sm font-semibold text-white/80 mb-1">CSV-Import (manuell)</h2>
