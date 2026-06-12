@@ -1,21 +1,20 @@
 import { useState } from 'react'
-import { CATEGORIES } from '@/data/categories'
-import type { CategoryId } from '@/types'
+import { useAllCategories } from '@/hooks/useAllCategories'
 import { getLogoUrl } from '@/utils/merchantLogos'
 
 interface Props {
   merchantKey?: string
-  categoryId: CategoryId
+  categoryId: string
   customIcon?: string
   size?: number
 }
 
 export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }: Props) {
   const [error, setError] = useState(false)
-  const cat = CATEGORIES[categoryId]
+  const { allMap } = useAllCategories()
+  const cat = allMap[categoryId] ?? allMap['other']
 
-  // Custom image (data URL)
-  if (customIcon?.startsWith('data:')) {
+  if (customIcon?.startsWith('data:') || customIcon?.startsWith('http')) {
     return (
       <div
         className="shrink-0 rounded-card_sm overflow-hidden flex items-center justify-center"
@@ -26,7 +25,6 @@ export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }:
     )
   }
 
-  // Custom emoji
   if (customIcon) {
     return (
       <div
@@ -44,7 +42,6 @@ export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }:
     )
   }
 
-  // Brand logo
   if (merchantKey && !error) {
     return (
       <div
@@ -63,7 +60,6 @@ export function MerchantLogo({ merchantKey, categoryId, customIcon, size = 40 }:
     )
   }
 
-  // Category icon fallback
   return (
     <div
       className="shrink-0 rounded-card_sm flex items-center justify-center text-lg"

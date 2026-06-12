@@ -1,17 +1,20 @@
 import { createContext, useContext } from 'react'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useMerchantProfiles } from '@/hooks/useMerchantProfiles'
+import { useCustomCategories } from '@/hooks/useCustomCategories'
 
 type TransactionsCtx =
   ReturnType<typeof useTransactions> &
-  ReturnType<typeof useMerchantProfiles>
+  ReturnType<typeof useMerchantProfiles> &
+  ReturnType<typeof useCustomCategories>
 
 const Ctx = createContext<TransactionsCtx | null>(null)
 
 export function TransactionsProvider({ children }: { children: React.ReactNode }) {
   const transactions = useTransactions()
   const profiles = useMerchantProfiles()
-  return <Ctx.Provider value={{ ...transactions, ...profiles }}>{children}</Ctx.Provider>
+  const categories = useCustomCategories()
+  return <Ctx.Provider value={{ ...transactions, ...profiles, ...categories }}>{children}</Ctx.Provider>
 }
 
 export function useTransactionsCtx() {

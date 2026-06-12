@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { TrendingDown, TrendingUp, RefreshCw, ChevronDown, ChevronUp, Landmark } from 'lucide-react'
+import { TrendingDown, TrendingUp, RefreshCw, ChevronDown, ChevronUp, Landmark, Plus, X } from 'lucide-react'
 import type { TimeFilter, Transaction } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions, useBalanceSummary } from '@/hooks/useFilteredTransactions'
@@ -11,6 +11,7 @@ import { CategoryPieChart } from '@/components/charts/CategoryPieChart'
 import { BalanceBar } from '@/components/charts/BalanceBar'
 import { TransactionList } from '@/components/transactions/TransactionList'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
+import { CategoryCreateModal } from '@/components/ui/CategoryCreateModal'
 import { AccountCard } from '@/components/ui/AccountCard'
 
 function formatEur(v: number, maximumFractionDigits = 0) {
@@ -21,7 +22,8 @@ export function Dashboard() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month')
   const [showAccounts, setShowAccounts] = useState(false)
   const [selected, setSelected] = useState<Transaction | null>(null)
-  const { transactions, recurringGroups, updateCategory, updateTransaction } = useTransactionsCtx()
+  const [createCatOpen, setCreateCatOpen] = useState(false)
+  const { transactions, recurringGroups, updateCategory, updateTransaction, customCategories, addCustomCategory, deleteCustomCategory } = useTransactionsCtx()
   const { accounts, toggleIncluded, totalWealth } = useAccounts()
   const filtered = useFilteredTransactions(transactions, timeFilter)
   const summary = useBalanceSummary(filtered)
@@ -125,13 +127,49 @@ export function Dashboard() {
         </GlassCard>
       </div>
 
-      {/* Category pie chart */}
-      {summary.categories.length > 0 && (
-        <GlassCard>
-          <h2 className="text-sm font-semibold text-white/70 mb-4">Ausgaben nach Kategorie</h2>
+      {/* Category frame */}
+      <GlassCard>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-white/70">Kategorien</h2>
+          <button
+            onClick={() => setCreateCatOpen(true)}
+            className="w-7 h-7 rounded-full bg-white/6 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors active:scale-90"
+          >
+            <Plus size={14} />
+          </button>
+        </div>
+
+        {/* Custom categories */}
+        {customCategories.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {customCategories.map(cat => (
+              <div
+                key={cat.id}
+                className="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-pill border text-xs"
+                style={{ backgroundColor: `${cat.color}18`, borderColor: `${cat.color}40`, color: cat.color }}
+              >
+                <span>{cat.icon}</span>
+                <span className="font-medium">{cat.label}</span>
+                <button
+                  onClick={() => deleteCustomCategory(cat.id)}
+                  className="ml-0.5 w-4 h-4 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity"
+                >
+                  <X size={9} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {summary.categories.length > 0 ? (
           <CategoryPieChart categories={summary.categories} />
-        </GlassCard>
-      )}
+        ) : (
+          <div className="flex flex-col items-center gap-2 py-8 text-white/25">
+            <span className="text-2xl">📊</span>
+            <p className="text-xs">Noch keine Ausgaben im Zeitraum</p>
+          </div>
+        )}
+      </GlassCard>
 
       {/* Recurring standing orders */}
       {recurringGroups.length > 0 && (
@@ -179,6 +217,12 @@ export function Dashboard() {
           updateTransaction(id, patch)
           setSelected(prev => prev ? { ...prev, ...patch } : null)
         }}
+      />
+
+      <CategoryCreateModal
+        open={createCatOpen}
+        onClose={() => setCreateCatOpen(false)}
+        onSave={addCustomCategory}
       />
     </div>
   )

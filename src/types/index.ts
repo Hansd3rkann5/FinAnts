@@ -18,7 +18,7 @@ export type CategoryId =
   | 'other'
 
 export interface Category {
-  id: CategoryId
+  id: string
   label: string
   color: string
   icon: string
@@ -33,7 +33,7 @@ export interface Transaction {
   counterparty: string
   iban?: string
   reference?: string
-  categoryId: CategoryId
+  categoryId: string
   merchantKey?: string
   isRecurring?: boolean
   recurringGroupId?: string
@@ -76,7 +76,7 @@ export interface RecurringGroup {
 export type TimeFilter = 'week' | 'month' | 'year' | 'all'
 
 export interface CategorySummary {
-  categoryId: CategoryId
+  categoryId: string
   total: number
   count: number
   percentage: number

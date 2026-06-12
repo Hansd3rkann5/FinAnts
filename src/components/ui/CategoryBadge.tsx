@@ -1,16 +1,17 @@
-import type { CategoryId } from '@/types'
-import { CATEGORIES } from '@/data/categories'
 import { clsx } from 'clsx'
+import { useAllCategories } from '@/hooks/useAllCategories'
 
 interface Props {
-  categoryId: CategoryId
+  categoryId: string
   size?: 'sm' | 'md'
   showLabel?: boolean
   onClick?: () => void
 }
 
 export function CategoryBadge({ categoryId, size = 'md', showLabel = true, onClick }: Props) {
-  const cat = CATEGORIES[categoryId]
+  const { allMap } = useAllCategories()
+  const cat = allMap[categoryId]
+  if (!cat) return null
   return (
     <button
       onClick={onClick}

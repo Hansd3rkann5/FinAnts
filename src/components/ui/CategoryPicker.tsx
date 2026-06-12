@@ -1,16 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
-import { CATEGORY_LIST } from '@/data/categories'
-import type { CategoryId } from '@/types'
+import { useAllCategories } from '@/hooks/useAllCategories'
 
 interface Props {
   open: boolean
-  current: CategoryId
-  onSelect: (id: CategoryId) => void
+  current: string
+  onSelect: (id: string) => void
   onClose: () => void
 }
 
 export function CategoryPicker({ open, current, onSelect, onClose }: Props) {
+  const { allList } = useAllCategories()
   return (
     <AnimatePresence>
       {open && (
@@ -37,7 +37,7 @@ export function CategoryPicker({ open, current, onSelect, onClose }: Props) {
               </button>
             </div>
             <div className="p-4 grid grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto">
-              {CATEGORY_LIST.map(cat => (
+              {allList.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => { onSelect(cat.id); onClose() }}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import type { CategorySummary } from '@/types'
-import { CATEGORIES } from '@/data/categories'
+import { useAllCategories } from '@/hooks/useAllCategories'
 
 interface Props {
   categories: CategorySummary[]
@@ -11,10 +11,11 @@ function formatEur(v: number) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
 }
 
-function CustomTooltip({ active, payload }: { active?: boolean; payload?: { payload: CategorySummary }[] }) {
+function CustomTooltip({ active, payload, allMap }: { active?: boolean; payload?: { payload: CategorySummary }[]; allMap: Record<string, { icon: string; label: string }> }) {
   if (!active || !payload?.length) return null
   const item = payload[0].payload
-  const cat = CATEGORIES[item.categoryId]
+  const cat = allMap[item.categoryId]
+  if (!cat) return null
   return (
     <div className="bg-[#1c1c28]/95 backdrop-blur-sm border border-white/10 rounded-card_sm px-3 py-2 text-xs">
       <div className="flex items-center gap-1.5 mb-1">
@@ -28,12 +29,15 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: { payl
 
 export function CategoryPieChart({ categories }: Props) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const { allMap } = useAllCategories()
 
-  const data = categories.map(c => ({
-    ...c,
-    name: CATEGORIES[c.categoryId].label,
-    color: CATEGORIES[c.categoryId].color,
-  }))
+  const data = categories
+    .filter(c => allMap[c.categoryId])
+    .map(c => ({
+      ...c,
+      name: allMap[c.categoryId].label,
+      color: allMap[c.categoryId].color,
+    }))
 
   if (data.length === 0) {
     return (
@@ -45,7 +49,6 @@ export function CategoryPieChart({ categories }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Center label overlaid via absolute positioning */}
       <div className="relative">
         <ResponsiveContainer width="100%" height={220}>
           <PieChart>
@@ -70,11 +73,10 @@ export function CategoryPieChart({ categories }: Props) {
                 />
               ))}
             </Pie>
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip allMap={allMap} />} />
           </PieChart>
         </ResponsiveContainer>
 
-        {/* Center label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-sm font-semibold text-white/90 text-center px-2 leading-tight">
             {data[activeIndex]?.name ?? ''}
@@ -88,7 +90,6 @@ export function CategoryPieChart({ categories }: Props) {
         </div>
       </div>
 
-      {/* Legend */}
       <div className="flex flex-col gap-1.5">
         {data.slice(0, 7).map((item, i) => (
           <button

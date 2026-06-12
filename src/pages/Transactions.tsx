@@ -1,19 +1,20 @@
 import { useState, useMemo } from 'react'
 import { Search, X, SlidersHorizontal } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { TimeFilter, CategoryId, Transaction } from '@/types'
+import type { TimeFilter, Transaction } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions } from '@/hooks/useFilteredTransactions'
+import { useAllCategories } from '@/hooks/useAllCategories'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { TransactionList } from '@/components/transactions/TransactionList'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
-import { CATEGORY_LIST } from '@/data/categories'
 import { PillButton } from '@/components/ui/PillButton'
 
 export function Transactions() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month')
   const [search, setSearch] = useState('')
-  const [filterCategory, setFilterCategory] = useState<CategoryId | null>(null)
+  const [filterCategory, setFilterCategory] = useState<string | null>(null)
+  const { allList } = useAllCategories()
   const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Transaction | null>(null)
   const { transactions, updateCategory, updateTransaction } = useTransactionsCtx()
@@ -87,7 +88,7 @@ export function Transactions() {
               >
                 Alle
               </PillButton>
-              {CATEGORY_LIST.map(cat => (
+              {allList.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => setFilterCategory(filterCategory === cat.id ? null : cat.id)}

@@ -1,6 +1,6 @@
 import type { Category, CategoryId } from '@/types'
 
-export const CATEGORIES: Record<CategoryId, Category> = {
+export const CATEGORIES: Record<string, Category> = {
   groceries:     { id: 'groceries',     label: 'Lebensmittel',   color: '#22c55e', icon: '🛒' },
   dining:        { id: 'dining',        label: 'Restaurants',    color: '#f97316', icon: '🍽️' },
   transport:     { id: 'transport',     label: 'Mobilität',      color: '#3b82f6', icon: '🚗' },

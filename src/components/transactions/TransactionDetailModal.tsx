@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { X, Pencil, Check, RotateCcw, Upload, Loader } from 'lucide-react'
-import type { Transaction, CategoryId } from '@/types'
-import { CATEGORIES, CATEGORY_LIST } from '@/data/categories'
+import type { Transaction } from '@/types'
+import { CATEGORIES } from '@/data/categories'
+import { useAllCategories } from '@/hooks/useAllCategories'
 import { MerchantLogo } from './MerchantLogo'
 import { AmountDisplay } from '@/components/ui/AmountDisplay'
 import { loadWorkerConfig } from '@/hooks/useWorkerSync'
@@ -72,7 +73,8 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
 
   const [editing, setEditing] = useState(false)
   const [label, setLabel] = useState('')
-  const [category, setCategory] = useState<CategoryId>('other')
+  const [category, setCategory] = useState<string>('other')
+  const { allList } = useAllCategories()
   const [icon, setIcon] = useState<string | undefined>(undefined)
   const [iconTab, setIconTab] = useState<'emoji' | 'upload'>('emoji')
   const [uploading, setUploading] = useState(false)
@@ -145,7 +147,8 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
 
   const displayIcon  = tx?.customIcon  ?? profile?.customIcon
   const displayLabel = tx?.customLabel ?? profile?.label
-  const cat = tx ? CATEGORIES[tx.categoryId] : null
+  const { allMap } = useAllCategories()
+  const cat = tx ? (allMap[tx.categoryId] ?? CATEGORIES['other']) : null
 
   return (
     <AnimatePresence>
@@ -238,7 +241,7 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
                   <div>
                     <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-1.5">Kategorie</label>
                     <div className="grid grid-cols-4 gap-1.5">
-                      {CATEGORY_LIST.map(c => (
+                      {allList.map(c => (
                         <button key={c.id} onClick={() => setCategory(c.id)}
                           className="flex flex-col items-center gap-1 p-2 rounded-card_sm border text-center transition-all duration-100 active:scale-95"
                           style={{
