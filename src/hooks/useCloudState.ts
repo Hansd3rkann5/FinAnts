@@ -50,8 +50,13 @@ export function useCloudSync() {
   const [message, setMessage] = useState('')
   const [lastSync, setLastSync] = useState<string | null>(() => localStorage.getItem(LAST_CLOUD_SYNC_KEY))
 
-  const push = useCallback(async () => {
-    const cfg = loadWorkerConfig()
+  function resolveConfig(override?: { workerUrl: string; apiKey: string }) {
+    if (override?.workerUrl && override?.apiKey) return override
+    return loadWorkerConfig()
+  }
+
+  const push = useCallback(async (override?: { workerUrl: string; apiKey: string }) => {
+    const cfg = resolveConfig(override)
     if (!cfg) { setStatus('error'); setMessage('Worker nicht konfiguriert'); return }
     setStatus('pushing')
     setMessage('')
@@ -81,8 +86,8 @@ export function useCloudSync() {
     }
   }, [ctx])
 
-  const pull = useCallback(async () => {
-    const cfg = loadWorkerConfig()
+  const pull = useCallback(async (override?: { workerUrl: string; apiKey: string }) => {
+    const cfg = resolveConfig(override)
     if (!cfg) { setStatus('error'); setMessage('Worker nicht konfiguriert'); return }
     setStatus('pulling')
     setMessage('')

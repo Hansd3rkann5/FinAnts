@@ -276,7 +276,7 @@ export function Settings() {
               size="sm"
               disabled={cloudStatus === 'pushing' || cloudStatus === 'pulling'}
               icon={<CloudUpload size={13} className={cloudStatus === 'pushing' ? 'animate-pulse' : ''} />}
-              onClick={cloudPush}
+              onClick={() => cloudPush(workerUrl && apiKey ? { workerUrl, apiKey } : undefined)}
             >
               {cloudStatus === 'pushing' ? 'Lädt…' : 'Hochladen'}
             </PillButton>
@@ -285,7 +285,7 @@ export function Settings() {
               size="sm"
               disabled={cloudStatus === 'pushing' || cloudStatus === 'pulling'}
               icon={<CloudDownload size={13} className={cloudStatus === 'pulling' ? 'animate-pulse' : ''} />}
-              onClick={cloudPull}
+              onClick={() => cloudPull(workerUrl && apiKey ? { workerUrl, apiKey } : undefined)}
             >
               {cloudStatus === 'pulling' ? 'Lädt…' : 'Herunterladen'}
             </PillButton>
