@@ -14,7 +14,7 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-30 pb-safe">
       {/* Blurred glass backdrop — same width as pill, rounded top, fills safe area */}
       <div
-        className="absolute top-0 bottom-0 left-3 right-3 rounded-t-[28px] overflow-hidden"
+        className="absolute top-0 bottom-0 left-3 right-3 rounded-t-[35px] overflow-hidden"
         style={{
           background: 'rgba(8, 8, 14, 0.82)',
           backdropFilter: 'blur(24px)',
