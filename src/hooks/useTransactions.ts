@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Transaction, RecurringGroup } from '@/types'
 import { detectRecurring } from '@/utils/recurringDetector'
-import { MOCK_TRANSACTIONS } from '@/utils/mockData'
 
 const STORAGE_KEY = 'finants_transactions'
 const STORAGE_GROUPS_KEY = 'finants_recurring_groups'
@@ -34,37 +33,24 @@ export function useTransactions() {
 
   useEffect(() => {
     const stored = loadFromStorage()
-    if (stored.transactions.length > 0) {
-      setTransactions(stored.transactions)
-      setRecurringGroups(stored.groups)
-    } else {
-      const { transactions: annotated, groups } = detectRecurring(MOCK_TRANSACTIONS)
-      setTransactions(annotated)
-      setRecurringGroups(groups)
-      saveToStorage(annotated, groups)
+    // Wipe leftover mock data from previous sessions
+    if (stored.transactions.some(t => t.id.startsWith('mock-'))) {
+      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(STORAGE_GROUPS_KEY)
+      setIsLoaded(true)
+      return
     }
+    setTransactions(stored.transactions)
+    setRecurringGroups(stored.groups)
     setIsLoaded(true)
   }, [])
 
   const importTransactions = useCallback((raw: Transaction[]) => {
-    const merged = [...raw]
-    const existingIds = new Set(transactions.map(t => t.id))
-    const existing = transactions.filter(t => existingIds.has(t.id))
-
-    const combined = [...merged, ...existing].sort((a, b) => b.date.getTime() - a.date.getTime())
-    const deduped = combined.filter((t, i, arr) =>
-      i === arr.findIndex(x =>
-        x.date.getTime() === t.date.getTime() &&
-        Math.abs(x.amount - t.amount) < 0.01 &&
-        x.counterparty === t.counterparty
-      )
-    )
-
-    const { transactions: annotated, groups } = detectRecurring(deduped)
+    const { transactions: annotated, groups } = detectRecurring(raw)
     setTransactions(annotated)
     setRecurringGroups(groups)
     saveToStorage(annotated, groups)
-  }, [transactions])
+  }, [])
 
   const updateCategory = useCallback((id: string, categoryId: Transaction['categoryId']) => {
     setTransactions(prev => {
@@ -77,9 +63,8 @@ export function useTransactions() {
   const clearAll = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(STORAGE_GROUPS_KEY)
-    const { transactions: annotated, groups } = detectRecurring(MOCK_TRANSACTIONS)
-    setTransactions(annotated)
-    setRecurringGroups(groups)
+    setTransactions([])
+    setRecurringGroups([])
   }, [])
 
   return { transactions, recurringGroups, isLoaded, importTransactions, updateCategory, clearAll }
