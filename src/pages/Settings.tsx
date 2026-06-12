@@ -338,12 +338,15 @@ export function Settings() {
         </GlassCard>
 
         <GlassCard padding="sm">
-          <p className="text-xs text-white/20 text-center">
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full text-xs text-white/20 text-center active:opacity-50 transition-opacity"
+          >
             FinAnts · Deine Finanzen, lokal & privat
             <span className="ml-2 text-white/10">
               {import.meta.env.DEV ? `V${DEV_VERSION}` : __APP_VERSION__}
             </span>
-          </p>
+          </button>
         </GlassCard>
       </div>
     </>
