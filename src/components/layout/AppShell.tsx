@@ -13,7 +13,7 @@ export function AppShell() {
   const title = PAGE_TITLES[location.pathname] ?? 'FinAnts'
 
   return (
-    <div className="min-h-screen bg-bg-base text-white flex flex-col">
+    <div className="h-full bg-bg-base text-white flex flex-col">
       {/* Status-bar spacer (iPhone notch) */}
       <div className="h-safe-top bg-bg-base/80 backdrop-blur-glass" />
 

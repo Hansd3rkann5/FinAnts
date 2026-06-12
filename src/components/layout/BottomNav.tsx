@@ -11,7 +11,7 @@ const TABS = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 pb-safe bg-bg-base">
       <div className="mx-3 mb-3 rounded-pill bg-[#16161f]/90 backdrop-blur-glass border border-white/[0.1] flex">
         {TABS.map(({ to, label, Icon }) => (
           <NavLink
