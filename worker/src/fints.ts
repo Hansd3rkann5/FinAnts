@@ -363,7 +363,7 @@ const DEFAULT_URL = 'https://fints.commerzbank.de/fints'
 
 function buildSecHdr(pos: number, secFun: string, secRef: string, blz: string, name: string): string {
   const now = new Date()
-  return `HNSHK:${pos}:4+998:${secFun}+${secRef}+1+1+1::0+1+1:${fmtDate(now)}:${fmtTime(now)}+1:999:1+6:10:16+280:${blz}:${esc(name)}:V:0:0'`
+  return `HNSHK:${pos}:4+998:1+${secFun}+${secRef}+1+1+1::0+1+1:${fmtDate(now)}:${fmtTime(now)}+1:999:1+6:10:16+280:${blz}:${esc(name)}:S:0:0'`
 }
 
 function buildSecFtr(pos: number, secRef: string, pin: string, tan?: string): string {
@@ -438,50 +438,67 @@ export async function syncAll(
     }
   }
 
-  // ── Authenticated dialog ──────────────────────────────────────────────────
-  const dialogId = pendingDialogId ?? '0'
-  const secRef = pendingSecRef ? pendingSecRef + 1 : 1
-  const secRefStr = String(secRef)
   const fromStr = fmtDate(fromDate)
   const toStr   = fmtDate(toDate)
+  let secRef = pendingSecRef ? pendingSecRef + 1 : 1
 
-  console.log('[FinTS] auth dialog → secFun:', resolvedSecFun, 'from:', fromStr, 'to:', toStr)
+  // ── Step 1: Dialog-Init ───────────────────────────────────────────────────
+  // When resuming with a TAN, the dialog is already open — skip init.
+  let dialogId = pendingDialogId ?? '0'
+  let initSegs2: FinTSSegment[] = []
 
-  const authSegs: string[] = [
-    buildSecHdr(2, resolvedSecFun, secRefStr, blz, name),
-    `HKIDN:3:2+280:${blz}+${esc(name)}+0+1'`,
-    `HKVVB:4:3+0+0+0+FinAnts+1.0'`,
-    `HKSAL:5:7+::${blz}+J+'`,
-    `HKKAZ:6:7+::${blz}+J+${fromStr}+${toStr}++'`,
-    buildSecFtr(7, secRefStr, cfg.pin, tan),
-  ]
+  if (!pendingDialogId) {
+    console.log('[FinTS] dialog-init → secFun:', resolvedSecFun)
+    const initMsg = buildMessage('0', 1,
+      buildSecHdr(2, resolvedSecFun, String(secRef), blz, name),
+      `HKIDN:3:2+280:${blz}+${esc(name)}+0+1'`,
+      `HKVVB:4:3+0+0+0+FinAnts+1.0'`,
+      buildSecFtr(5, String(secRef), cfg.pin),
+    )
+    const initResp = await httpPost(url, initMsg)
+    initSegs2 = parseResponse(initResp)
+    console.log('[FinTS] init segments:', initSegs2.map(s => `${s.name}:${s.version}`).join(' '))
+    for (const s of initSegs2.filter(s => s.name === 'HIRMG' || s.name === 'HIRMS')) {
+      for (const f of s.fields) {
+        const p = splitDEG(f)
+        console.log(`[FinTS] init ${s.name} code ${p[0]}: ${unesc(p[2] ?? '')}`)
+      }
+    }
+    assertNoError(initSegs2)
+    dialogId = getDialogId(initSegs2)
+    secRef++
+    console.log('[FinTS] dialog opened, id:', dialogId)
+  }
 
-  const authMsg = buildMessage(dialogId, 1, ...authSegs)
-  let authResp: string
+  // ── Step 2: Send jobs ─────────────────────────────────────────────────────
+  console.log('[FinTS] jobs → secFun:', resolvedSecFun, 'from:', fromStr, 'to:', toStr)
+  const jobMsg = buildMessage(dialogId, 2,
+    buildSecHdr(2, resolvedSecFun, String(secRef), blz, name),
+    `HKSAL:3:7+::0+J'`,
+    `HKKAZ:4:7+::0+J+${fromStr}+${toStr}++'`,
+    buildSecFtr(5, String(secRef), cfg.pin, tan),
+  )
+  let jobResp: string
   try {
-    authResp = await httpPost(url, authMsg)
+    jobResp = await httpPost(url, jobMsg)
   } catch (e) {
-    console.error('[FinTS] auth httpPost threw:', String(e))
+    console.error('[FinTS] jobs httpPost threw:', String(e))
     throw e
   }
-  console.log('[FinTS] auth raw response len:', authResp.length, '| preview:', JSON.stringify(authResp.slice(0, 120)))
-  const authSegs2 = parseResponse(authResp)
+  console.log('[FinTS] jobs raw response len:', jobResp.length, '| preview:', JSON.stringify(jobResp.slice(0, 120)))
+  const jobSegs = parseResponse(jobResp)
+  console.log('[FinTS] jobs segments:', jobSegs.map(s => `${s.name}:${s.version}`).join(' '))
 
-  console.log('[FinTS] auth response segments:', authSegs2.map(s => `${s.name}:${s.version}`).join(' '))
-
-  // Log HIRMG/HIRMS codes for visibility
-  for (const s of authSegs2.filter(s => s.name === 'HIRMG' || s.name === 'HIRMS')) {
+  for (const s of jobSegs.filter(s => s.name === 'HIRMG' || s.name === 'HIRMS')) {
     for (const f of s.fields) {
       const p = splitDEG(f)
-      console.log(`[FinTS] ${s.name} code ${p[0]}: ${unesc(p[2] ?? '')}`)
+      console.log(`[FinTS] jobs ${s.name} code ${p[0]}: ${unesc(p[2] ?? '')}`)
     }
   }
 
-  // Check for TAN challenge (HITAN)
-  const challengeData = parseHITAN(authSegs2)
-  const authDialogId = getDialogId(authSegs2)
-
-  console.log('[FinTS] HITAN found:', !!challengeData, challengeData ? `method=${challengeData.method} orderRef=${challengeData.orderRef}` : '')
+  // Check for TAN challenge
+  const challengeData = parseHITAN(jobSegs)
+  console.log('[FinTS] HITAN found:', !!challengeData, challengeData ? `method=${challengeData.method}` : '')
 
   if (challengeData && !tan) {
     return {
@@ -489,25 +506,25 @@ export async function syncAll(
       transactions: [],
       challenge: {
         ...challengeData,
-        dialogId: authDialogId,
+        dialogId,
         secRef,
         secFun: resolvedSecFun,
       },
     }
   }
 
-  assertNoError(authSegs2)
+  assertNoError(jobSegs)
+  secRef++
 
-  // ── Parse accounts from HIUPD ─────────────────────────────────────────────
-  const accountPartials = parseHIUPD(authSegs2)
-  const balances = parseHISAL(authSegs2)
+  // ── Parse results ─────────────────────────────────────────────────────────
+  const accountPartials = parseHIUPD([...initSegs2, ...jobSegs])
+  const balances = parseHISAL(jobSegs)
   console.log('[FinTS] HIUPD accounts:', accountPartials.length, '| HISAL entries:', balances.size)
 
-  // ── Parse transactions from HIKAZ blobs; collect MT940-derived balances ──
   const allTxs: RawTransaction[] = []
   const mt940Balances = new Map<string, { balance: number; date: string; currency: string }>()
 
-  for (const seg of findSegs(authSegs2, 'HIKAZ')) {
+  for (const seg of findSegs(jobSegs, 'HIKAZ')) {
     const segIban = (splitDEG(seg.fields[0] ?? '')[0] ?? '').replace(/\s/g, '')
     for (const field of seg.fields) {
       for (const blob of extractBlobs(field)) {
@@ -524,9 +541,7 @@ export async function syncAll(
     }
   }
 
-  // Build account list: HIUPD if available, else infer from MT940
   let accounts: FinTSAccount[]
-
   if (accountPartials.length > 0) {
     accounts = accountPartials.map(a => {
       const hisal = balances.get(a.iban ?? '')
@@ -545,29 +560,21 @@ export async function syncAll(
       }
     })
   } else {
-    // No HIUPD — build minimal account entries from MT940 data
     accounts = Array.from(mt940Balances.entries()).map(([iban, bal]) => ({
-      iban,
-      blz,
-      accountNumber: '',
-      owner: name,
-      description: '',
-      type: 'giro' as const,
-      currency: bal.currency,
-      balance: bal.balance,
-      balanceDate: bal.date,
+      iban, blz, accountNumber: '', owner: name, description: '',
+      type: 'giro' as const, currency: bal.currency,
+      balance: bal.balance, balanceDate: bal.date,
     }))
   }
 
   console.log('[FinTS] result: accounts:', accounts.length, 'transactions:', allTxs.length)
 
-  // ── End dialog ────────────────────────────────────────────────────────────
-  if (authDialogId !== '0') {
-    const secRef2 = secRef + 1
-    await httpPost(url, buildMessage(authDialogId, 2,
-      buildSecHdr(2, resolvedSecFun, String(secRef2), blz, name),
-      `HKEND:3:1+${authDialogId}'`,
-      buildSecFtr(4, String(secRef2), cfg.pin),
+  // ── Step 3: Dialog-End ────────────────────────────────────────────────────
+  if (dialogId !== '0') {
+    await httpPost(url, buildMessage(dialogId, 3,
+      buildSecHdr(2, resolvedSecFun, String(secRef), blz, name),
+      `HKEND:3:1+${dialogId}'`,
+      buildSecFtr(4, String(secRef), cfg.pin),
     )).catch(() => {})
   }
 

@@ -86,6 +86,8 @@ export interface MerchantMatch {
   categoryOverride?: string
 }
 
+const LOGOS_TOKEN = import.meta.env.VITE_LOGOS_TOKEN ?? ''
+
 export function findMerchant(text: string): MerchantMatch | null {
   const lower = text.toLowerCase()
   for (const m of MERCHANTS) {
@@ -93,7 +95,7 @@ export function findMerchant(text: string): MerchantMatch | null {
       return {
         merchantKey: m.domain,
         name: m.name,
-        logoUrl: `https://img.logo.dev/${m.domain}?size=128&format=png`,
+        logoUrl: `https://img.logo.dev/${m.domain}?token=${LOGOS_TOKEN}&size=128&format=png`,
         categoryOverride: m.categoryOverride,
       }
     }
@@ -102,5 +104,5 @@ export function findMerchant(text: string): MerchantMatch | null {
 }
 
 export function getLogoUrl(domain: string): string {
-  return `https://img.logo.dev/${domain}?size=128&format=png`
+  return `https://img.logo.dev/${domain}?token=${LOGOS_TOKEN}&size=128&format=png`
 }

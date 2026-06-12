@@ -33,6 +33,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_LOGOS_TOKEN: ${{ secrets.VITE_LOGOS_TOKEN }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
