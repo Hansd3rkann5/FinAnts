@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence, rgba } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { X, Pencil, Trash2, Plus } from 'lucide-react'
 import type { Category } from '@/types'
 import { CATEGORIES } from '@/data/categories'

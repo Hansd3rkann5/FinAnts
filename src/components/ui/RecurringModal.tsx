@@ -28,7 +28,7 @@ interface Props {
 
 export function RecurringModal({ open, onClose }: Props) {
   useModalRegistration(open)
-  const { transactions, recurringGroups, removeRecurringGroup, updateCategory, updateTransaction } = useTransactionsCtx()
+  const { transactions, recurringGroups, removeRecurringGroup, updateTransaction } = useTransactionsCtx()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [selected, setSelected] = useState<Transaction | null>(null)
 
