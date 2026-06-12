@@ -16,7 +16,7 @@ export interface Env {
 function corsHeaders(origin: string): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Api-Key',
     'Access-Control-Max-Age': '86400',
   }
@@ -92,6 +92,25 @@ export default {
       await env.ICONS.put(key, body, { httpMetadata: { contentType } })
       const iconUrl = new URL(`/icon/${key}`, url.origin).toString()
       return jsonResponse({ url: iconUrl, key }, 200, cors)
+    }
+
+    // ── GET /state ─────────────────────────────────────────────────────────
+    if (request.method === 'GET' && path === '/state') {
+      if (!env.ICONS) return jsonResponse({ error: 'R2 not configured' }, 503, cors)
+      const obj = await env.ICONS.get('state/user.json')
+      if (!obj) return new Response('null', { status: 200, headers: { 'Content-Type': 'application/json', ...cors } })
+      const h = new Headers(cors)
+      h.set('Content-Type', 'application/json')
+      return new Response(obj.body, { status: 200, headers: h })
+    }
+
+    // ── PUT /state ─────────────────────────────────────────────────────────
+    if (request.method === 'PUT' && path === '/state') {
+      if (!env.ICONS) return jsonResponse({ error: 'R2 not configured' }, 503, cors)
+      const body = await request.text()
+      if (body.length > 20 * 1024 * 1024) return jsonResponse({ error: 'State too large (max 20 MB)' }, 413, cors)
+      await env.ICONS.put('state/user.json', body, { httpMetadata: { contentType: 'application/json' } })
+      return jsonResponse({ ok: true }, 200, cors)
     }
 
     let blz: string

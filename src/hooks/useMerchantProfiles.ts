@@ -57,5 +57,10 @@ export function useMerchantProfiles() {
     })
   }, [])
 
-  return { merchantProfiles, upsertProfile, deleteProfile }
+  const applyCloudProfiles = useCallback((profiles: MerchantProfile[]) => {
+    setMerchantProfiles(profiles)
+    save(profiles)
+  }, [])
+
+  return { merchantProfiles, upsertProfile, deleteProfile, applyCloudProfiles }
 }

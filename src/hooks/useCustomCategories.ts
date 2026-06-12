@@ -52,5 +52,10 @@ export function useCustomCategories() {
     })
   }, [])
 
-  return { customCategories, addCustomCategory, updateCustomCategory, upsertCategory, deleteCustomCategory }
+  const applyCloudCategories = useCallback((cats: Category[]) => {
+    setCustomCategories(cats)
+    save(cats)
+  }, [])
+
+  return { customCategories, addCustomCategory, updateCustomCategory, upsertCategory, deleteCustomCategory, applyCloudCategories }
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Transaction, RecurringGroup } from '@/types'
+import type { TxOverride } from './useCloudState'
 import { detectRecurring } from '@/utils/recurringDetector'
 
 const STORAGE_KEY = 'finants_transactions'
@@ -100,5 +101,17 @@ export function useTransactions() {
     setRecurringGroups([])
   }, [])
 
-  return { transactions, recurringGroups, isLoaded, importTransactions, updateCategory, batchUpdateCategory, updateTransaction, removeRecurringGroup, clearAll }
+  const applyTxOverrides = useCallback((overrides: Record<string, TxOverride>) => {
+    setTransactions(prev => {
+      const updated = prev.map(t => {
+        const o = overrides[t.id]
+        if (!o) return t
+        return { ...t, categoryId: o.categoryId ?? t.categoryId, customLabel: o.customLabel, customIcon: o.customIcon }
+      })
+      saveToStorage(updated, recurringGroups)
+      return updated
+    })
+  }, [recurringGroups])
+
+  return { transactions, recurringGroups, isLoaded, importTransactions, updateCategory, batchUpdateCategory, updateTransaction, removeRecurringGroup, clearAll, applyTxOverrides }
 }

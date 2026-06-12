@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { DEV_VERSION } from 'virtual:dev-version'
-import { Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw, Wifi, Eye, EyeOff } from 'lucide-react'
+import { Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw, Wifi, Eye, EyeOff, CloudUpload, CloudDownload, Cloud } from 'lucide-react'
+import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { PillButton } from '@/components/ui/PillButton'
@@ -18,7 +19,7 @@ import {
 
 type ImportStatus = 'idle' | 'parsing' | 'success' | 'error'
 
-function StatusBanner({ status, message }: { status: ImportStatus | SyncStatus; message: string }) {
+function StatusBanner({ status, message }: { status: ImportStatus | SyncStatus | CloudSyncStatus; message: string }) {
   if (status === 'idle' || status === 'challenge') return null
   return (
     <motion.div
@@ -71,6 +72,14 @@ export function Settings() {
     lastSync,
     challenge,
   } = useWorkerSync(importTransactions, setAccounts)
+
+  const {
+    push: cloudPush,
+    pull: cloudPull,
+    status: cloudStatus,
+    message: cloudMessage,
+    lastSync: cloudLastSync,
+  } = useCloudSync()
 
   useEffect(() => {
     const cfg = loadWorkerConfig()
@@ -248,6 +257,53 @@ export function Settings() {
               </p>
             )}
           </div>
+        </GlassCard>
+
+        {/* ── Cloud-Backup ──────────────────────────────────────────────── */}
+        <GlassCard>
+          <div className="flex items-center gap-2 mb-1">
+            <Cloud size={15} className="text-blue-400" />
+            <h2 className="text-sm font-semibold text-white/90">Cloud-Backup</h2>
+          </div>
+          <p className="text-xs text-white/40 mb-4">
+            Kategorien, Händler-Profile und Icons geräteübergreifend sichern.
+            Nutzt deinen konfigurierten Cloudflare Worker.
+          </p>
+
+          <div className="flex gap-2">
+            <PillButton
+              variant="secondary"
+              size="sm"
+              disabled={!configSaved || cloudStatus === 'pushing' || cloudStatus === 'pulling'}
+              icon={<CloudUpload size={13} className={cloudStatus === 'pushing' ? 'animate-pulse' : ''} />}
+              onClick={cloudPush}
+            >
+              {cloudStatus === 'pushing' ? 'Lädt…' : 'Hochladen'}
+            </PillButton>
+            <PillButton
+              variant="secondary"
+              size="sm"
+              disabled={!configSaved || cloudStatus === 'pushing' || cloudStatus === 'pulling'}
+              icon={<CloudDownload size={13} className={cloudStatus === 'pulling' ? 'animate-pulse' : ''} />}
+              onClick={cloudPull}
+            >
+              {cloudStatus === 'pulling' ? 'Lädt…' : 'Herunterladen'}
+            </PillButton>
+          </div>
+
+          <AnimatePresence>
+            {(cloudStatus === 'success' || cloudStatus === 'error') && (
+              <div className="mt-3">
+                <StatusBanner status={cloudStatus} message={cloudMessage} />
+              </div>
+            )}
+          </AnimatePresence>
+
+          {cloudLastSync && (
+            <p className="text-[10px] text-white/25 text-center mt-2">
+              Zuletzt: {cloudLastSync}
+            </p>
+          )}
         </GlassCard>
 
         {/* ── Konten & Gesamtvermögen ────────────────────────────────────── */}
