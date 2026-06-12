@@ -200,7 +200,12 @@ export function parseMT940(text: string): Transaction[] {
 }
 
 export function detectAndParse(text: string): Transaction[] {
-  if (text.includes(':20:') || text.includes(':61:')) {
+  // MT940 files start with :20: in the first line; check only the beginning
+  // to avoid false matches on `:20:` or `:61:` inside CSV description fields
+  const head = text.slice(0, 500)
+  const isMT940 = /^:20:/m.test(head) && head.includes(':61:')
+  console.log('[detectAndParse] isMT940:', isMT940, '| first 80 chars:', JSON.stringify(text.slice(0, 80)))
+  if (isMT940) {
     return parseMT940(text)
   }
   return parseCommerzbankCSV(text)
