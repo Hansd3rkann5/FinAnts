@@ -19,6 +19,7 @@ const EMOJI_PRESETS = [
   '🏠','💡','🔧','🛋️',
   '💳','💵','🏦','💰','📈',
   '🎬','🎵','⚽','🎾','📚','✏️',
+  '🚴','🏃','🧗','🌲','🌳','🏕️','🌊',
 ]
 
 async function resizeToWebP(file: File, maxPx = 192): Promise<Blob> {
