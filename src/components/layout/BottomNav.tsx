@@ -17,11 +17,13 @@ export function BottomNav() {
         className="absolute top-0 bottom-0 left-3 right-3 rounded-t-[35px] overflow-hidden"
         style={{
           background: 'rgba(8, 8, 14, 0.82)',
+          backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
         }}
       />
       <div id="nav-pill" className="relative mx-3 mb-3 rounded-pill bg-white/[0.04] border border-white/[0.08] flex"
-      style={{
+        style={{
+          backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
         }}
       >
