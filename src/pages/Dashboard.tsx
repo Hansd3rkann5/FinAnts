@@ -5,6 +5,7 @@ import type { TimeFilter, Transaction } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions, useBalanceSummary } from '@/hooks/useFilteredTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useManualBalance } from '@/hooks/useManualBalance'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { CategoryPieChart } from '@/components/charts/CategoryPieChart'
@@ -35,12 +36,34 @@ export function Dashboard() {
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
   const { transactions, recurringGroups, updateTransaction } = useTransactionsCtx()
   const { accounts, toggleIncluded, totalWealth } = useAccounts()
+  const { balance: manualBalance, updatedAt: balanceUpdatedAt } = useManualBalance()
   const filtered = useFilteredTransactions(transactions, timeFilter)
   const summary = useBalanceSummary(filtered)
 
   return (
     <div id="page-dashboard" className="flex flex-col gap-4">
       <TimeFilterBar value={timeFilter} onChange={handleTimeFilter} id="dash" />
+
+      {accounts.length === 0 && manualBalance !== null && (
+        <GlassCard id="card-manual-balance" glow="purple">
+          <div className="flex items-center gap-2 mb-1">
+            <Landmark size={14} className="text-purple-400" />
+            <p className="text-xs text-white/40">Kontostand</p>
+            {balanceUpdatedAt && (
+              <p className="ml-auto text-[10px] text-white/25">{balanceUpdatedAt}</p>
+            )}
+          </div>
+          <motion.p
+            key={manualBalance}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            className={`text-3xl font-bold ${manualBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+          >
+            {formatEur(manualBalance, 2)}
+          </motion.p>
+        </GlassCard>
+      )}
 
       {accounts.length > 0 && (
         <GlassCard id="card-wealth" glow="purple">
@@ -98,7 +121,7 @@ export function Dashboard() {
         </GlassCard>
       )}
 
-      <GlassCard id="card-balance" glow={accounts.length === 0 ? 'purple' : undefined}>
+      <GlassCard id="card-balance" glow={accounts.length === 0 && manualBalance === null ? 'purple' : undefined}>
         <p className="text-xs text-white/40 mb-1">Saldo im Zeitraum</p>
         <motion.p
           key={`${timeFilter}-${summary.balance}`}

@@ -363,11 +363,53 @@ const DEFAULT_URL = 'https://fints.commerzbank.de/fints'
 
 function buildSecHdr(pos: number, secFun: string, secRef: string, blz: string, name: string): string {
   const now = new Date()
-  return `HNSHK:${pos}:4+998:1+${secFun}+${secRef}+1+1+1::0+1+1:${fmtDate(now)}:${fmtTime(now)}+1:999:1+6:10:16+280:${blz}:${esc(name)}:S:0:0'`
+  return `HNSHK:${pos}:4+998:1+${secFun}+${secRef}+1+1+1:${fmtDate(now)}:${fmtTime(now)}+999:999:1+6:10:16+280:${blz}:${esc(name)}:V:0:0'`
 }
 
 function buildSecFtr(pos: number, secRef: string, pin: string, tan?: string): string {
   return `HNSHA:${pos}:2+${secRef}++${esc(pin)}${tan ? ':' + esc(tan) : ''}'`
+}
+
+/**
+ * Build a two-layer PIN/TAN message with HNVSK encryption header wrapper.
+ * Commerzbank requires: outer HNHBK+HNVSK+HNVSD(inner)+HNVSE+HNHBS
+ * Inner (inside HNVSD): HNSHK:998 + customer segs + HNSHA:999
+ */
+function buildPinTanMessage(
+  dialogId: string,
+  msgNo: number,
+  blz: string,
+  name: string,
+  secRef: number,
+  pin: string,
+  secFun: string,
+  tan: string | undefined,
+  ...customerSegs: string[]
+): string {
+  const secRefStr = String(secRef)
+
+  // Inner signed content: HNSHK at position 998, customer segs at 1..N, HNSHA at 999
+  const inner = [
+    buildSecHdr(998, secFun, secRefStr, blz, name),
+    ...customerSegs,
+    buildSecFtr(999, secRefStr, pin, tan),
+  ].join('')
+
+  // HNVSK at reserved position 998 — Sicherheitsfunktion (field 2) is optional and omitted for
+  // PIN/TAN null-encryption; including it with value 998 causes the bank to attempt real decryption.
+  const now = new Date()
+  const iv = '\x00'.repeat(8)
+  const hnvsk = `HNVSK:998:3+998:1+1+1::0+1:${fmtDate(now)}:${fmtTime(now)}+2:2:13:@8@${iv}:5:1+280:${blz}:${esc(name)}:V:0:0'`
+
+  // HNVSD/HNVSE/HNHBS at FinTS-reserved positions 999/1000/1001
+  const hnvsd = `HNVSD:999:1+@${inner.length}@${inner}'`
+  const hnvse = `HNVSE:1000:1+1'`
+  const hnhbs = `HNHBS:1001:1+${msgNo}'`
+
+  const body = hnvsk + hnvsd + hnvse + hnhbs
+  const stub = `HNHBK:1:3+000000000000+300+${dialogId}+${msgNo}'`
+  const total = stub.length + body.length
+  return `HNHBK:1:3+${String(total).padStart(12, '0')}+300+${dialogId}+${msgNo}'${body}`
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -403,15 +445,16 @@ export async function syncAll(
   const blz = cfg.blz
   const name = cfg.username
 
-  let resolvedSecFun = secFun ?? '999'
+  // Commerzbank pushTAN default; overridden if HIPINS found in anon dialog
+  let resolvedSecFun = secFun ?? '900'
 
   // ── Discover security function (anonymous dialog) ─────────────────────────
   if (!secFun && !pendingDialogId) {
     try {
+      // No HKSYN here — it requires authentication and causes 9110 in anon context
       const anonMsg = buildMessage('0', 1,
         `HKIDN:2:2+280:${blz}+anonymous+0+0'`,
         `HKVVB:3:3+0+0+0+FinAnts+1.0'`,
-        `HKSYN:4:3+0'`,
       )
       const anonResp = await httpPost(url, anonMsg)
       console.log('[FinTS] anon raw response len:', anonResp.length, '| preview:', JSON.stringify(anonResp.slice(0, 120)))
@@ -424,10 +467,10 @@ export async function syncAll(
         for (let f = 4; f < hipins.fields.length; f++) {
           const p = splitDEG(hipins.fields[f])
           const c = parseInt(p[0] ?? '0')
-          if (!isNaN(c) && c >= 900 && c <= 999) { resolvedSecFun = String(c); break }
+          if (!isNaN(c) && c >= 900 && c < 999) { resolvedSecFun = String(c); break }
         }
       }
-      console.log('[FinTS] secFun resolved:', resolvedSecFun, hipins ? '(from HIPINS)' : '(default)')
+      console.log('[FinTS] secFun resolved:', resolvedSecFun, hipins ? '(from HIPINS)' : '(default 900)')
 
       if (anonId !== '0') {
         await httpPost(url, buildMessage(anonId, 2, `HKEND:2:1+${anonId}'`))
@@ -449,16 +492,16 @@ export async function syncAll(
 
   if (!pendingDialogId) {
     console.log('[FinTS] dialog-init → secFun:', resolvedSecFun)
-    const initMsg = buildMessage('0', 1,
-      buildSecHdr(2, resolvedSecFun, String(secRef), blz, name),
-      `HKIDN:3:2+280:${blz}+${esc(name)}+0+1'`,
-      `HKVVB:4:3+0+0+0+FinAnts+1.0'`,
-      buildSecFtr(5, String(secRef), cfg.pin),
+    const initMsg = buildPinTanMessage('0', 1, blz, name, secRef, cfg.pin, resolvedSecFun, undefined,
+      `HKIDN:1:2+280:${blz}+${esc(name)}+0+0'`,
+      `HKVVB:2:3+0+0+0+FinAnts+1.0'`,
     )
+    console.log('[FinTS] init message preview:', initMsg.slice(0, 400))
     const initResp = await httpPost(url, initMsg)
     initSegs2 = parseResponse(initResp)
     console.log('[FinTS] init segments:', initSegs2.map(s => `${s.name}:${s.version}`).join(' '))
     for (const s of initSegs2.filter(s => s.name === 'HIRMG' || s.name === 'HIRMS')) {
+      console.log(`[FinTS] init ${s.name} raw:`, JSON.stringify(s.fields))
       for (const f of s.fields) {
         const p = splitDEG(f)
         console.log(`[FinTS] init ${s.name} code ${p[0]}: ${unesc(p[2] ?? '')}`)
@@ -472,11 +515,9 @@ export async function syncAll(
 
   // ── Step 2: Send jobs ─────────────────────────────────────────────────────
   console.log('[FinTS] jobs → secFun:', resolvedSecFun, 'from:', fromStr, 'to:', toStr)
-  const jobMsg = buildMessage(dialogId, 2,
-    buildSecHdr(2, resolvedSecFun, String(secRef), blz, name),
-    `HKSAL:3:7+::0+J'`,
-    `HKKAZ:4:7+::0+J+${fromStr}+${toStr}++'`,
-    buildSecFtr(5, String(secRef), cfg.pin, tan),
+  const jobMsg = buildPinTanMessage(dialogId, 2, blz, name, secRef, cfg.pin, resolvedSecFun, tan,
+    `HKSAL:1:7+::0+J'`,
+    `HKKAZ:2:7+::0+J+${fromStr}+${toStr}++'`,
   )
   let jobResp: string
   try {
@@ -571,10 +612,8 @@ export async function syncAll(
 
   // ── Step 3: Dialog-End ────────────────────────────────────────────────────
   if (dialogId !== '0') {
-    await httpPost(url, buildMessage(dialogId, 3,
-      buildSecHdr(2, resolvedSecFun, String(secRef), blz, name),
-      `HKEND:3:1+${dialogId}'`,
-      buildSecFtr(4, String(secRef), cfg.pin),
+    await httpPost(url, buildPinTanMessage(dialogId, 3, blz, name, secRef, cfg.pin, resolvedSecFun, undefined,
+      `HKEND:1:1+${dialogId}'`,
     )).catch(() => {})
   }
 

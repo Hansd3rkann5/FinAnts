@@ -1,7 +1,12 @@
 import { useRef, useState, useEffect } from 'react'
 import { DEV_VERSION } from 'virtual:dev-version'
-import { Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw, Wifi, Eye, EyeOff, CloudUpload, CloudDownload, Cloud } from 'lucide-react'
+import {
+  Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
+  Wifi, Eye, EyeOff, CloudUpload, CloudDownload, Cloud,
+  ChevronDown, Wallet, Database,
+} from 'lucide-react'
 import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
+import { useManualBalance } from '@/hooks/useManualBalance'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { PillButton } from '@/components/ui/PillButton'
@@ -16,6 +21,7 @@ import {
   saveWorkerConfig,
   type SyncStatus,
 } from '@/hooks/useWorkerSync'
+import { formatEur } from '@/utils/formatEur'
 
 type ImportStatus = 'idle' | 'parsing' | 'success' | 'error'
 
@@ -49,36 +55,92 @@ function StatusBanner({ status, message }: { status: ImportStatus | SyncStatus |
   )
 }
 
+function CollapsibleCard({
+  icon,
+  title,
+  badge,
+  statusText,
+  defaultOpen = false,
+  glow,
+  children,
+}: {
+  icon: React.ReactNode
+  title: string
+  badge?: React.ReactNode
+  statusText?: string
+  defaultOpen?: boolean
+  glow?: 'purple' | 'blue'
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <GlassCard glow={glow}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-2 text-left"
+      >
+        {icon}
+        <span className="text-sm font-semibold text-white/90 flex-1">{title}</span>
+        {badge}
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="text-white/30 shrink-0"
+        >
+          <ChevronDown size={14} />
+        </motion.span>
+      </button>
+
+      {!open && statusText && (
+        <p className="text-[10px] text-white/30 mt-1.5 ml-5.5">{statusText}</p>
+      )}
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="pt-4">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </GlassCard>
+  )
+}
+
 export function Settings() {
   const { transactions, importTransactions, clearAll } = useTransactionsCtx()
   const { accounts, setAccounts, toggleIncluded } = useAccounts()
+  const { balance: manualBalance, updatedAt: balanceUpdatedAt, save: saveBalance } = useManualBalance()
   const fileRef = useRef<HTMLInputElement>(null)
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle')
   const [importMessage, setImportMessage] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
 
-  const [workerUrl, setWorkerUrl] = useState('')
-  const [apiKey, setApiKey] = useState('')
+  const [workerUrl, setWorkerUrl] = useState(import.meta.env.VITE_WORKER_URL ?? '')
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_WORKER_API_KEY ?? '')
   const [showKey, setShowKey] = useState(false)
   const [syncDays, setSyncDays] = useState(90)
   const [configSaved, setConfigSaved] = useState(false)
 
+  const [balanceInput, setBalanceInput] = useState(
+    manualBalance !== null ? String(manualBalance).replace('.', ',') : ''
+  )
+
   const {
-    sync,
-    submitTan,
-    dismissChallenge,
-    status: syncStatus,
-    message: syncMessage,
-    lastSync,
-    challenge,
+    sync, submitTan, dismissChallenge,
+    status: syncStatus, message: syncMessage, lastSync, challenge,
   } = useWorkerSync(importTransactions, setAccounts)
 
   const {
-    push: cloudPush,
-    pull: cloudPull,
-    status: cloudStatus,
-    message: cloudMessage,
-    lastSync: cloudLastSync,
+    push: cloudPush, pull: cloudPull,
+    status: cloudStatus, message: cloudMessage, lastSync: cloudLastSync,
   } = useCloudSync()
 
   useEffect(() => {
@@ -90,15 +152,13 @@ export function Settings() {
     }
   }, [])
 
-  // ── CSV Import ─────────────────────────────────────────────────────────────
+  // ── CSV Import ──────────────────────────────────────────────────────────────
 
   async function handleFile(file: File) {
     setImportStatus('parsing')
     setImportMessage('')
     try {
       const text = await file.text()
-      console.log('[Import] File:', file.name, '| size:', file.size, '| type:', file.type)
-      console.log('[Import] First 300 chars:', JSON.stringify(text.slice(0, 300)))
       const parsed = detectAndParse(text)
       if (parsed.length === 0) throw new Error('Keine Buchungen gefunden. Bitte prüfe das Dateiformat.')
       importTransactions(parsed)
@@ -122,7 +182,7 @@ export function Settings() {
     if (file) handleFile(file)
   }
 
-  // ── Worker sync ────────────────────────────────────────────────────────────
+  // ── Worker sync ─────────────────────────────────────────────────────────────
 
   function saveConfig() {
     if (!workerUrl || !apiKey) return
@@ -135,9 +195,15 @@ export function Settings() {
     sync({ workerUrl: workerUrl.trim(), apiKey: apiKey.trim() }, syncDays)
   }
 
+  // ── Manual balance ──────────────────────────────────────────────────────────
+
+  function handleSaveBalance() {
+    const parsed = parseFloat(balanceInput.replace(',', '.'))
+    if (!isNaN(parsed)) saveBalance(parsed)
+  }
+
   return (
     <>
-      {/* PhotoTAN / pushTAN modal */}
       {challenge && (
         <PhotoTanModal
           challenge={challenge}
@@ -147,26 +213,65 @@ export function Settings() {
         />
       )}
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
 
-        {/* ── Live-Sync via Cloudflare Worker ───────────────────────────────── */}
-        <GlassCard glow="purple">
-          <div className="flex items-center gap-2 mb-1">
-            <Wifi size={15} className="text-purple-400" />
-            <h2 className="text-sm font-semibold text-white/90">Automatischer Sync</h2>
-            {configSaved && (
-              <span className="ml-auto text-[10px] text-purple-400/70 border border-purple-500/20 bg-purple-500/10 rounded-pill px-2 py-0.5">
-                Konfiguriert
-              </span>
-            )}
+        {/* ── Kontostand ──────────────────────────────────────────────────── */}
+        <CollapsibleCard
+          icon={<Wallet size={15} className="text-emerald-400 shrink-0" />}
+          title="Kontostand"
+          statusText={manualBalance !== null
+            ? `${formatEur(manualBalance)} · Aktualisiert ${balanceUpdatedAt}`
+            : 'Nicht gesetzt · Manuell eingetragen'}
+          defaultOpen={manualBalance === null && accounts.length === 0}
+        >
+          <p className="text-xs text-white/40 mb-3">
+            Aktueller Kontostand aus deiner Banking-App. Wird angezeigt bis der automatische Sync aktiv ist.
+          </p>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40">€</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={balanceInput}
+                onChange={e => setBalanceInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSaveBalance()}
+                className="w-full rounded-card_sm bg-white/4 border border-white/8 pl-7 pr-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-emerald-500/40 transition-colors duration-200"
+              />
+            </div>
+            <PillButton
+              variant="secondary"
+              size="sm"
+              disabled={!balanceInput}
+              onClick={handleSaveBalance}
+            >
+              Speichern
+            </PillButton>
           </div>
+          {balanceUpdatedAt && (
+            <p className="text-[10px] text-white/25 mt-2">Zuletzt aktualisiert: {balanceUpdatedAt}</p>
+          )}
+        </CollapsibleCard>
+
+        {/* ── Automatischer Sync ──────────────────────────────────────────── */}
+        <CollapsibleCard
+          icon={<Wifi size={15} className="text-purple-400 shrink-0" />}
+          title="Automatischer Sync"
+          glow="purple"
+          badge={configSaved
+            ? <span className="text-[10px] text-purple-400/70 border border-purple-500/20 bg-purple-500/10 rounded-pill px-2 py-0.5">Konfiguriert</span>
+            : undefined}
+          statusText={configSaved
+            ? `Commerzbank · Zuletzt: ${lastSync ?? 'Noch nie'}`
+            : 'Commerzbank via Cloudflare Worker'}
+          defaultOpen={!configSaved}
+        >
           <p className="text-xs text-white/40 mb-4">
             Verbinde deine Commerzbank-Konten über deinen Cloudflare Worker.
             Zugangsdaten werden nur lokal gespeichert.
           </p>
-
           <div className="flex flex-col gap-3">
-            {/* Worker URL */}
             <div>
               <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">Worker-URL</label>
               <input
@@ -177,8 +282,6 @@ export function Settings() {
                 className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-purple-500/40 transition-colors duration-200"
               />
             </div>
-
-            {/* API Key */}
             <div>
               <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">API Key</label>
               <div className="relative">
@@ -198,8 +301,6 @@ export function Settings() {
                 </button>
               </div>
             </div>
-
-            {/* Days selector */}
             <div>
               <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">
                 Zeitraum: letzte {syncDays} Tage
@@ -221,16 +322,9 @@ export function Settings() {
                 ))}
               </div>
             </div>
-
-            {/* Action buttons */}
             <div className="flex gap-2 mt-1">
               {!configSaved && (
-                <PillButton
-                  variant="secondary"
-                  size="sm"
-                  disabled={!workerUrl || !apiKey}
-                  onClick={saveConfig}
-                >
+                <PillButton variant="secondary" size="sm" disabled={!workerUrl || !apiKey} onClick={saveConfig}>
                   Speichern
                 </PillButton>
               )}
@@ -244,32 +338,29 @@ export function Settings() {
                 {syncStatus === 'syncing' ? 'Lädt…' : 'Jetzt synchronisieren'}
               </PillButton>
             </div>
-
             <AnimatePresence>
               {syncStatus !== 'idle' && syncStatus !== 'challenge' && (
                 <StatusBanner status={syncStatus} message={syncMessage} />
               )}
             </AnimatePresence>
-
             {lastSync && (
-              <p className="text-[10px] text-white/25 text-center">
-                Zuletzt synchronisiert: {lastSync}
-              </p>
+              <p className="text-[10px] text-white/25 text-center">Zuletzt synchronisiert: {lastSync}</p>
             )}
           </div>
-        </GlassCard>
+        </CollapsibleCard>
 
-        {/* ── Cloud-Backup ──────────────────────────────────────────────── */}
-        <GlassCard>
-          <div className="flex items-center gap-2 mb-1">
-            <Cloud size={15} className="text-blue-400" />
-            <h2 className="text-sm font-semibold text-white/90">Cloud-Backup</h2>
-          </div>
+        {/* ── Cloud-Backup ─────────────────────────────────────────────────── */}
+        <CollapsibleCard
+          icon={<Cloud size={15} className="text-blue-400 shrink-0" />}
+          title="Cloud-Backup"
+          statusText={cloudLastSync
+            ? `Zuletzt: ${cloudLastSync}`
+            : 'Kategorien & Profile geräteübergreifend sichern'}
+        >
           <p className="text-xs text-white/40 mb-4">
             Kategorien, Händler-Profile und Icons geräteübergreifend sichern.
             Nutzt deinen konfigurierten Cloudflare Worker.
           </p>
-
           <div className="flex gap-2">
             <PillButton
               variant="secondary"
@@ -290,7 +381,6 @@ export function Settings() {
               {cloudStatus === 'pulling' ? 'Lädt…' : 'Herunterladen'}
             </PillButton>
           </div>
-
           <AnimatePresence>
             {(cloudStatus === 'success' || cloudStatus === 'error') && (
               <div className="mt-3">
@@ -298,41 +388,35 @@ export function Settings() {
               </div>
             )}
           </AnimatePresence>
-
           {cloudLastSync && (
-            <p className="text-[10px] text-white/25 text-center mt-2">
-              Zuletzt: {cloudLastSync}
-            </p>
+            <p className="text-[10px] text-white/25 text-center mt-2">Zuletzt: {cloudLastSync}</p>
           )}
-        </GlassCard>
+        </CollapsibleCard>
 
-        {/* ── Konten & Gesamtvermögen ────────────────────────────────────── */}
+        {/* ── Konten ───────────────────────────────────────────────────────── */}
         {accounts.length > 0 && (
-          <GlassCard>
-            <h2 className="text-sm font-semibold text-white/80 mb-1">Konten</h2>
-            <p className="text-xs text-white/40 mb-3">
-              Wähle, welche Konten ins Gesamtvermögen einfließen.
-            </p>
+          <CollapsibleCard
+            icon={<Wallet size={15} className="text-white/40 shrink-0" />}
+            title="Konten"
+            statusText={`${accounts.length} Konto${accounts.length !== 1 ? 'en' : ''} · Wähle welche ins Gesamtvermögen einfließen`}
+          >
             <div className="flex flex-col gap-2">
               {accounts.map(a => (
-                <AccountCard
-                  key={a.iban}
-                  account={a}
-                  onToggle={toggleIncluded}
-                  showToggle
-                />
+                <AccountCard key={a.iban} account={a} onToggle={toggleIncluded} showToggle />
               ))}
             </div>
-          </GlassCard>
+          </CollapsibleCard>
         )}
 
-        {/* ── CSV-Import ─────────────────────────────────────────────────── */}
-        <GlassCard>
-          <h2 className="text-sm font-semibold text-white/80 mb-1">CSV-Import (manuell)</h2>
+        {/* ── CSV-Import ───────────────────────────────────────────────────── */}
+        <CollapsibleCard
+          icon={<Upload size={15} className="text-white/40 shrink-0" />}
+          title="CSV-Import"
+          statusText="Manueller Import via Commerzbank-Export"
+        >
           <p className="text-xs text-white/40 mb-4">
-            Alternativ: CSV-Export aus dem Commerzbank OnlineBanking hochladen.
+            CSV-Export aus dem Commerzbank OnlineBanking hochladen.
           </p>
-
           <div
             onDragOver={e => e.preventDefault()}
             onDrop={onDrop}
@@ -348,7 +432,6 @@ export function Settings() {
             </div>
             <input ref={fileRef} type="file" accept=".csv,.txt,.mt940,.sta" className="hidden" onChange={onFileChange} />
           </div>
-
           <AnimatePresence>
             {importStatus !== 'idle' && (
               <div className="mt-3">
@@ -356,15 +439,17 @@ export function Settings() {
               </div>
             )}
           </AnimatePresence>
-        </GlassCard>
+        </CollapsibleCard>
 
-        {/* ── Daten ───────────────────────────────────────────────────────── */}
-        <GlassCard>
-          <h2 className="text-sm font-semibold text-white/80 mb-1">Daten</h2>
+        {/* ── Daten ────────────────────────────────────────────────────────── */}
+        <CollapsibleCard
+          icon={<Database size={15} className="text-white/40 shrink-0" />}
+          title="Daten"
+          statusText={`${transactions.length} Buchungen · Lokal gespeichert`}
+        >
           <p className="text-xs text-white/40 mb-3">
-            {transactions.length} Buchungen gespeichert · Alle Daten verbleiben lokal auf deinem Gerät
+            Alle Daten verbleiben lokal auf deinem Gerät.
           </p>
-
           {!showConfirm ? (
             <PillButton
               variant="danger"
@@ -391,7 +476,7 @@ export function Settings() {
               </div>
             </motion.div>
           )}
-        </GlassCard>
+        </CollapsibleCard>
 
         <GlassCard padding="sm">
           <button
