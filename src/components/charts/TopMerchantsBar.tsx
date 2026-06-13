@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import type { TopMerchant } from '@/hooks/useAnalytics'
+import type { TopMerchant } from '@/utils/chartCompute'
 import type { Category } from '@/types'
 
 function formatEur(v: number) {
@@ -15,16 +15,17 @@ export function TopMerchantsBar({ merchants, allMap }: Props) {
   const max = merchants[0]?.total ?? 1
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div id="chart-top-merchants" className="flex flex-col gap-2.5">
       {merchants.map((m, i) => {
         const cat = allMap[m.categoryId]
         const pct = (m.total / max) * 100
         return (
-          <div key={m.name} className="flex items-center gap-2">
+          <div key={m.name} id={`merchant-row-${i}`} className="flex items-center gap-2">
             <span className="text-[10px] text-white/20 w-4 shrink-0 text-right">{i + 1}</span>
-            <span className="text-xs text-white/60 truncate w-28 shrink-0">{m.name}</span>
-            <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+            <span id={`merchant-name-${i}`} className="text-xs text-white/60 truncate w-28 shrink-0">{m.name}</span>
+            <div id={`merchant-bar-track-${i}`} className="flex-1 h-1.5 bg-white/6 rounded-full overflow-hidden">
               <motion.div
+                id={`merchant-bar-${i}`}
                 className="h-full rounded-full"
                 style={{ backgroundColor: cat?.color ?? '#6b7280' }}
                 initial={{ width: 0 }}

@@ -3,9 +3,9 @@ import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
-import type { CategoryTrendPoint } from '@/hooks/useAnalytics'
+import type { CategoryTrendPoint } from '@/utils/chartCompute'
 import type { Category } from '@/types'
-import { getNiceTicks, fmtY, StickyYAxis } from './chartUtils'
+import { getNiceTicks, StickyYAxis } from './chartUtils'
 
 function fmtEur(v: number) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
@@ -54,17 +54,18 @@ export function CategoryTrendChart({ points, topCats, allMap }: Props) {
   const minWidth = Math.max(280, points.length * 56)
 
   return (
-    <div className="flex flex-col gap-3">
+    <div id="chart-category-trends" className="flex flex-col gap-3">
       <div className="flex items-start">
-        <StickyYAxis ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
-        <div ref={scrollRef} className="overflow-x-auto flex-1 min-w-0">
-          <div style={{ minWidth }}>
+        <StickyYAxis id="chart-category-trends-yaxis" ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
+        <div ref={scrollRef} id="chart-category-trends-scroll" className="overflow-x-auto flex-1 min-w-0">
+          <div id="chart-category-trends-inner" style={{ minWidth }}>
             <ResponsiveContainer width="100%" height={H}>
               <LineChart data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                 <XAxis
                   dataKey="month"
                   height={X_AXIS_H}
+                  padding={{ left: 20, right: 12 }}
                   tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.35)' }}
                   axisLine={false}
                   tickLine={false}

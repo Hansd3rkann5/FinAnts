@@ -73,7 +73,12 @@ export interface RecurringGroup {
   transactions: string[]
 }
 
-export type TimeFilter = 'week' | 'month' | 'year' | 'all'
+// Base modes = "current" period; encoded strings = specific past period
+export type TimeFilter =
+  | 'week' | 'month' | 'year' | 'all'
+  | `year/${number}`
+  | `month/${number}/${number}`   // month/year/month  e.g. 'month/2025/1'
+  | `week/${number}/${number}`    // week/year/isoWeek e.g. 'week/2025/5'
 
 export interface CategorySummary {
   categoryId: string

@@ -15,14 +15,17 @@ export function AppShell() {
 
   return (
     <div id="app-shell" className="flex-1 min-h-0 bg-bg-base text-white flex flex-col">
-      <div id="safe-area-top" className="h-safe-top" />
+      {/* <div id="safe-area-top" className="h-safe-top" /> */}
 
-      <main id="app-main" className="flex-1 overflow-hidden relative" style={{ height: '100vh' }}>
+      {/* Extends the sticky filter's blur behind the notch / safe area */}
+
+
+      <main id="app-main" className="mt-12 flex-1 overflow-hidden relative" style={{ height: '100vh' }}>
         {TABS.map(({ path, Component, scrollId }) => (
           <div
             key={path}
             id={scrollId}
-            className="absolute inset-0 overflow-y-auto overscroll-contain px-4 pt-4 pb-24"
+            className="absolute inset-0 overflow-y-auto overscroll-contain px-0 pt-0 pb-24"
             style={{ display: pathname === path ? 'block' : 'none' }}
           >
             <Component />

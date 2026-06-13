@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   TrendingDown, TrendingUp, RefreshCw, ChevronDown, ChevronUp,
   Landmark, Pencil, BarChart2, ShoppingBag, TrendingUp as TrendIcon,
-  Calendar,
+  Calendar, PieChart,
 } from 'lucide-react'
 import type { TimeFilter, Transaction } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
@@ -12,8 +12,15 @@ import { useAccounts } from '@/hooks/useAccounts'
 import { useManualBalance } from '@/hooks/useManualBalance'
 import { useAllCategories } from '@/hooks/useAllCategories'
 import { useAnalytics } from '@/hooks/useAnalytics'
+import { useChartFilter } from '@/hooks/useChartFilter'
+import {
+  computeMonthlyData, computeSpendingData,
+  computeCategoryTrends, computeTopMerchants, filterByTimeFilter,
+  computeAvailablePeriods,
+} from '@/utils/chartCompute'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
+import { ChartHeader } from '@/components/ui/ChartHeader'
 import { CategoryPieChart } from '@/components/charts/CategoryPieChart'
 import { MonthlyBarChart } from '@/components/charts/MonthlyBarChart'
 import { SpendingAreaChart } from '@/components/charts/SpendingAreaChart'
@@ -27,15 +34,6 @@ import { TransactionDetailModal } from '@/components/transactions/TransactionDet
 
 function formatEur(v: number, maximumFractionDigits = 0) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
-}
-
-function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return (
-    <div className="flex items-center gap-2 mb-4">
-      {icon}
-      <h2 className="text-sm font-semibold text-white/70">{title}</h2>
-    </div>
-  )
 }
 
 function StatPill({ label, value, sub, color = 'text-white/80' }: {
@@ -60,19 +58,21 @@ export function Dashboard() {
     localStorage.setItem('dash-time-filter', v)
   }
 
-  const [showAccounts, setShowAccounts] = useState(false)
-  const [catManageOpen, setCatManageOpen] = useState(false)
+  const [showAccounts,    setShowAccounts]    = useState(false)
+  const [catManageOpen,   setCatManageOpen]   = useState(false)
   const [catBreakdownOpen, setCatBreakdownOpen] = useState(false)
-  const [recurringOpen, setRecurringOpen] = useState(false)
-  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
+  const [recurringOpen,   setRecurringOpen]   = useState(false)
+  const [selectedTx,      setSelectedTx]      = useState<Transaction | null>(null)
 
+  // ── Data ──────────────────────────────────────────────────────────────────
   const { transactions, recurringGroups, updateTransaction } = useTransactionsCtx()
   const { accounts, toggleIncluded, totalWealth } = useAccounts()
   const { baseBalance, savedAt: balanceSavedAt, updatedAt: balanceUpdatedAt } = useManualBalance()
   const { allMap } = useAllCategories()
+
   const filtered = useFilteredTransactions(transactions, timeFilter)
-  const summary = useBalanceSummary(filtered)
-  const analytics = useAnalytics(transactions, filtered, timeFilter)
+  const summary  = useBalanceSummary(filtered)
+  const analytics = useAnalytics(transactions)
 
   // Adjust manual balance by all booked transactions since the save date
   const manualBalance = (() => {
@@ -84,22 +84,68 @@ export function Dashboard() {
     return baseBalance + delta
   })()
 
-  const filledMonths = analytics.monthlyData.filter(m => m.expenses > 0 || m.income > 0)
+  // ── Per-chart filters ─────────────────────────────────────────────────────
+  const pieChart = useChartFilter(timeFilter)
+  const mbChart  = useChartFilter(timeFilter)
+  const saChart  = useChartFilter(timeFilter)
+  const catChart = useChartFilter(timeFilter)
+  const topChart = useChartFilter(timeFilter)
+
+  // ── Per-chart data ────────────────────────────────────────────────────────
+  const pieFiltered = useMemo(
+    () => filterByTimeFilter(transactions, pieChart.effectiveFilter),
+    [transactions, pieChart.effectiveFilter],
+  )
+  const pieSummary = useBalanceSummary(pieFiltered)
+
+  const monthlyBarData = useMemo(
+    () => computeMonthlyData(transactions, mbChart.effectiveFilter),
+    [transactions, mbChart.effectiveFilter],
+  )
+
+  const spendingData = useMemo(
+    () => computeSpendingData(transactions, saChart.effectiveFilter),
+    [transactions, saChart.effectiveFilter],
+  )
+
+  const { points: catTrendPoints, topCats } = useMemo(
+    () => computeCategoryTrends(transactions, catChart.effectiveFilter),
+    [transactions, catChart.effectiveFilter],
+  )
+
+  const topMerchants = useMemo(
+    () => computeTopMerchants(transactions, topChart.effectiveFilter),
+    [transactions, topChart.effectiveFilter],
+  )
+
+  // Available periods for time pickers (derived from all transactions)
+  const periods = useMemo(() => computeAvailablePeriods(transactions), [transactions])
+
+  // Summary stats (always last 12 months, unaffected by chart filters)
+  const summaryMonthly = useMemo(() => computeMonthlyData(transactions, 'year'), [transactions])
+  const filledMonths = summaryMonthly.filter(m => m.expenses > 0 || m.income > 0)
   const bestMonth = filledMonths.length
-    ? filledMonths.reduce((best, m) => m.balance > best.balance ? m : best)
-    : null
-  const worstMonthByExpenses = filledMonths.length
-    ? filledMonths.reduce((w, m) => m.expenses > w.expenses ? m : w)
+    ? filledMonths.reduce((b, m) => m.balance > b.balance ? m : b)
     : null
 
   return (
     <div id="page-dashboard" className="flex flex-col gap-4">
-      <TimeFilterBar value={timeFilter} onChange={handleTimeFilter} id="dash" />
+      <div
+        id="dash-sticky-filter"
+        className="sticky top-0 z-30 pt-2 pb-2"
+        style={{
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          backgroundColor: 'rgba(10, 10, 20, 0.75)',
+          boxShadow: '0 -4px 24px 10px rgba(10,10,10,0.8), 0 -1px 80px 10px rgba(10,10,10,0.8)',
+        }}
+      >
+        <TimeFilterBar value={timeFilter} onChange={handleTimeFilter} id="dash" periods={periods} />
+      </div>
 
-
-      {/* ── FinTS Gesamtvermögen ───────────────────────────────────────── */}
+      {/* ── FinTS Gesamtvermögen ──────────────────────────────────────────── */}
       {accounts.length > 0 && (
-        <GlassCard id="card-wealth" glow="purple">
+        <GlassCard id="card-wealth" glow="purple" className="mx-4">
           <div className="flex items-center gap-2 mb-1">
             <Landmark size={14} className="text-purple-400" />
             <p className="text-xs text-white/40">Gesamtvermögen</p>
@@ -149,9 +195,9 @@ export function Dashboard() {
         </GlassCard>
       )}
 
-      {/* ── Kontostand (manuell, nur wenn kein FinTS) ─────────────────── */}
+      {/* ── Kontostand (manuell, nur wenn kein FinTS) ────────────────────── */}
       {accounts.length === 0 && manualBalance !== null && (
-        <GlassCard id="card-manual-balance" glow="purple">
+        <GlassCard id="card-manual-balance" glow="purple" className="mx-4">
           <div className="flex items-center gap-2 mb-1">
             <Landmark size={14} className="text-purple-400" />
             <p className="text-xs text-white/40">Kontostand</p>
@@ -171,8 +217,8 @@ export function Dashboard() {
         </GlassCard>
       )}
 
-      {/* ── Einnahmen / Ausgaben stats ─────────────────────────────────── */}
-      <div id="stats-row" className="grid grid-cols-2 gap-3">
+      {/* ── Einnahmen / Ausgaben stats ──────────────────────────────────── */}
+      <div id="stats-row" className="grid grid-cols-2 gap-3 px-4">
         <GlassCard id="card-income-stat" padding="sm" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-card_sm bg-emerald-500/15 flex items-center justify-center text-emerald-400">
             <TrendingUp size={18} />
@@ -193,21 +239,30 @@ export function Dashboard() {
         </GlassCard>
       </div>
 
-      {/* ── Kategorien (Pie) ──────────────────────────────────────────── */}
-      <GlassCard id="card-categories">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-white/70">Kategorien</h2>
-          <button
-            id="btn-manage-categories"
-            onClick={() => setCatManageOpen(true)}
-            className="w-7 h-7 rounded-full bg-white/6 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors active:scale-90"
-          >
-            <Pencil size={13} />
-          </button>
-        </div>
+      {/* ── Kategorien (Pie) ─────────────────────────────────────────────── */}
+      <GlassCard id="card-categories" className="mx-4">
+        <ChartHeader
+          chartId="categories"
+          icon={<PieChart size={14} className="text-pink-400" />}
+          title="Kategorien"
+          synced={pieChart.synced}
+          effectiveFilter={pieChart.effectiveFilter}
+          onSyncToggle={pieChart.toggleSync}
+          onFilterChange={pieChart.setFilter}
+          periods={periods}
+          extra={
+            <button
+              id="btn-manage-categories"
+              onClick={() => setCatManageOpen(true)}
+              className="w-6 h-6 rounded-full bg-white/6 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors active:scale-90 shrink-0"
+            >
+              <Pencil size={11} />
+            </button>
+          }
+        />
 
-        {summary.categories.length > 0 ? (
-          <CategoryPieChart categories={summary.categories} />
+        {pieSummary.categories.length > 0 ? (
+          <CategoryPieChart categories={pieSummary.categories} />
         ) : (
           <div id="categories-empty-state" className="flex flex-col items-center gap-2 py-8 text-white/25">
             <span className="text-2xl">📊</span>
@@ -223,16 +278,22 @@ export function Dashboard() {
         </button>
       </GlassCard>
 
-      {/* ── Analytics section (only when enough data) ─────────────────── */}
+      {/* ── Analytics (only when enough data) ───────────────────────────── */}
       {analytics.hasEnoughData && (
         <>
           {/* Monatlicher Verlauf */}
-          <GlassCard id="card-monthly-bar">
-            <SectionHeader
+          <GlassCard id="card-monthly-bar" className="mx-4">
+            <ChartHeader
+              chartId="monthly-bar"
               icon={<BarChart2 size={14} className="text-purple-400" />}
-              title="Monatlicher Verlauf"
+              title="Verlauf"
+              synced={mbChart.synced}
+              effectiveFilter={mbChart.effectiveFilter}
+              onSyncToggle={mbChart.toggleSync}
+              onFilterChange={mbChart.setFilter}
+              periods={periods}
             />
-            <MonthlyBarChart data={analytics.monthlyData} />
+            <MonthlyBarChart data={monthlyBarData} />
             <div className="flex gap-4 justify-center mt-3">
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm bg-emerald-400/70" />
@@ -250,7 +311,7 @@ export function Dashboard() {
           </GlassCard>
 
           {/* Statistiken Highlights */}
-          <GlassCard id="card-stats-highlights" padding="sm">
+          <GlassCard id="card-stats-highlights" padding="sm" className="mx-4">
             <div className="flex gap-1 divide-x divide-white/6">
               <div className="flex-1 px-3 py-1">
                 <StatPill
@@ -284,60 +345,66 @@ export function Dashboard() {
             </div>
           </GlassCard>
 
-          {/* Ausgaben im Zeitraum */}
-          {analytics.spendingData.length >= 2 && (
-            <GlassCard id="card-spending-area">
-              <SectionHeader
+          {/* Ausgaben im Überblick */}
+          {spendingData.length >= 2 && (
+            <GlassCard id="card-spending-area" className="mx-4">
+              <ChartHeader
+                chartId="spending-area"
                 icon={<Calendar size={14} className="text-blue-400" />}
-                title={timeFilter === 'week'
-                  ? 'Ausgaben diese Woche'
-                  : timeFilter === 'month'
-                  ? 'Ausgaben diesen Monat'
-                  : 'Ausgaben im Überblick'}
+                title="Ausgaben"
+                synced={saChart.synced}
+                effectiveFilter={saChart.effectiveFilter}
+                onSyncToggle={saChart.toggleSync}
+                onFilterChange={saChart.setFilter}
+                periods={periods}
               />
-              <SpendingAreaChart data={analytics.spendingData} timeFilter={timeFilter} />
-              {worstMonthByExpenses && timeFilter === 'all' && (
-                <p className="text-[10px] text-white/25 text-center mt-2">
-                  Ausgabenrekord: {worstMonthByExpenses.month} · {formatEur(worstMonthByExpenses.expenses)}
-                </p>
-              )}
+              <SpendingAreaChart data={spendingData} timeFilter={saChart.effectiveFilter} />
             </GlassCard>
           )}
 
           {/* Kategorie-Entwicklung */}
-          {analytics.categoryTrends.topCats.length >= 2 && (
-            <GlassCard id="card-category-trends">
-              <SectionHeader
+          {topCats.length >= 2 && (
+            <GlassCard id="card-category-trends" className="mx-4">
+              <ChartHeader
+                chartId="category-trends"
                 icon={<TrendIcon size={14} className="text-orange-400" />}
                 title="Kategorie-Entwicklung"
+                synced={catChart.synced}
+                effectiveFilter={catChart.effectiveFilter}
+                onSyncToggle={catChart.toggleSync}
+                onFilterChange={catChart.setFilter}
+                periods={periods}
               />
               <CategoryTrendChart
-                points={analytics.categoryTrends.points}
-                topCats={analytics.categoryTrends.topCats}
+                points={catTrendPoints}
+                topCats={topCats}
                 allMap={allMap}
               />
-              <p className="text-[10px] text-white/25 text-center mt-3">
-                Top-Kategorien · Letzte 6 Monate
-              </p>
             </GlassCard>
           )}
 
           {/* Top Händler */}
-          {analytics.topMerchants.length >= 2 && (
-            <GlassCard id="card-top-merchants">
-              <SectionHeader
+          {topMerchants.length >= 2 && (
+            <GlassCard id="card-top-merchants" className="mx-4">
+              <ChartHeader
+                chartId="top-merchants"
                 icon={<ShoppingBag size={14} className="text-yellow-400" />}
                 title="Top Händler"
+                synced={topChart.synced}
+                effectiveFilter={topChart.effectiveFilter}
+                onSyncToggle={topChart.toggleSync}
+                onFilterChange={topChart.setFilter}
+                periods={periods}
               />
-              <TopMerchantsBar merchants={analytics.topMerchants} allMap={allMap} />
+              <TopMerchantsBar merchants={topMerchants} allMap={allMap} />
             </GlassCard>
           )}
         </>
       )}
 
-      {/* ── Daueraufträge ─────────────────────────────────────────────── */}
+      {/* ── Daueraufträge ─────────────────────────────────────────────────── */}
       {recurringGroups.length > 0 && (
-        <GlassCard id="card-recurring" glow="purple">
+        <GlassCard id="card-recurring" glow="purple" className="mx-4">
           <div className="flex items-center gap-2 mb-3">
             <RefreshCw size={14} className="text-purple-400" />
             <h2 className="text-sm font-semibold text-white/70">Daueraufträge erkannt</h2>
@@ -368,7 +435,7 @@ export function Dashboard() {
         </GlassCard>
       )}
 
-      {/* ── Modals ────────────────────────────────────────────────────── */}
+      {/* ── Modals ──────────────────────────────────────────────────────────── */}
       <CategoryManageModal open={catManageOpen} onClose={() => setCatManageOpen(false)} />
       <CategoryBreakdownModal
         open={catBreakdownOpen}

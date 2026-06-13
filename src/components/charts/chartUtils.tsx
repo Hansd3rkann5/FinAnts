@@ -21,18 +21,20 @@ interface Props {
   height: number
   marginTop?: number
   xAxisHeight?: number
+  id?: string
 }
 
 /** Fixed-width Y-axis overlay — sits outside the scroll container. */
-export function StickyYAxis({ ticks, yMax, height, marginTop = 8, xAxisHeight = 20 }: Props) {
+export function StickyYAxis({ ticks, yMax, height, marginTop = 8, xAxisHeight = 20, id }: Props) {
   const drawH = height - marginTop - xAxisHeight
   return (
-    <div className="shrink-0 w-8 relative" style={{ height }}>
+    <div id={id} className="shrink-0 w-8 relative" style={{ height }}>
       {ticks.map(tick => {
         const top = marginTop + drawH * (1 - tick / yMax)
         return (
           <span
             key={tick}
+            id={id ? `${id}-tick-${tick}` : undefined}
             className="absolute right-1 text-[9px] text-white/25 leading-none select-none"
             style={{ top, transform: 'translateY(-50%)' }}
           >

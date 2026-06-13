@@ -3,7 +3,7 @@ import {
   ResponsiveContainer, ComposedChart, Bar, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
-import type { MonthPoint } from '@/hooks/useAnalytics'
+import type { MonthPoint } from '@/utils/chartCompute'
 import { getNiceTicks, fmtY, StickyYAxis } from './chartUtils'
 
 function fmtEur(v: number) {
@@ -50,10 +50,10 @@ export function MonthlyBarChart({ data }: Props) {
   const minWidth = Math.max(320, data.length * 60)
 
   return (
-    <div className="flex items-start">
-      <StickyYAxis ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
-      <div ref={scrollRef} className="overflow-x-auto flex-1 min-w-0">
-        <div style={{ minWidth }}>
+    <div id="chart-monthly-bar" className="flex items-start">
+      <StickyYAxis id="chart-monthly-bar-yaxis" ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
+      <div ref={scrollRef} id="chart-monthly-bar-scroll" className="overflow-x-auto flex-1 min-w-0">
+        <div id="chart-monthly-bar-inner" style={{ minWidth }}>
           <ResponsiveContainer width="100%" height={H}>
             <ComposedChart
               data={data}

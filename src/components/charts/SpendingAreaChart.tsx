@@ -3,9 +3,10 @@ import {
   ResponsiveContainer, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from 'recharts'
-import type { SpendingPoint } from '@/hooks/useAnalytics'
+import type { SpendingPoint } from '@/utils/chartCompute'
+import { getFilterMode } from '@/utils/chartCompute'
 import type { TimeFilter } from '@/types'
-import { getNiceTicks, fmtY, StickyYAxis } from './chartUtils'
+import { getNiceTicks, StickyYAxis } from './chartUtils'
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
@@ -60,7 +61,8 @@ const X_AXIS_H = 20
 
 export function SpendingAreaChart({ data, timeFilter }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const isMonthly = timeFilter === 'year' || timeFilter === 'all'
+  const mode = getFilterMode(timeFilter)
+  const isMonthly = mode === 'year' || mode === 'all'
   const hasIncome = data.some(d => d.income > 0)
 
   const yearBoundaries = useMemo(() => {
@@ -82,7 +84,7 @@ export function SpendingAreaChart({ data, timeFilter }: Props) {
     ? Math.max(300, data.length * 18)
     : undefined
 
-  const tickInterval = timeFilter === 'month' ? 6 : 0
+  const tickInterval = mode === 'month' ? 6 : 0
 
   useEffect(() => {
     const el = scrollRef.current
@@ -92,10 +94,10 @@ export function SpendingAreaChart({ data, timeFilter }: Props) {
   const TooltipEl = (props: any) => <ChartTooltip {...props} monthly={isMonthly} />
 
   return (
-    <div className="flex items-start">
-      <StickyYAxis ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
-      <div ref={scrollRef} className="overflow-x-auto flex-1 min-w-0">
-        <div style={minWidth ? { minWidth } : undefined}>
+    <div id="chart-spending-area" className="flex items-start">
+      <StickyYAxis id="chart-spending-area-yaxis" ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
+      <div ref={scrollRef} id="chart-spending-area-scroll" className="overflow-x-auto flex-1 min-w-0">
+        <div id="chart-spending-area-inner" style={minWidth ? { minWidth } : undefined}>
           <ResponsiveContainer width="100%" height={H}>
             <AreaChart data={data} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
               <defs>
@@ -112,6 +114,7 @@ export function SpendingAreaChart({ data, timeFilter }: Props) {
               <XAxis
                 dataKey="label"
                 height={X_AXIS_H}
+                padding={{ left: 20, right: 12 }}
                 tick={isMonthly
                   ? <MonthTick yearBoundaries={yearBoundaries} />
                   : { fontSize: 10, fill: 'rgba(255,255,255,0.35)' }
