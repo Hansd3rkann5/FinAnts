@@ -1,15 +1,24 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { TrendingDown, TrendingUp, RefreshCw, ChevronDown, ChevronUp, Landmark, Pencil } from 'lucide-react'
+import {
+  TrendingDown, TrendingUp, RefreshCw, ChevronDown, ChevronUp,
+  Landmark, Pencil, BarChart2, ShoppingBag, TrendingUp as TrendIcon,
+  Calendar,
+} from 'lucide-react'
 import type { TimeFilter, Transaction } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions, useBalanceSummary } from '@/hooks/useFilteredTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useManualBalance } from '@/hooks/useManualBalance'
+import { useAllCategories } from '@/hooks/useAllCategories'
+import { useAnalytics } from '@/hooks/useAnalytics'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { CategoryPieChart } from '@/components/charts/CategoryPieChart'
-import { BalanceBar } from '@/components/charts/BalanceBar'
+import { MonthlyBarChart } from '@/components/charts/MonthlyBarChart'
+import { SpendingAreaChart } from '@/components/charts/SpendingAreaChart'
+import { CategoryTrendChart } from '@/components/charts/CategoryTrendChart'
+import { TopMerchantsBar } from '@/components/charts/TopMerchantsBar'
 import { CategoryManageModal } from '@/components/ui/CategoryManageModal'
 import { CategoryBreakdownModal } from '@/components/ui/CategoryBreakdownModal'
 import { RecurringModal } from '@/components/ui/RecurringModal'
@@ -18,6 +27,27 @@ import { TransactionDetailModal } from '@/components/transactions/TransactionDet
 
 function formatEur(v: number, maximumFractionDigits = 0) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
+}
+
+function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      {icon}
+      <h2 className="text-sm font-semibold text-white/70">{title}</h2>
+    </div>
+  )
+}
+
+function StatPill({ label, value, sub, color = 'text-white/80' }: {
+  label: string; value: string; sub?: string; color?: string
+}) {
+  return (
+    <div className="flex-1 min-w-0">
+      <p className="text-[10px] text-white/35 mb-0.5">{label}</p>
+      <p className={`text-sm font-bold ${color} leading-tight`}>{value}</p>
+      {sub && <p className="text-[10px] text-white/25 mt-0.5">{sub}</p>}
+    </div>
+  )
 }
 
 export function Dashboard() {
@@ -29,42 +59,45 @@ export function Dashboard() {
     setTimeFilter(v)
     localStorage.setItem('dash-time-filter', v)
   }
+
   const [showAccounts, setShowAccounts] = useState(false)
   const [catManageOpen, setCatManageOpen] = useState(false)
   const [catBreakdownOpen, setCatBreakdownOpen] = useState(false)
   const [recurringOpen, setRecurringOpen] = useState(false)
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
+
   const { transactions, recurringGroups, updateTransaction } = useTransactionsCtx()
   const { accounts, toggleIncluded, totalWealth } = useAccounts()
-  const { balance: manualBalance, updatedAt: balanceUpdatedAt } = useManualBalance()
+  const { baseBalance, savedAt: balanceSavedAt, updatedAt: balanceUpdatedAt } = useManualBalance()
+  const { allMap } = useAllCategories()
   const filtered = useFilteredTransactions(transactions, timeFilter)
   const summary = useBalanceSummary(filtered)
+  const analytics = useAnalytics(transactions, filtered, timeFilter)
+
+  // Adjust manual balance by all booked transactions since the save date
+  const manualBalance = (() => {
+    if (baseBalance === null || balanceSavedAt === null) return null
+    const savedDate = new Date(balanceSavedAt)
+    const delta = transactions
+      .filter(t => !t.isPending && t.date >= savedDate)
+      .reduce((s, t) => s + t.amount, 0)
+    return baseBalance + delta
+  })()
+
+  const filledMonths = analytics.monthlyData.filter(m => m.expenses > 0 || m.income > 0)
+  const bestMonth = filledMonths.length
+    ? filledMonths.reduce((best, m) => m.balance > best.balance ? m : best)
+    : null
+  const worstMonthByExpenses = filledMonths.length
+    ? filledMonths.reduce((w, m) => m.expenses > w.expenses ? m : w)
+    : null
 
   return (
     <div id="page-dashboard" className="flex flex-col gap-4">
       <TimeFilterBar value={timeFilter} onChange={handleTimeFilter} id="dash" />
 
-      {accounts.length === 0 && manualBalance !== null && (
-        <GlassCard id="card-manual-balance" glow="purple">
-          <div className="flex items-center gap-2 mb-1">
-            <Landmark size={14} className="text-purple-400" />
-            <p className="text-xs text-white/40">Kontostand</p>
-            {balanceUpdatedAt && (
-              <p className="ml-auto text-[10px] text-white/25">{balanceUpdatedAt}</p>
-            )}
-          </div>
-          <motion.p
-            key={manualBalance}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className={`text-3xl font-bold ${manualBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
-          >
-            {formatEur(manualBalance, 2)}
-          </motion.p>
-        </GlassCard>
-      )}
 
+      {/* ── FinTS Gesamtvermögen ───────────────────────────────────────── */}
       {accounts.length > 0 && (
         <GlassCard id="card-wealth" glow="purple">
           <div className="flex items-center gap-2 mb-1">
@@ -102,12 +135,7 @@ export function Dashboard() {
               >
                 <div id="accounts-list" className="flex flex-col gap-2 pt-1">
                   {accounts.map(a => (
-                    <AccountCard
-                      key={a.iban}
-                      account={a}
-                      onToggle={toggleIncluded}
-                      showToggle
-                    />
+                    <AccountCard key={a.iban} account={a} onToggle={toggleIncluded} showToggle />
                   ))}
                   {accounts.some(a => !a.included) && (
                     <p className="text-[10px] text-white/25 text-center pt-1">
@@ -121,20 +149,29 @@ export function Dashboard() {
         </GlassCard>
       )}
 
-      <GlassCard id="card-balance" glow={accounts.length === 0 && manualBalance === null ? 'purple' : undefined}>
-        <p className="text-xs text-white/40 mb-1">Saldo im Zeitraum</p>
-        <motion.p
-          key={`${timeFilter}-${summary.balance}`}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          className={`text-3xl font-bold mb-4 ${summary.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
-        >
-          {summary.balance >= 0 ? '+' : ''}{formatEur(summary.balance)}
-        </motion.p>
-        <BalanceBar summary={summary} />
-      </GlassCard>
+      {/* ── Kontostand (manuell, nur wenn kein FinTS) ─────────────────── */}
+      {accounts.length === 0 && manualBalance !== null && (
+        <GlassCard id="card-manual-balance" glow="purple">
+          <div className="flex items-center gap-2 mb-1">
+            <Landmark size={14} className="text-purple-400" />
+            <p className="text-xs text-white/40">Kontostand</p>
+            {balanceUpdatedAt && (
+              <p className="ml-auto text-[10px] text-white/25">Stand: {balanceUpdatedAt}</p>
+            )}
+          </div>
+          <motion.p
+            key={manualBalance}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            className={`text-3xl font-bold ${manualBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+          >
+            {formatEur(manualBalance, 2)}
+          </motion.p>
+        </GlassCard>
+      )}
 
+      {/* ── Einnahmen / Ausgaben stats ─────────────────────────────────── */}
       <div id="stats-row" className="grid grid-cols-2 gap-3">
         <GlassCard id="card-income-stat" padding="sm" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-card_sm bg-emerald-500/15 flex items-center justify-center text-emerald-400">
@@ -156,6 +193,7 @@ export function Dashboard() {
         </GlassCard>
       </div>
 
+      {/* ── Kategorien (Pie) ──────────────────────────────────────────── */}
       <GlassCard id="card-categories">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-white/70">Kategorien</h2>
@@ -167,7 +205,6 @@ export function Dashboard() {
             <Pencil size={13} />
           </button>
         </div>
-
 
         {summary.categories.length > 0 ? (
           <CategoryPieChart categories={summary.categories} />
@@ -186,6 +223,119 @@ export function Dashboard() {
         </button>
       </GlassCard>
 
+      {/* ── Analytics section (only when enough data) ─────────────────── */}
+      {analytics.hasEnoughData && (
+        <>
+          {/* Monatlicher Verlauf */}
+          <GlassCard id="card-monthly-bar">
+            <SectionHeader
+              icon={<BarChart2 size={14} className="text-purple-400" />}
+              title="Monatlicher Verlauf"
+            />
+            <MonthlyBarChart data={analytics.monthlyData} />
+            <div className="flex gap-4 justify-center mt-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-emerald-400/70" />
+                <span className="text-[10px] text-white/35">Einnahmen</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-red-400/70" />
+                <span className="text-[10px] text-white/35">Ausgaben</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-6 h-px bg-white/30" />
+                <span className="text-[10px] text-white/35">Saldo</span>
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Statistiken Highlights */}
+          <GlassCard id="card-stats-highlights" padding="sm">
+            <div className="flex gap-1 divide-x divide-white/6">
+              <div className="flex-1 px-3 py-1">
+                <StatPill
+                  label="Ø Monatsausgaben"
+                  value={formatEur(analytics.avgMonthlyExpenses)}
+                  color="text-white/80"
+                />
+              </div>
+              {analytics.currentMonthSavingsRate !== null && (
+                <div className="flex-1 px-3 py-1">
+                  <StatPill
+                    label="Sparquote (akt. Monat)"
+                    value={`${analytics.currentMonthSavingsRate.toFixed(0)} %`}
+                    sub={analytics.lastMonthSavingsRate !== null
+                      ? `Vormonat: ${analytics.lastMonthSavingsRate.toFixed(0)} %`
+                      : undefined}
+                    color={analytics.currentMonthSavingsRate > 10 ? 'text-emerald-400' : 'text-white/80'}
+                  />
+                </div>
+              )}
+              {bestMonth && (
+                <div className="flex-1 px-3 py-1">
+                  <StatPill
+                    label="Bester Monat"
+                    value={bestMonth.month}
+                    sub={`+${formatEur(bestMonth.balance)}`}
+                    color="text-emerald-400"
+                  />
+                </div>
+              )}
+            </div>
+          </GlassCard>
+
+          {/* Ausgaben im Zeitraum */}
+          {analytics.spendingData.length >= 2 && (
+            <GlassCard id="card-spending-area">
+              <SectionHeader
+                icon={<Calendar size={14} className="text-blue-400" />}
+                title={timeFilter === 'week'
+                  ? 'Ausgaben diese Woche'
+                  : timeFilter === 'month'
+                  ? 'Ausgaben diesen Monat'
+                  : 'Ausgaben im Überblick'}
+              />
+              <SpendingAreaChart data={analytics.spendingData} timeFilter={timeFilter} />
+              {worstMonthByExpenses && timeFilter === 'all' && (
+                <p className="text-[10px] text-white/25 text-center mt-2">
+                  Ausgabenrekord: {worstMonthByExpenses.month} · {formatEur(worstMonthByExpenses.expenses)}
+                </p>
+              )}
+            </GlassCard>
+          )}
+
+          {/* Kategorie-Entwicklung */}
+          {analytics.categoryTrends.topCats.length >= 2 && (
+            <GlassCard id="card-category-trends">
+              <SectionHeader
+                icon={<TrendIcon size={14} className="text-orange-400" />}
+                title="Kategorie-Entwicklung"
+              />
+              <CategoryTrendChart
+                points={analytics.categoryTrends.points}
+                topCats={analytics.categoryTrends.topCats}
+                allMap={allMap}
+              />
+              <p className="text-[10px] text-white/25 text-center mt-3">
+                Top-Kategorien · Letzte 6 Monate
+              </p>
+            </GlassCard>
+          )}
+
+          {/* Top Händler */}
+          {analytics.topMerchants.length >= 2 && (
+            <GlassCard id="card-top-merchants">
+              <SectionHeader
+                icon={<ShoppingBag size={14} className="text-yellow-400" />}
+                title="Top Händler"
+              />
+              <TopMerchantsBar merchants={analytics.topMerchants} allMap={allMap} />
+            </GlassCard>
+          )}
+        </>
+      )}
+
+      {/* ── Daueraufträge ─────────────────────────────────────────────── */}
       {recurringGroups.length > 0 && (
         <GlassCard id="card-recurring" glow="purple">
           <div className="flex items-center gap-2 mb-3">
@@ -218,11 +368,8 @@ export function Dashboard() {
         </GlassCard>
       )}
 
-
-      <CategoryManageModal
-        open={catManageOpen}
-        onClose={() => setCatManageOpen(false)}
-      />
+      {/* ── Modals ────────────────────────────────────────────────────── */}
+      <CategoryManageModal open={catManageOpen} onClose={() => setCatManageOpen(false)} />
       <CategoryBreakdownModal
         open={catBreakdownOpen}
         onClose={() => setCatBreakdownOpen(false)}
@@ -236,10 +383,7 @@ export function Dashboard() {
           setSelectedTx(prev => prev ? { ...prev, ...patch } : null)
         }}
       />
-      <RecurringModal
-        open={recurringOpen}
-        onClose={() => setRecurringOpen(false)}
-      />
+      <RecurringModal open={recurringOpen} onClose={() => setRecurringOpen(false)} />
     </div>
   )
 }

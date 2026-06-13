@@ -3,48 +3,62 @@ import type { MerchantProfile, Transaction } from '@/types'
 
 const STORAGE_KEY = 'finants_merchant_profiles'
 
+type StoredProfile = MerchantProfile & { matchString?: string }
+
 function load(): MerchantProfile[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
+    if (!raw) return []
+    const profiles = JSON.parse(raw) as StoredProfile[]
+    // migrate old single-string entries
+    return profiles.map(p => {
+      if (!p.matchStrings && p.matchString) {
+        const { matchString, ...rest } = p
+        return { ...rest, matchStrings: [matchString] }
+      }
+      return p as MerchantProfile
+    })
   } catch { return [] }
 }
 
-function save(profiles: MerchantProfile[]) {
+function persist(profiles: MerchantProfile[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles))
 }
 
 export function resolveProfile(tx: Transaction, profiles: MerchantProfile[]): MerchantProfile | null {
   const text = `${tx.counterparty} ${tx.description}`.toLowerCase()
-  const matches = profiles.filter(p => {
-    const m = p.matchString.toLowerCase()
-    return p.matchMode === 'exact'
-      ? tx.counterparty.toLowerCase() === m
-      : text.includes(m)
-  })
+  const matches = profiles.filter(p =>
+    p.matchStrings.some(ms => {
+      const m = ms.toLowerCase()
+      return p.matchMode === 'exact'
+        ? tx.counterparty.toLowerCase() === m
+        : text.includes(m)
+    })
+  )
   if (!matches.length) return null
-  return matches.sort((a, b) => b.matchString.length - a.matchString.length)[0]
+  // prefer the profile with the most strings (more specific)
+  return matches.sort((a, b) => b.matchStrings.length - a.matchStrings.length)[0]
 }
 
 export function useMerchantProfiles() {
   const [merchantProfiles, setMerchantProfiles] = useState<MerchantProfile[]>(load)
 
   const upsertProfile = useCallback((
-    matchString: string,
+    profileId: string | null,
+    matchStrings: string[],
     matchMode: 'exact' | 'contains',
     patch: { label?: string; customIcon?: string },
   ) => {
     setMerchantProfiles(prev => {
-      const existing = prev.find(
-        p => p.matchString.toLowerCase() === matchString.toLowerCase() && p.matchMode === matchMode,
-      )
       let next: MerchantProfile[]
-      if (existing) {
-        next = prev.map(p => p.id === existing.id ? { ...p, ...patch } : p)
+      if (profileId) {
+        next = prev.map(p =>
+          p.id === profileId ? { ...p, matchStrings, matchMode, ...patch } : p
+        )
       } else {
-        next = [...prev, { id: crypto.randomUUID(), matchString, matchMode, ...patch }]
+        next = [...prev, { id: crypto.randomUUID(), matchStrings, matchMode, ...patch }]
       }
-      save(next)
+      persist(next)
       return next
     })
   }, [])
@@ -52,14 +66,14 @@ export function useMerchantProfiles() {
   const deleteProfile = useCallback((id: string) => {
     setMerchantProfiles(prev => {
       const next = prev.filter(p => p.id !== id)
-      save(next)
+      persist(next)
       return next
     })
   }, [])
 
   const applyCloudProfiles = useCallback((profiles: MerchantProfile[]) => {
     setMerchantProfiles(profiles)
-    save(profiles)
+    persist(profiles)
   }, [])
 
   return { merchantProfiles, upsertProfile, deleteProfile, applyCloudProfiles }

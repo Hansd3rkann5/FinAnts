@@ -44,7 +44,7 @@ export interface Transaction {
 
 export interface MerchantProfile {
   id: string
-  matchString: string
+  matchStrings: string[]
   matchMode: 'exact' | 'contains'
   label?: string
   customIcon?: string

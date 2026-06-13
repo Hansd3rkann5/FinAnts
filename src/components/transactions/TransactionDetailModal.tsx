@@ -4,7 +4,7 @@ import { useModalRegistration } from '@/hooks/useModalRegistration'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { X, Pencil, Check, RotateCcw, Upload, Loader } from 'lucide-react'
+import { X, Pencil, Check, RotateCcw, Upload, Loader, Plus } from 'lucide-react'
 import type { Transaction } from '@/types'
 import { CATEGORIES } from '@/data/categories'
 import { useAllCategories } from '@/hooks/useAllCategories'
@@ -78,25 +78,43 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
   const [editing, setEditing] = useState(false)
   const [label, setLabel] = useState('')
   const [category, setCategory] = useState<string>('other')
-  const { allList } = useAllCategories()
+  const { allList, allMap } = useAllCategories()
   const [icon, setIcon] = useState<string | undefined>(undefined)
   const [iconTab, setIconTab] = useState<'emoji' | 'upload'>('emoji')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
-  const [matchString, setMatchString] = useState('')
+  const [matchStrings, setMatchStrings] = useState<string[]>([])
   const [matchMode, setMatchMode] = useState<'exact' | 'contains'>('exact')
+  const [customInput, setCustomInput] = useState('')
+  const [existingProfileId, setExistingProfileId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const chips = useMemo(() => tx ? extractChips(tx) : [], [tx])
 
   const affectedCount = useMemo(() => {
-    if (!matchString.trim()) return 0
-    const m = matchString.toLowerCase()
+    if (!matchStrings.length) return 0
     return transactions.filter(t => {
       const text = `${t.counterparty} ${t.description}`.toLowerCase()
-      return matchMode === 'exact' ? t.counterparty.toLowerCase() === m : text.includes(m)
+      return matchStrings.some(ms => {
+        const m = ms.toLowerCase()
+        return matchMode === 'exact'
+          ? t.counterparty.toLowerCase() === m
+          : text.includes(m)
+      })
     }).length
-  }, [transactions, matchString, matchMode])
+  }, [transactions, matchStrings, matchMode])
+
+  function toggleChip(chip: string) {
+    setMatchStrings(prev =>
+      prev.includes(chip) ? prev.filter(s => s !== chip) : [...prev, chip]
+    )
+  }
+
+  function addCustom() {
+    const s = customInput.trim()
+    if (s && !matchStrings.includes(s)) setMatchStrings(prev => [...prev, s])
+    setCustomInput('')
+  }
 
   function openEdit() {
     if (!tx) return
@@ -104,10 +122,12 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
     setLabel(p?.label ?? tx.customLabel ?? tx.counterparty ?? '')
     setCategory(tx.categoryId)
     setIcon(p?.customIcon ?? tx.customIcon)
-    setMatchString(p?.matchString ?? tx.counterparty ?? '')
+    setMatchStrings(p?.matchStrings ?? [tx.counterparty ?? ''].filter(Boolean))
     setMatchMode(p?.matchMode ?? 'exact')
+    setExistingProfileId(p?.id ?? null)
     setEditing(true)
     setUploadError('')
+    setCustomInput('')
   }
 
   function cancelEdit() { setEditing(false) }
@@ -119,25 +139,24 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
 
   function save() {
     if (!tx) return
-    const ms = matchString.trim()
-    if (ms) {
-      upsertProfile(ms, matchMode, {
+    if (matchStrings.length > 0) {
+      upsertProfile(existingProfileId, matchStrings, matchMode, {
         label: label.trim() || undefined,
         customIcon: icon,
       })
-      // Apply category to all existing matching transactions
-      const m = ms.toLowerCase()
       const matchingIds = transactions
         .filter(t => {
           const text = `${t.counterparty} ${t.description}`.toLowerCase()
-          return matchMode === 'exact'
-            ? t.counterparty.toLowerCase() === m
-            : text.includes(m)
+          return matchStrings.some(ms => {
+            const m = ms.toLowerCase()
+            return matchMode === 'exact'
+              ? t.counterparty.toLowerCase() === m
+              : text.includes(m)
+          })
         })
         .map(t => t.id)
       batchUpdateCategory(matchingIds, category)
     }
-    // Clear per-transaction overrides — profile now drives display
     onUpdate(tx.id, { customLabel: undefined, customIcon: undefined, categoryId: category })
     setEditing(false)
   }
@@ -165,10 +184,9 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
     }
   }
 
-  const displayIcon   = tx?.customIcon  ?? profile?.customIcon
-  const displayLabel  = tx?.customLabel ?? profile?.label
-  const merchantKey   = tx?.merchantKey ?? (tx ? findMerchant(`${tx.description ?? ''} ${tx.counterparty ?? ''}`)?.merchantKey : undefined)
-  const { allMap } = useAllCategories()
+  const displayIcon  = tx?.customIcon  ?? profile?.customIcon
+  const displayLabel = tx?.customLabel ?? profile?.label
+  const merchantKey  = tx?.merchantKey ?? (tx ? findMerchant(`${tx.description ?? ''} ${tx.counterparty ?? ''}`)?.merchantKey : undefined)
   const cat = tx ? (allMap[tx.categoryId] ?? CATEGORIES['other']) : null
 
   return createPortal(
@@ -225,7 +243,10 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
                   tx.iban ? { label: 'IBAN', value: tx.iban } : null,
                   tx.reference ? { label: 'Verwendungszweck', value: tx.reference } : null,
                   tx.isRecurring ? { label: 'Typ', value: '🔁 Wiederkehrend' } : null,
-                  profile ? { label: 'Profil', value: `${profile.matchMode === 'exact' ? '=' : '~'} „${profile.matchString}"` } : null,
+                  profile ? {
+                    label: 'Profil',
+                    value: `${profile.matchMode === 'exact' ? '=' : '~'} ${profile.matchStrings.map(s => `„${s}"`).join(', ')}`,
+                  } : null,
                 ].filter(Boolean).map((row, i) => (
                   <div key={i} className="flex justify-between gap-4 bg-white/4 px-4 py-3">
                     <span className="text-xs text-white/40 shrink-0">{row!.label}</span>
@@ -358,46 +379,66 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
                     )}
                   </div>
 
-                  {/* Tag / match rule */}
+                  {/* ── Gilt für ─────────────────────────────────────────── */}
                   <div>
-                    <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-1.5">
-                      Gilt für
-                    </label>
-
-                    {/* Mode toggle + input */}
-                    <div className="flex gap-2 mb-2">
-                      <div className="flex rounded-card_sm overflow-hidden border border-white/10 shrink-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="text-[10px] text-white/40 uppercase tracking-wider">Gilt für</label>
+                      {/* Mode toggle */}
+                      <div className="flex rounded-card_sm overflow-hidden border border-white/10 ml-auto shrink-0">
                         {(['exact', 'contains'] as const).map(m => (
                           <button key={m} onClick={() => setMatchMode(m)}
-                            className={`text-[10px] px-2.5 py-1.5 transition-colors ${matchMode === m ? 'bg-purple-500/30 text-purple-300' : 'text-white/30 hover:text-white/50'}`}
+                            className={`text-[10px] px-2.5 py-1 transition-colors ${matchMode === m ? 'bg-purple-500/30 text-purple-300' : 'text-white/30 hover:text-white/50'}`}
                           >{m === 'exact' ? 'Exakt' : 'Enthält'}</button>
                         ))}
                       </div>
-                      <input
-                        type="text"
-                        value={matchString}
-                        onChange={e => setMatchString(e.target.value)}
-                        placeholder="Suchbegriff…"
-                        className="flex-1 min-w-0 rounded-card_sm bg-white/6 border border-white/10 px-3 py-1.5 text-sm text-white placeholder-white/25 outline-none focus:border-purple-500/50 transition-colors"
-                      />
                     </div>
 
-                    {/* Word chips */}
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {chips.map(chip => (
-                        <button key={chip} onClick={() => setMatchString(chip)}
-                          className={`text-[11px] px-2 py-0.5 rounded-full border transition-all active:scale-95 ${
-                            matchString.toUpperCase() === chip
-                              ? 'bg-purple-500/30 border-purple-500/50 text-purple-300'
-                              : 'bg-white/4 border-white/10 text-white/50 hover:text-white/80 hover:border-white/25'
-                          }`}
+                    {/* Selected strings */}
+                    {matchStrings.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2.5">
+                        {matchStrings.map(s => (
+                          <button
+                            key={s}
+                            onClick={() => toggleChip(s)}
+                            className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-purple-500/25 border border-purple-500/40 text-purple-300 transition-all active:scale-95"
+                          >
+                            {s}
+                            <X size={9} className="opacity-70" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Word chips from transaction text */}
+                    <div className="flex flex-wrap gap-1.5 mb-2.5">
+                      {chips.filter(c => !matchStrings.includes(c)).map(chip => (
+                        <button key={chip} onClick={() => toggleChip(chip)}
+                          className="text-[11px] px-2 py-0.5 rounded-full border bg-white/4 border-white/10 text-white/50 hover:text-white/80 hover:border-white/25 transition-all active:scale-95"
                         >{chip}</button>
                       ))}
                     </div>
 
-                    {/* Affected count */}
-                    {matchString.trim() && (
-                      <p className="text-[10px] text-white/30">
+                    {/* Custom string input */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={customInput}
+                        onChange={e => setCustomInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addCustom()}
+                        placeholder="Eigener Begriff…"
+                        className="flex-1 min-w-0 rounded-card_sm bg-white/6 border border-white/10 px-3 py-1.5 text-sm text-white placeholder-white/25 outline-none focus:border-purple-500/50 transition-colors"
+                      />
+                      <button
+                        onClick={addCustom}
+                        disabled={!customInput.trim()}
+                        className="w-8 h-8 shrink-0 rounded-card_sm bg-white/6 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/80 disabled:opacity-30 transition-colors"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+
+                    {affectedCount > 0 && (
+                      <p className="text-[10px] text-white/30 mt-2">
                         {affectedCount} Buchung{affectedCount !== 1 ? 'en' : ''} betroffen
                       </p>
                     )}

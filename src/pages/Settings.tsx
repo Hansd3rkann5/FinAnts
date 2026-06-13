@@ -21,7 +21,9 @@ import {
   saveWorkerConfig,
   type SyncStatus,
 } from '@/hooks/useWorkerSync'
-import { formatEur } from '@/utils/formatEur'
+function formatEur(v: number, maximumFractionDigits = 2) {
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
+}
 
 type ImportStatus = 'idle' | 'parsing' | 'success' | 'error'
 
@@ -117,7 +119,7 @@ function CollapsibleCard({
 export function Settings() {
   const { transactions, importTransactions, clearAll } = useTransactionsCtx()
   const { accounts, setAccounts, toggleIncluded } = useAccounts()
-  const { balance: manualBalance, updatedAt: balanceUpdatedAt, save: saveBalance } = useManualBalance()
+  const { baseBalance: manualBalance, updatedAt: balanceUpdatedAt, save: saveBalance } = useManualBalance()
   const fileRef = useRef<HTMLInputElement>(null)
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle')
   const [importMessage, setImportMessage] = useState('')
