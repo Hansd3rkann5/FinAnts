@@ -15,18 +15,18 @@ const PAD_X = 3   // keep end points off the very edge
 const PAD_Y = 9   // vertical breathing room for the random y-values
 const POINTS = 5
 
-// Lifecycle of a single line (seconds), three equal phases:
+// Lifecycle of a single line (seconds):
 //   draw  → revealed left→right (ease-in-out)
-//   hold  → fully drawn, held while its successor draws its first 2 points
+//   hold  → fully drawn, held while its successor draws its first segment
 //   erase → wiped left→right (ease-in-out)
-// A new line spawns every LIFE/2 seconds. With three equal phases that means
-// the steady state always holds exactly two lines: the old one erasing
-// left→right while the new one draws left→right, their fronts kept half the
-// width apart — so they overlap across ~2 of the chart's points.
-const PHASE = 1.2
-const DRAW = PHASE
-const HOLD = PHASE
-const ERASE = PHASE
+// A new line spawns every LIFE/2 seconds, so the steady state always holds
+// exactly two lines: the old one erasing left→right while the new one draws
+// left→right. The draw:hold:erase = 2:1:2 ratio keeps the old line's erase
+// front exactly one segment behind the new line's draw front — i.e. the two
+// lines overlap by a single x-segment during the handoff.
+const DRAW = 1.4
+const HOLD = 0.7
+const ERASE = 1.4
 const LIFE = DRAW + HOLD + ERASE
 const SPAWN = LIFE / 2
 
