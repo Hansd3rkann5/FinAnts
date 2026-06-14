@@ -15,7 +15,7 @@ interface Props {
 export function TopMerchantsBar({ merchants, allMap }: Props) {
   const max = merchants[0]?.total ?? 1
   const containerRef = useRef<HTMLDivElement>(null)
-  const inView = useInView(containerRef, { once: true, amount: 0.3 })
+  const inView = useInView(containerRef, { once: true, amount: 0.1 })
 
   return (
     <div ref={containerRef} id="chart-top-merchants" className="flex flex-col gap-2.5">
@@ -33,7 +33,7 @@ export function TopMerchantsBar({ merchants, allMap }: Props) {
                 style={{ backgroundColor: cat?.color ?? '#6b7280' }}
                 initial={{ width: 0 }}
                 animate={{ width: inView ? `${pct}%` : 0 }}
-                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1], delay: i * 0.04 }}
+                transition={{ duration: 1, ease: [0.4, 0, 0.2, 1], delay: i * 0.1 }}
               />
             </div>
             <div className="text-right shrink-0 w-14">

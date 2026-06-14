@@ -3,9 +3,10 @@ import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
   Wifi, Eye, EyeOff, CloudUpload, CloudDownload, Cloud,
-  ChevronDown, Wallet, Database,
+  ChevronDown, Wallet, Database, Link2,
 } from 'lucide-react'
 import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
+import { useEnableBanking } from '@/hooks/useEnableBanking'
 import { useManualBalance } from '@/hooks/useManualBalance'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
@@ -144,6 +145,16 @@ export function Settings() {
     push: cloudPush, pull: cloudPull,
     status: cloudStatus, message: cloudMessage, lastSync: cloudLastSync,
   } = useCloudSync()
+
+  const [ebBank,    setEbBank]    = useState('Commerzbank')
+  const [ebCountry, setEbCountry] = useState('DE')
+  const [ebDays,    setEbDays]    = useState(90)
+  const {
+    start: ebStart,
+    status: ebStatus,
+    message: ebMessage,
+    lastSync: ebLastSync,
+  } = useEnableBanking(importTransactions, setAccounts)
 
   useEffect(() => {
     const cfg = loadWorkerConfig()
@@ -347,6 +358,98 @@ export function Settings() {
             </AnimatePresence>
             {lastSync && (
               <p className="text-[10px] text-white/25 text-center">Zuletzt synchronisiert: {lastSync}</p>
+            )}
+          </div>
+        </CollapsibleCard>
+
+        {/* ── EnableBanking (PSD2) ─────────────────────────────────────────── */}
+        <CollapsibleCard
+          icon={<Link2 size={15} className="text-blue-400 shrink-0" />}
+          title="EnableBanking (PSD2)"
+          badge={ebLastSync
+            ? <span className="text-[10px] text-blue-400/70 border border-blue-500/20 bg-blue-500/10 rounded-pill px-2 py-0.5">Verbunden</span>
+            : undefined}
+          statusText={ebLastSync
+            ? `PSD2 · Zuletzt: ${ebLastSync}`
+            : 'Offizielle PSD2-Schnittstelle · Alternative zu FinTS'}
+        >
+          <p className="text-xs text-white/40 mb-4">
+            Verbinde deine Bank über die offizielle PSD2-Schnittstelle. Sicherer als FinTS,
+            direkt von der Bank unterstützt. Erfordert <span className="text-white/60">EB_APPLICATION_ID</span> und{' '}
+            <span className="text-white/60">EB_PRIVATE_KEY</span> als Worker-Secrets.
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">Bank</label>
+                <input
+                  type="text"
+                  value={ebBank}
+                  onChange={e => setEbBank(e.target.value)}
+                  placeholder="Commerzbank"
+                  className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-blue-500/40 transition-colors"
+                />
+              </div>
+              <div className="w-16">
+                <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">Land</label>
+                <input
+                  type="text"
+                  value={ebCountry}
+                  onChange={e => setEbCountry(e.target.value.toUpperCase().slice(0, 2))}
+                  placeholder="DE"
+                  className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-blue-500/40 transition-colors text-center"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">
+                Zeitraum: letzte {ebDays} Tage
+              </label>
+              <div className="flex gap-2">
+                {[30, 60, 90, 180, 365].map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setEbDays(d)}
+                    className="flex-1 py-1.5 rounded-pill text-xs border transition-all duration-150"
+                    style={{
+                      backgroundColor: ebDays === d ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)',
+                      borderColor:     ebDays === d ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)',
+                      color:           ebDays === d ? '#93c5fd' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    {d === 365 ? '1J' : `${d}T`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <PillButton
+              variant="primary"
+              size="sm"
+              disabled={!workerUrl || !apiKey || ebStatus === 'starting' || ebStatus === 'syncing'}
+              icon={<Link2 size={13} className={ebStatus === 'starting' || ebStatus === 'syncing' ? 'animate-pulse' : ''} />}
+              onClick={() => ebStart({ workerUrl: workerUrl.trim(), apiKey: apiKey.trim() }, ebBank, ebCountry, ebDays)}
+            >
+              {ebStatus === 'starting'      ? 'Starte Session…'
+               : ebStatus === 'awaiting_auth' ? 'Warte auf Bank-Auth…'
+               : ebStatus === 'syncing'       ? 'Importiere…'
+               : ebLastSync                   ? 'Erneut synchronisieren'
+               : 'Mit Bank verbinden'}
+            </PillButton>
+
+            <AnimatePresence>
+              {(ebStatus === 'success' || ebStatus === 'error') && (
+                <StatusBanner
+                  status={ebStatus === 'success' ? 'success' : 'error'}
+                  message={ebMessage}
+                />
+              )}
+            </AnimatePresence>
+
+            {ebLastSync && (
+              <p className="text-[10px] text-white/25 text-center">Zuletzt synchronisiert: {ebLastSync}</p>
             )}
           </div>
         </CollapsibleCard>

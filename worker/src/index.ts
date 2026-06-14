@@ -1,4 +1,5 @@
 import { syncAll, blzFromIban } from './fints'
+import { ebStartAuth, ebExchangeAndSync, ebGetAspsps } from './enablebanking'
 
 export interface Env {
   FINTS_BLZ?: string
@@ -9,6 +10,10 @@ export interface Env {
   API_KEY: string
   ALLOWED_ORIGIN: string
   ICONS: R2Bucket
+  /** EnableBanking – set via: wrangler secret put EB_APPLICATION_ID */
+  EB_APPLICATION_ID?: string
+  /** EnableBanking – set via: wrangler secret put EB_PRIVATE_KEY */
+  EB_PRIVATE_KEY?: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,6 +82,57 @@ export default {
 
     if (!checkAuth(request, env)) {
       return jsonResponse({ error: 'Unauthorized' }, 401, cors)
+    }
+
+    // ── GET /eb/aspsps?country=DE — list supported banks ──────────────────
+    if (request.method === 'GET' && path === '/eb/aspsps') {
+      if (!env.EB_APPLICATION_ID || !env.EB_PRIVATE_KEY) {
+        return jsonResponse({ error: 'EnableBanking nicht konfiguriert' }, 503, cors)
+      }
+      const country = url.searchParams.get('country') ?? 'DE'
+      const search  = url.searchParams.get('search') ?? undefined
+      try {
+        const data = await ebGetAspsps(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, country, search)
+        return jsonResponse(data, 200, cors)
+      } catch (e) {
+        return jsonResponse({ error: String(e) }, 502, cors)
+      }
+    }
+
+    // ── POST /eb/start ─────────────────────────────────────────────────────
+    if (request.method === 'POST' && path === '/eb/start') {
+      if (!env.EB_APPLICATION_ID || !env.EB_PRIVATE_KEY) {
+        return jsonResponse({ error: 'EnableBanking nicht konfiguriert (EB_APPLICATION_ID, EB_PRIVATE_KEY)' }, 503, cors)
+      }
+      let body: { redirect_url: string; aspsp_name?: string; aspsp_country?: string }
+      try { body = await request.json() as typeof body } catch { return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors) }
+
+      try {
+        const result = await ebStartAuth(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, body.redirect_url, body.aspsp_name ?? 'Commerzbank AG', body.aspsp_country ?? 'DE')
+        return jsonResponse(result, 200, cors)
+      } catch (e) {
+        return jsonResponse({ error: String(e) }, 502, cors)
+      }
+    }
+
+    // ── POST /eb/sync ──────────────────────────────────────────────────────
+    if (request.method === 'POST' && path === '/eb/sync') {
+      if (!env.EB_APPLICATION_ID || !env.EB_PRIVATE_KEY) {
+        return jsonResponse({ error: 'EnableBanking nicht konfiguriert' }, 503, cors)
+      }
+      let body: { code: string; days?: number }
+      try { body = await request.json() as typeof body } catch { return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors) }
+
+      const daysBack = Math.min(body.days ?? 90, 365)
+      const toDate   = new Date()
+      const fromDate = new Date(toDate.getTime() - daysBack * 86_400_000)
+
+      try {
+        const result = await ebExchangeAndSync(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, body.code, fromDate, toDate)
+        return jsonResponse(buildSuccessBody(result, fromDate, toDate), 200, cors)
+      } catch (e) {
+        return jsonResponse({ error: String(e) }, 502, cors)
+      }
     }
 
     // ── POST /upload-icon ──────────────────────────────────────────────────
