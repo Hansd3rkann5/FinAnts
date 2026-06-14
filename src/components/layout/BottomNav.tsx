@@ -5,8 +5,8 @@ import { clsx } from 'clsx'
 import { useModalContext } from '@/context/ModalContext'
 
 const TABS = [
-  { to: '/',             label: 'Übersicht',    Icon: LayoutDashboard },
   { to: '/transactions', label: 'Buchungen',    Icon: List            },
+  { to: '/',             label: 'Übersicht',    Icon: LayoutDashboard },
   { to: '/settings',     label: 'Einstellungen', Icon: Settings        },
 ]
 
@@ -23,18 +23,20 @@ export function BottomNav() {
     >
       <div
         id="nav-glass"
-        className="absolute top-0 bottom-0 left-4 right-4 rounded-t-[35px]"
+        className="absolute top-0 bottom-0 rounded-t-[35px]"
         style={{
           backdropFilter: 'blur(5px)',
           WebkitBackdropFilter: 'blur(5px)',
+          marginInline: '24px',
         }}
       />
-      <div id="nav-pill" className="relative mb-4 rounded-pill bg-white/[0.04] border border-white/[0.08] flex"
+      <div id="nav-pill" className="relative rounded-pill bg-white/[0.04] border border-white/[0.08] flex"
         style={{
           backgroundColor: 'rgba(30, 30, 30, 0.7)',
           backdropFilter: 'blur(1px)',
           WebkitBackdropFilter: 'blur(1px)',
-          marginInline: '14px',
+          marginInline: '24px',
+          marginBottom: '24px',
           boxShadow: '0 4px 24px 10px rgba(10,10,10,0.8), 0 1px 80px 10px rgba(10,10,10,0.8)',
         }}
       >

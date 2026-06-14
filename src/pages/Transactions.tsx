@@ -5,6 +5,7 @@ import type { TimeFilter, Transaction } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions } from '@/hooks/useFilteredTransactions'
 import { useAllCategories } from '@/hooks/useAllCategories'
+import { computeAvailablePeriods } from '@/utils/chartCompute'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { TransactionList } from '@/components/transactions/TransactionList'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
@@ -21,6 +22,7 @@ export function Transactions() {
   const { transactions, updateCategory, updateTransaction } = useTransactionsCtx()
 
   const timeFiltered = useFilteredTransactions(transactions, timeFilter)
+  const periods = useMemo(() => computeAvailablePeriods(transactions), [transactions])
 
   const displayed = useMemo(() => {
     let result = timeFiltered
@@ -40,9 +42,20 @@ export function Transactions() {
   return (
     <PullToRefresh onRefresh={() => window.location.reload()}>
     <div id="page-transactions" className="flex flex-col gap-4">
-      <TimeFilterBar value={timeFilter} onChange={setTimeFilter} id="tx" />
+      <div
+        id="tx-sticky-filter"
+        className="sticky top-0 z-30 pt-2 pb-2"
+        style={{
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          backgroundColor: 'rgba(10, 10, 20, 0.75)',
+          boxShadow: '0 -4px 24px 10px rgba(10,10,10,0.8), 0 -1px 80px 10px rgba(10,10,10,0.8)',
+        }}
+      >
+        <TimeFilterBar value={timeFilter} onChange={setTimeFilter} id="tx" periods={periods} />
+      </div>
 
-      <div id="tx-search-bar" className="relative flex items-center">
+      <div id="tx-search-bar" className="relative flex items-center mx-4">
         <Search size={14} className="absolute left-3 text-white/30 pointer-events-none" />
         <input
           type="text"
@@ -78,7 +91,7 @@ export function Transactions() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
+            className="overflow-hidden mx-4"
           >
             <div id="tx-filter-pills" className="flex flex-wrap gap-2 pb-1">
               <PillButton
@@ -109,15 +122,17 @@ export function Transactions() {
         )}
       </AnimatePresence>
 
-      <p id="tx-result-count" className="text-xs text-white/30">
+      <p id="tx-result-count" className="text-xs text-white/30 mx-4">
         {displayed.length} Buchung{displayed.length !== 1 ? 'en' : ''}
       </p>
 
-      <TransactionList
-        transactions={displayed}
-        onCategoryChange={updateCategory}
-        onTransactionClick={setSelected}
-      />
+      <div className="mx-4">
+        <TransactionList
+          transactions={displayed}
+          onCategoryChange={updateCategory}
+          onTransactionClick={setSelected}
+        />
+      </div>
 
       <TransactionDetailModal
         transaction={selected}
