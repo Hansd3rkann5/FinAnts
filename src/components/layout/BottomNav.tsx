@@ -25,14 +25,14 @@ export function BottomNav() {
         id="nav-glass"
         className="absolute top-0 bottom-0 rounded-t-[35px]"
         style={{
-          backdropFilter: 'blur(5px)',
-          WebkitBackdropFilter: 'blur(5px)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           marginInline: '24px',
         }}
       />
       <div id="nav-pill" className="relative rounded-pill bg-white/[0.04] border border-white/[0.08] flex"
         style={{
-          backgroundColor: 'rgba(30, 30, 30, 0.7)',
+          backgroundColor: 'rgba(20, 20, 20, 0.7)',
           backdropFilter: 'blur(1px)',
           WebkitBackdropFilter: 'blur(1px)',
           marginInline: '24px',

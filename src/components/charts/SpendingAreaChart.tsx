@@ -1,4 +1,5 @@
 import { useRef, useEffect, useMemo } from 'react'
+import { useInView } from 'framer-motion'
 import {
   ResponsiveContainer, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
@@ -61,6 +62,8 @@ const X_AXIS_H = 20
 
 export function SpendingAreaChart({ data, timeFilter }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const inView = useInView(containerRef, { once: true, amount: 0.3 })
   const mode = getFilterMode(timeFilter)
   const isMonthly = mode === 'year' || mode === 'all'
   const hasIncome = data.some(d => d.income > 0)
@@ -94,7 +97,7 @@ export function SpendingAreaChart({ data, timeFilter }: Props) {
   const TooltipEl = (props: any) => <ChartTooltip {...props} monthly={isMonthly} />
 
   return (
-    <div id="chart-spending-area" className="flex items-start">
+    <div ref={containerRef} id="chart-spending-area" className="flex items-start">
       <StickyYAxis id="chart-spending-area-yaxis" ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
       <div ref={scrollRef} id="chart-spending-area-scroll" className="overflow-x-auto flex-1 min-w-0">
         <div id="chart-spending-area-inner" style={minWidth ? { minWidth } : undefined}>
@@ -132,10 +135,10 @@ export function SpendingAreaChart({ data, timeFilter }: Props) {
 
               {hasIncome && (
                 <Area dataKey="income" stroke="#34d399" strokeWidth={1.5} fill="url(#incomeGrad)"
-                  dot={false} activeDot={{ r: 3, fill: '#34d399', strokeWidth: 0 }} animationDuration={500} />
+                  dot={false} activeDot={{ r: 3, fill: '#34d399', strokeWidth: 0 }} isAnimationActive={inView} animationDuration={500} />
               )}
               <Area dataKey="expenses" stroke="#f87171" strokeWidth={2} fill="url(#spendGrad)"
-                dot={false} activeDot={{ r: 3, fill: '#f87171', strokeWidth: 0 }} animationDuration={500} />
+                dot={false} activeDot={{ r: 3, fill: '#f87171', strokeWidth: 0 }} isAnimationActive={inView} animationDuration={500} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

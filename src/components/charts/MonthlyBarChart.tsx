@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { useInView } from 'framer-motion'
 import {
   ResponsiveContainer, ComposedChart, Bar, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -37,6 +38,8 @@ interface Props { data: MonthPoint[] }
 
 export function MonthlyBarChart({ data }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const inView = useInView(containerRef, { once: true, amount: 0.3 })
 
   // Start scrolled to most recent (right edge)
   useEffect(() => {
@@ -50,7 +53,7 @@ export function MonthlyBarChart({ data }: Props) {
   const minWidth = Math.max(320, data.length * 60)
 
   return (
-    <div id="chart-monthly-bar" className="flex items-start">
+    <div ref={containerRef} id="chart-monthly-bar" className="flex items-start">
       <StickyYAxis id="chart-monthly-bar-yaxis" ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
       <div ref={scrollRef} id="chart-monthly-bar-scroll" className="overflow-x-auto flex-1 min-w-0">
         <div id="chart-monthly-bar-inner" style={{ minWidth }}>
@@ -81,14 +84,15 @@ export function MonthlyBarChart({ data }: Props) {
               />
               <YAxis domain={[0, yMax]} hide tickFormatter={fmtY} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-              <Bar dataKey="income"   fill="url(#incGrad)" radius={[3,3,0,0]} maxBarSize={22} animationDuration={400} animationEasing="ease-out" />
-              <Bar dataKey="expenses" fill="url(#expGrad)" radius={[3,3,0,0]} maxBarSize={22} animationDuration={400} animationEasing="ease-out" />
+              <Bar dataKey="income"   fill="url(#incGrad)" radius={[3,3,0,0]} maxBarSize={22} isAnimationActive={inView} animationDuration={400} animationEasing="ease-out" />
+              <Bar dataKey="expenses" fill="url(#expGrad)" radius={[3,3,0,0]} maxBarSize={22} isAnimationActive={inView} animationDuration={400} animationEasing="ease-out" />
               <Line
                 dataKey="balance"
                 stroke="rgba(255,255,255,0.35)"
                 strokeWidth={1.5}
                 dot={{ r: 2, fill: 'rgba(255,255,255,0.4)', strokeWidth: 0 }}
                 activeDot={{ r: 4, fill: '#fff', strokeWidth: 0 }}
+                isAnimationActive={inView}
                 animationDuration={600}
               />
             </ComposedChart>

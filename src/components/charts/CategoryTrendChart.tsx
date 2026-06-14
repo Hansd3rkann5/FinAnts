@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { useInView } from 'framer-motion'
 import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -39,6 +40,8 @@ interface Props {
 
 export function CategoryTrendChart({ points, topCats, allMap }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const inView = useInView(containerRef, { once: true, amount: 0.3 })
 
   useEffect(() => {
     const el = scrollRef.current
@@ -54,7 +57,7 @@ export function CategoryTrendChart({ points, topCats, allMap }: Props) {
   const minWidth = Math.max(280, points.length * 56)
 
   return (
-    <div id="chart-category-trends" className="flex flex-col gap-3">
+    <div ref={containerRef} id="chart-category-trends" className="flex flex-col gap-3">
       <div className="flex items-start">
         <StickyYAxis id="chart-category-trends-yaxis" ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
         <div ref={scrollRef} id="chart-category-trends-scroll" className="overflow-x-auto flex-1 min-w-0">
@@ -81,6 +84,7 @@ export function CategoryTrendChart({ points, topCats, allMap }: Props) {
                     strokeWidth={2}
                     dot={{ r: 2.5, fill: allMap[catId]?.color ?? '#888', strokeWidth: 0 }}
                     activeDot={{ r: 4, strokeWidth: 0 }}
+                    isAnimationActive={inView}
                     animationDuration={500}
                     animationEasing="ease-out"
                   />

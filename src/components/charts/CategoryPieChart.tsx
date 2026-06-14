@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { useInView } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import type { CategorySummary } from '@/types'
 import { useAllCategories } from '@/hooks/useAllCategories'
@@ -15,6 +16,8 @@ function formatEur(v: number) {
 export function CategoryPieChart({ categories }: Props) {
   const [activeIndex, setActiveIndex] = useState(0)
   const { allMap } = useAllCategories()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const inView = useInView(containerRef, { once: true, amount: 0.3 })
 
   const data = categories
     .filter(c => allMap[c.categoryId])
@@ -33,7 +36,7 @@ export function CategoryPieChart({ categories }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={containerRef} className="flex flex-col gap-4">
       <div className="relative">
         <ResponsiveContainer width="100%" height={220}>
           <PieChart>
@@ -48,6 +51,7 @@ export function CategoryPieChart({ categories }: Props) {
               onClick={(_, index) => setActiveIndex(index)}
               paddingAngle={2}
               strokeWidth={0}
+              isAnimationActive={inView}
               animationDuration={400}
               animationEasing="ease-out"
             >
