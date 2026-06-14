@@ -61,7 +61,7 @@ export function useEnableBanking(
     setStatus('syncing')
     setMessage('')
     try {
-      const res  = await fetch(`${cfg.workerUrl}/eb/sync`, {
+      const res  = await fetch(`${cfg.workerUrl.replace(/\/$/, '')}/eb/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Api-Key': cfg.apiKey },
         body: JSON.stringify({ code, days }),
@@ -117,7 +117,7 @@ export function useEnableBanking(
     setMessage('')
     try {
       const redirectUrl = window.location.origin + import.meta.env.BASE_URL
-      const res  = await fetch(`${cfg.workerUrl}/eb/start`, {
+      const res  = await fetch(`${cfg.workerUrl.replace(/\/$/, '')}/eb/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Api-Key': cfg.apiKey },
         body: JSON.stringify({ redirect_url: redirectUrl, aspsp_name: aspspName, aspsp_country: aspspCountry }),
