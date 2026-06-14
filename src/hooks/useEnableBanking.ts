@@ -67,6 +67,7 @@ export function useEnableBanking(
         body: JSON.stringify({ code, days }),
       })
       const data = await res.json() as EbSyncResponse
+      console.log('[EB] sync response:', JSON.stringify(data))
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
 
       if (onAccounts && data.accounts?.length) {
@@ -94,13 +95,18 @@ export function useEnableBanking(
   // Detect redirect-back from EnableBanking (code in URL)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const code   = params.get('code')
-    if (!code) return
+    console.log('[EB] redirect check — search:', window.location.search)
+    const code = params.get('code')
+    if (!code) {
+      console.log('[EB] no ?code= found, skipping sync')
+      return
+    }
+    console.log('[EB] got code, length:', code.length)
 
-    // Clean URL immediately so it doesn't re-trigger on hot-reload
     window.history.replaceState({}, '', window.location.pathname)
 
     const raw = localStorage.getItem(EB_PENDING_KEY)
+    console.log('[EB] pending in localStorage:', raw)
     if (!raw) return
 
     const pending: PendingSession = JSON.parse(raw)

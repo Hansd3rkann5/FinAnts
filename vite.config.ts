@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import mkcert from 'vite-plugin-mkcert'
 import path from 'path'
 import fs from 'fs'
 import { execSync } from 'child_process'
@@ -49,7 +50,7 @@ function devVersionPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), devVersionPlugin()],
+  plugins: [react(), mkcert(), devVersionPlugin()],
   base: '/FinAnts/',
   define: {
     __APP_VERSION__: JSON.stringify(buildVersion()),
