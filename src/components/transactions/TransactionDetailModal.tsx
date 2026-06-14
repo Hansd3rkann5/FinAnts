@@ -12,6 +12,7 @@ import { MerchantLogo } from './MerchantLogo'
 import { findMerchant } from '@/utils/merchantLogos'
 import { AmountDisplay } from '@/components/ui/AmountDisplay'
 import { loadWorkerConfig } from '@/hooks/useWorkerSync'
+import { getCfJwt } from '@/utils/cfAuth'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { resolveProfile } from '@/hooks/useMerchantProfiles'
 
@@ -54,10 +55,11 @@ async function resizeToWebP(file: File, maxPx = 192): Promise<Blob> {
 }
 
 async function uploadIcon(blob: Blob, workerUrl: string): Promise<string> {
+  const jwt = getCfJwt()
   const res = await fetch(`${workerUrl.replace(/\/$/, '')}/upload-icon`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': blob.type },
+    headers: { 'Content-Type': blob.type, ...(jwt ? { 'Cf-Access-Jwt-Assertion': jwt } : {}) },
     body: blob,
   })
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`)

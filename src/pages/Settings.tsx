@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
@@ -6,6 +6,7 @@ import {
   ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn,
 } from 'lucide-react'
 import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
+import { getCfJwt } from '@/utils/cfAuth'
 import { useEnableBanking } from '@/hooks/useEnableBanking'
 import { useManualBalance } from '@/hooks/useManualBalance'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -119,13 +120,18 @@ export function Settings() {
   const [cfEmail, setCfEmail]   = useState<string | null>(null)
   const [cfChecked, setCfChecked] = useState(false)
 
-  useEffect(() => {
-    fetch(`${WORKER_URL}/ping`, { credentials: 'include' })
+  const checkCfAuth = useCallback(() => {
+    const jwt = getCfJwt()
+    const headers: Record<string, string> = {}
+    if (jwt) headers['Cf-Access-Jwt-Assertion'] = jwt
+    fetch(`${WORKER_URL}/ping`, { credentials: 'include', headers })
       .then(r => r.ok ? r.json() : null)
       .then((d: { email?: string } | null) => { if (d?.email) setCfEmail(d.email) })
       .catch(() => {})
       .finally(() => setCfChecked(true))
   }, [])
+
+  useEffect(() => { checkCfAuth() }, [checkCfAuth])
 
   const [syncDays, setSyncDays] = useState(90)
   const { sync, submitTan, dismissChallenge, status: syncStatus, message: syncMessage, lastSync, challenge } =

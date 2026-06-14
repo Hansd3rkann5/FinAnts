@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import type { Category, MerchantProfile } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import type { WorkerConfig } from './useWorkerSync'
+import { cfHeaders } from '@/utils/cfAuth'
 
 export interface TxOverride {
   categoryId: string
@@ -24,7 +25,7 @@ async function pushToCloud(workerUrl: string, state: CloudState): Promise<void> 
   const res = await fetch(new URL('/state', workerUrl).toString(), {
     method: 'PUT',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: cfHeaders(),
     body: JSON.stringify(state),
   })
   if (!res.ok) {
@@ -36,6 +37,7 @@ async function pushToCloud(workerUrl: string, state: CloudState): Promise<void> 
 async function pullFromCloud(workerUrl: string): Promise<CloudState | null> {
   const res = await fetch(new URL('/state', workerUrl).toString(), {
     credentials: 'include',
+    headers: cfHeaders(),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { error?: string }

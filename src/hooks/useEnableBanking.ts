@@ -3,6 +3,7 @@ import { autoCategory } from '@/utils/categorizer'
 import { findMerchant } from '@/utils/merchantLogos'
 import type { Transaction, Account } from '@/types'
 import type { WorkerConfig } from './useWorkerSync'
+import { cfHeaders } from '@/utils/cfAuth'
 
 const EB_PENDING_KEY  = 'finants_eb_pending'
 const EB_LAST_SYNC_KEY = 'finants_eb_last_sync'
@@ -65,7 +66,7 @@ export function useEnableBanking(
       const res  = await fetch(`${cfg.workerUrl.replace(/\/$/, '')}/eb/sync`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: cfHeaders(),
         body: JSON.stringify({ code, days }),
       })
       const data = await res.json() as EbSyncResponse
@@ -128,7 +129,7 @@ export function useEnableBanking(
       const res  = await fetch(`${cfg.workerUrl.replace(/\/$/, '')}/eb/start`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: cfHeaders(),
         body: JSON.stringify({ redirect_url: redirectUrl, aspsp_name: aspspName, aspsp_country: aspspCountry }),
       })
       const data = await res.json() as { authorization_id: string; auth_url: string; error?: string }

@@ -26,8 +26,16 @@ async function getJwks(): Promise<{ keys: any[] }> {
   return jwksCache
 }
 
+async function getJwt(request: Request): Promise<string | null> {
+  const header = request.headers.get('Cf-Access-Jwt-Assertion')
+  if (header) return header
+  const cookie = request.headers.get('Cookie') ?? ''
+  const m = cookie.match(/CF_Authorization=([^;]+)/)
+  return m ? m[1] : null
+}
+
 async function checkAuth(request: Request): Promise<boolean> {
-  const jwt = request.headers.get('Cf-Access-Jwt-Assertion')
+  const jwt = await getJwt(request)
   if (!jwt) return false
   try {
     const parts = jwt.split('.')
@@ -37,14 +45,14 @@ async function checkAuth(request: Request): Promise<boolean> {
     const header  = JSON.parse(b64(parts[0]))
     const payload = JSON.parse(b64(parts[1]))
 
-    if (payload.exp < Math.floor(Date.now() / 1000)) return false
-    const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud]
-    if (!aud.includes(CF_AUD)) return false
-    if (payload.iss !== CF_TEAM_DOMAIN) return false
+    console.log('[Auth] iss:', payload.iss, 'aud:', JSON.stringify(payload.aud), 'exp:', payload.exp, 'email:', payload.email, 'kid:', header.kid)
+
+    if (payload.exp < Math.floor(Date.now() / 1000)) { console.log('[Auth] FAIL: expired'); return false }
+    if (payload.iss !== CF_TEAM_DOMAIN) { console.log('[Auth] FAIL: wrong iss, expected', CF_TEAM_DOMAIN); return false }
 
     const jwks = await getJwks()
     const jwk  = jwks.keys.find((k: any) => k.kid === header.kid)
-    if (!jwk) return false
+    if (!jwk) { console.log('[Auth] FAIL: kid not found in JWKS, available:', jwks.keys.map((k:any)=>k.kid)); return false }
 
     const key = await crypto.subtle.importKey(
       'jwk', jwk,
@@ -53,8 +61,11 @@ async function checkAuth(request: Request): Promise<boolean> {
     )
     const sig  = Uint8Array.from(b64(parts[2]), c => c.charCodeAt(0))
     const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
-    return crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, data)
-  } catch {
+    const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, data)
+    if (!ok) console.log('[Auth] FAIL: signature invalid')
+    return ok
+  } catch (e) {
+    console.log('[Auth] FAIL: exception', String(e))
     return false
   }
 }
@@ -127,7 +138,7 @@ export default {
 
     // ── GET /ping — auth check ────────────────────────────────────────────
     if (request.method === 'GET' && path === '/ping') {
-      const jwt = request.headers.get('Cf-Access-Jwt-Assertion')
+      const jwt = await getJwt(request)
       if (!jwt || !await checkAuth(request)) {
         return jsonResponse({ error: 'Unauthorized' }, 401, cors)
       }
@@ -147,10 +158,10 @@ export default {
 
     // ── GET /auth — redirect to app after CF Access login ─────────────────
     if (request.method === 'GET' && path === '/auth') {
-      return new Response(null, {
-        status: 302,
-        headers: { ...cors, Location: 'https://hansd3rkann5.github.io/FinAnts/' },
-      })
+      const jwt = await getJwt(request)
+      const dest = new URL('https://hansd3rkann5.github.io/FinAnts/')
+      if (jwt) dest.searchParams.set('cf_jwt', jwt)
+      return new Response(null, { status: 302, headers: { Location: dest.toString() } })
     }
 
     // ── GET /eb/aspsps ────────────────────────────────────────────────────
