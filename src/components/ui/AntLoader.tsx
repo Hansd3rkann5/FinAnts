@@ -26,7 +26,7 @@ function Leg({
   return (
     <line
       x1={x1} y1={y1} x2={x2} y2={y2}
-      stroke="white" strokeWidth={2.4} strokeLinecap="round"
+      stroke="url(#antLeg)" strokeWidth={2.6} strokeLinecap="round"
       style={{ transformOrigin: `${x1}px ${y1}px`, animation: `ant-${kf} ${LEG_ANIM}` }}
     />
   )
@@ -37,8 +37,32 @@ function AntSvg() {
     <>
       <style>{ANT_CSS}</style>
       {/* Default orientation: head points left (-x). The wander loop rotates the
-          whole ant so the head leads the direction of travel. */}
-      <svg viewBox="0 0 102 64" width={ANT_W} height={ANT_H} aria-hidden>
+          whole ant so the head leads the direction of travel.
+          Styled to match FinAntsIcon: glossy dark body with a purple→blue
+          gradient sheen and a soft brand glow. */}
+      <svg
+        viewBox="0 0 102 64" width={ANT_W} height={ANT_H} aria-hidden
+        style={{ filter: 'drop-shadow(0 0 7px rgba(139,92,246,0.55)) drop-shadow(0 0 14px rgba(59,130,246,0.35))' }}
+      >
+        <defs>
+          {/* Dark glossy body with violet→blue rim sheen */}
+          <linearGradient id="antBody" x1="0" y1="0" x2="0.9" y2="1">
+            <stop offset="0%" stopColor="#7c5cff" />
+            <stop offset="38%" stopColor="#3b1d8f" />
+            <stop offset="72%" stopColor="#1a1033" />
+            <stop offset="100%" stopColor="#2563eb" />
+          </linearGradient>
+          <linearGradient id="antLeg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#a78bfa" />
+            <stop offset="100%" stopColor="#3b82f6" />
+          </linearGradient>
+          {/* Top-down glossy highlight */}
+          <linearGradient id="antGloss" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </linearGradient>
+        </defs>
+
         {/* Legs — drawn before body so body overlaps them.
             Mirrored geometry + same kf on top/bottom = opposite-phase tripod gait. */}
         {/* Front pair */}
@@ -51,25 +75,33 @@ function AntSvg() {
         <Leg x1={49} y1={25} x2={63} y2={14} kf="a" />
         <Leg x1={49} y1={38} x2={63} y2={49} kf="a" />
 
-        {/* Body segments */}
-        <ellipse cx="74" cy="32" rx="20" ry="15" fill="white" />
-        <ellipse cx="53" cy="32" rx="5" ry="4" fill="white" />
-        <ellipse cx="40" cy="31" rx="14" ry="11" fill="white" />
-        <ellipse cx="22" cy="30" rx="11" ry="10" fill="white" />
+        {/* Body segments — teardrop gaster, thorax, waist, rounded head */}
+        <path
+          d="M94 32 C94 42 86 47 73 47 C61 47 55 41 55 32 C55 23 61 17 73 17 C86 17 94 22 94 32 Z"
+          fill="url(#antBody)"
+        />
+        <ellipse cx="53" cy="32" rx="5" ry="4" fill="url(#antBody)" />
+        <ellipse cx="40" cy="31" rx="14" ry="11.5" fill="url(#antBody)" />
+        <ellipse cx="22" cy="30" rx="11.5" ry="10.5" fill="url(#antBody)" />
+
+        {/* Glossy highlights along the top */}
+        <ellipse cx="72" cy="25" rx="14" ry="4.5" fill="url(#antGloss)" opacity={0.6} />
+        <ellipse cx="39" cy="24.5" rx="9" ry="3.2" fill="url(#antGloss)" opacity={0.7} />
+        <ellipse cx="20" cy="24" rx="6.5" ry="3" fill="url(#antGloss)" opacity={0.8} />
 
         {/* Antennae — twitch slightly out of phase to feel alive */}
         <g style={{ transformOrigin: '17px 22px', animation: `ant-antenna ${STEP * 5}s ease-in-out infinite` }}>
-          <line x1="17" y1="22" x2="7" y2="11" stroke="white" strokeWidth={1.8} strokeLinecap="round" />
-          <circle cx="7" cy="11" r="2.2" fill="white" />
+          <line x1="17" y1="22" x2="6" y2="9" stroke="url(#antLeg)" strokeWidth={1.9} strokeLinecap="round" />
+          <circle cx="6" cy="9" r="2.4" fill="#a78bfa" />
         </g>
         <g style={{ transformOrigin: '26px 21px', animation: `ant-antenna ${STEP * 5}s ease-in-out infinite`, animationDelay: `${STEP}s` }}>
-          <line x1="26" y1="21" x2="20" y2="9" stroke="white" strokeWidth={1.8} strokeLinecap="round" />
-          <circle cx="20" cy="9" r="2.2" fill="white" />
+          <line x1="26" y1="21" x2="19" y2="7" stroke="url(#antLeg)" strokeWidth={1.9} strokeLinecap="round" />
+          <circle cx="19" cy="7" r="2.4" fill="#a78bfa" />
         </g>
 
-        {/* Eye */}
-        <circle cx="18" cy="28" r="3" fill="rgba(0,0,0,0.35)" />
-        <circle cx="17" cy="27" r="1.2" fill="white" />
+        {/* Eye — bright reflective glint like the logo */}
+        <circle cx="18" cy="29" r="3.2" fill="#0b0820" />
+        <circle cx="17" cy="27.8" r="1.4" fill="rgba(255,255,255,0.95)" />
       </svg>
     </>
   )
