@@ -194,7 +194,7 @@ export async function ebExchangeAndSync(
     while (continuationKey) {
       console.log('[EB] fetching next page, continuation_key:', continuationKey.slice(0, 40) + '...')
       const pageRes = await ebFetch(
-        `/accounts/${acct.uid}/transactions?continuation_key=${encodeURIComponent(continuationKey)}`,
+        `/accounts/${acct.uid}/transactions?continuation_key=${continuationKey}`,
         appId, privKey,
       )
       if (!pageRes.ok) break
