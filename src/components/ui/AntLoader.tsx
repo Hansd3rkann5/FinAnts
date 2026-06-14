@@ -1,34 +1,49 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { motion, AnimatePresence, useAnimate } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
-// Leg cadence: one tripod touchdown every STEP seconds. The body bob is tuned
-// to this so the legs visually "carry" the ant.
-const STEP = 0.16
+// Limb motion: every leg and antenna shares one keyframe but supplies its own
+// swing range (via the --lo/--hi CSS custom props) plus a slightly detuned
+// duration and delay. The six legs therefore drift through a loose tripod gait
+// instead of moving in lockstep — it reads as a live, scurrying insect rather
+// than a rigid mechanism. The body bob is tuned to this base cadence.
+const LEG_DUR = 0.9
 
-const ANT_W = 102
-const ANT_H = 64
+const ANT_W = 126
+const ANT_H = 90
 
 const ANT_CSS = `
-@keyframes ant-a { 0%,100%{transform:rotate(-26deg)} 50%{transform:rotate(28deg)} }
-@keyframes ant-b { 0%,100%{transform:rotate(28deg)}  50%{transform:rotate(-26deg)} }
-@keyframes ant-antenna { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(-7deg)} }
+@keyframes ant-leg     { 0%,100%{transform:rotate(var(--lo))} 50%{transform:rotate(var(--hi))} }
+@keyframes ant-antenna { 0%,100%{transform:rotate(var(--lo))} 50%{transform:rotate(var(--hi))} }
 `
 
-const LEG_ANIM = `${STEP * 2}s ease-in-out infinite`
+interface LimbAnim { dur: number; delay: number; lo: number; hi: number }
 
-function Leg({
-  x1, y1, x2, y2, kf,
-}: {
-  x1: number; y1: number; x2: number; y2: number; kf: 'a' | 'b'
-}) {
+const limbStyle = (ox: number, oy: number, kf: 'leg' | 'antenna', a: LimbAnim): CSSProperties => ({
+  transformOrigin: `${ox}px ${oy}px`,
+  animation: `ant-${kf} ${a.dur}s ease-in-out ${a.delay}s infinite`,
+  ['--lo' as string]: `${a.lo}deg`,
+  ['--hi' as string]: `${a.hi}deg`,
+} as CSSProperties)
+
+function Leg({ d, ox, oy, ...a }: { d: string; ox: number; oy: number } & LimbAnim) {
   return (
-    <line
-      x1={x1} y1={y1} x2={x2} y2={y2}
-      stroke="url(#antLeg)" strokeWidth={2.6} strokeLinecap="round"
-      style={{ transformOrigin: `${x1}px ${y1}px`, animation: `ant-${kf} ${LEG_ANIM}` }}
+    <path
+      d={d} fill="none" stroke="url(#antLeg)" strokeWidth={2.4} strokeLinecap="round"
+      style={limbStyle(ox, oy, 'leg', a)}
     />
+  )
+}
+
+function Antenna({ d, ox, oy, tipX, tipY, ...a }: {
+  d: string; ox: number; oy: number; tipX: number; tipY: number
+} & LimbAnim) {
+  return (
+    <g style={limbStyle(ox, oy, 'antenna', a)}>
+      <path d={d} fill="none" stroke="url(#antLeg)" strokeWidth={1.8} strokeLinecap="round" />
+      <circle cx={tipX} cy={tipY} r={2.3} fill="#a78bfa" />
+    </g>
   )
 }
 
@@ -38,10 +53,12 @@ function AntSvg() {
       <style>{ANT_CSS}</style>
       {/* Default orientation: head points left (-x). The wander loop rotates the
           whole ant so the head leads the direction of travel.
-          Styled to match FinAntsIcon: glossy dark body with a purple→blue
-          gradient sheen and a soft brand glow. */}
+          Top-down silhouette — round head, slim waist nodes, large pointed
+          gaster, slender curved legs and elbowed antennae — tinted with the
+          FinAnts purple→blue sheen and a soft brand glow so it reads on the
+          dark overlay. */}
       <svg
-        viewBox="0 0 102 64" width={ANT_W} height={ANT_H} aria-hidden
+        viewBox="0 0 126 90" width={ANT_W} height={ANT_H} aria-hidden
         style={{ filter: 'drop-shadow(0 0 7px rgba(139,92,246,0.55)) drop-shadow(0 0 14px rgba(59,130,246,0.35))' }}
       >
         <defs>
@@ -63,45 +80,38 @@ function AntSvg() {
           </linearGradient>
         </defs>
 
-        {/* Legs — drawn before body so body overlaps them.
-            Mirrored geometry + same kf on top/bottom = opposite-phase tripod gait. */}
-        {/* Front pair */}
-        <Leg x1={33} y1={25} x2={18} y2={14} kf="a" />
-        <Leg x1={33} y1={38} x2={18} y2={49} kf="a" />
-        {/* Mid pair (opposite phase) */}
-        <Leg x1={41} y1={23} x2={41} y2={11} kf="b" />
-        <Leg x1={41} y1={40} x2={41} y2={52} kf="b" />
-        {/* Back pair */}
-        <Leg x1={49} y1={25} x2={63} y2={14} kf="a" />
-        <Leg x1={49} y1={38} x2={63} y2={49} kf="a" />
+        {/* Legs — drawn before the body so it overlaps their roots. Each swings
+            on its own detuned cycle; the delays group them into a loose,
+            organic tripod (front-top/hind-top/mid-bot vs the opposite three). */}
+        <Leg d="M42 40 C 35 31, 22 23, 13 13" ox={42} oy={40} dur={0.92} delay={0}     lo={-18} hi={9}  />
+        <Leg d="M55 40 C 65 31, 77 22, 87 13" ox={55} oy={40} dur={0.88} delay={-0.05} lo={-15} hi={11} />
+        <Leg d="M49 51 C 49 62, 47 73, 47 83" ox={49} oy={51} dur={0.95} delay={-0.02} lo={-13} hi={13} />
+        <Leg d="M42 50 C 35 59, 22 67, 13 77" ox={42} oy={50} dur={0.90} delay={-0.46} lo={-9}  hi={17} />
+        <Leg d="M55 50 C 65 59, 77 68, 87 77" ox={55} oy={50} dur={0.86} delay={-0.50} lo={-11} hi={15} />
+        <Leg d="M49 39 C 49 28, 47 17, 47 7"  ox={49} oy={39} dur={0.93} delay={-0.47} lo={-13} hi={13} />
 
-        {/* Body segments — teardrop gaster, thorax, waist, rounded head */}
+        {/* Body segments — pointed gaster, slim waist nodes, thorax, round head */}
         <path
-          d="M94 32 C94 42 86 47 73 47 C61 47 55 41 55 32 C55 23 61 17 73 17 C86 17 94 22 94 32 Z"
+          d="M118 45 C112 58 104 63 92 63 C78 63 70 56 70 45 C70 34 78 27 92 27 C104 27 112 32 118 45 Z"
           fill="url(#antBody)"
         />
-        <ellipse cx="53" cy="32" rx="5" ry="4" fill="url(#antBody)" />
-        <ellipse cx="40" cy="31" rx="14" ry="11.5" fill="url(#antBody)" />
-        <ellipse cx="22" cy="30" rx="11.5" ry="10.5" fill="url(#antBody)" />
+        <circle cx="67" cy="45" r="4"   fill="url(#antBody)" />
+        <circle cx="60" cy="45" r="3.3" fill="url(#antBody)" />
+        <ellipse cx="47" cy="45" rx="9" ry="7" fill="url(#antBody)" />
+        <circle cx="26" cy="45" r="11" fill="url(#antBody)" />
 
         {/* Glossy highlights along the top */}
-        <ellipse cx="72" cy="25" rx="14" ry="4.5" fill="url(#antGloss)" opacity={0.6} />
-        <ellipse cx="39" cy="24.5" rx="9" ry="3.2" fill="url(#antGloss)" opacity={0.7} />
-        <ellipse cx="20" cy="24" rx="6.5" ry="3" fill="url(#antGloss)" opacity={0.8} />
+        <ellipse cx="90" cy="35" rx="16" ry="4.5" fill="url(#antGloss)" opacity={0.55} />
+        <ellipse cx="46" cy="40" rx="6"  ry="2.8" fill="url(#antGloss)" opacity={0.7} />
+        <ellipse cx="24" cy="39" rx="7"  ry="3"   fill="url(#antGloss)" opacity={0.75} />
 
-        {/* Antennae — twitch slightly out of phase to feel alive */}
-        <g style={{ transformOrigin: '17px 22px', animation: `ant-antenna ${STEP * 5}s ease-in-out infinite` }}>
-          <line x1="17" y1="22" x2="6" y2="9" stroke="url(#antLeg)" strokeWidth={1.9} strokeLinecap="round" />
-          <circle cx="6" cy="9" r="2.4" fill="#a78bfa" />
-        </g>
-        <g style={{ transformOrigin: '26px 21px', animation: `ant-antenna ${STEP * 5}s ease-in-out infinite`, animationDelay: `${STEP}s` }}>
-          <line x1="26" y1="21" x2="19" y2="7" stroke="url(#antLeg)" strokeWidth={1.9} strokeLinecap="round" />
-          <circle cx="19" cy="7" r="2.4" fill="#a78bfa" />
-        </g>
+        {/* Antennae — each twitches on its own slower cycle */}
+        <Antenna d="M20 39 Q 10 30, 3 22" ox={20} oy={39} tipX={3} tipY={22} dur={1.1}  delay={0}    lo={-7} hi={6}  />
+        <Antenna d="M20 51 Q 10 60, 3 68" ox={20} oy={51} tipX={3} tipY={68} dur={1.35} delay={-0.4} lo={7}  hi={-5} />
 
         {/* Eye — bright reflective glint like the logo */}
-        <circle cx="18" cy="29" r="3.2" fill="#0b0820" />
-        <circle cx="17" cy="27.8" r="1.4" fill="rgba(255,255,255,0.95)" />
+        <circle cx="22" cy="42" r="3.2" fill="#0b0820" />
+        <circle cx="21" cy="40.8" r="1.4" fill="rgba(255,255,255,0.95)" />
       </svg>
     </>
   )
@@ -178,8 +188,8 @@ function WanderingAnt() {
         <motion.div ref={headScope}>
           {/* Step bob + slight body tilt, synced to leg touchdowns */}
           <motion.div
-            animate={{ y: [0, -3, 0], rotate: [-1.2, 1.2, -1.2] }}
-            transition={{ duration: STEP * 2, repeat: Infinity, ease: 'easeInOut' }}
+            animate={{ y: [0, -2, 0], rotate: [-1, 1, -1] }}
+            transition={{ duration: LEG_DUR, repeat: Infinity, ease: 'easeInOut' }}
           >
             <AntSvg />
           </motion.div>
