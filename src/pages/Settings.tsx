@@ -19,7 +19,7 @@ import { detectAndParse } from '@/utils/csvParser'
 import { useWorkerSync, type SyncStatus } from '@/hooks/useWorkerSync'
 
 const WORKER_URL  = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
-const CF_LOGIN_URL = `https://shrill-morning-3412.cloudflareaccess.com/cdn-cgi/access/login/ab7b540605742a2c199591d035e0f3cd?redirect_url=${encodeURIComponent(WORKER_URL + '/auth')}`
+const CF_LOGIN_URL = `${WORKER_URL}/auth`
 
 function formatEur(v: number, maximumFractionDigits = 2) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
