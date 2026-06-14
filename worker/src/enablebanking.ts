@@ -12,13 +12,15 @@ interface EbAccountResource {
 }
 
 interface EbTransaction {
-  booking_date: string
+  booking_date?: string
+  transaction_date?: string
   transaction_amount: { amount: string; currency: string }
-  creditor_name?: string
+  creditor?: { name?: string }
   creditor_account?: { iban?: string }
-  debtor_name?: string
+  debtor?: { name?: string }
   debtor_account?: { iban?: string }
-  remittance_information_unstructured?: string
+  remittance_information?: string[]
+  credit_debit_indicator?: string
 }
 
 // ─── Mapped types (match existing worker format) ───────────────────────────
@@ -114,7 +116,7 @@ export async function ebStartAuth(
       aspsp: { name: aspspName, country: aspspCountry },
       state: crypto.randomUUID(),
       redirect_url: redirectUrl,
-      psu_type: 'business',
+      psu_type: 'personal',
     }),
   })
 
@@ -178,8 +180,30 @@ export async function ebExchangeAndSync(
       return
     }
 
-    const txData = await txRes.json() as { transactions?: EbTransaction[] }
-    console.log('[EB] account:', iban, '| transactions:', txData.transactions?.length ?? 0)
+    // Paginate through all transactions
+    const allTxs: EbTransaction[] = []
+    let continuationKey: string | undefined
+
+    const firstData = await txRes.json() as { transactions?: EbTransaction[]; continuation_key?: string }
+    if (firstData.transactions?.[0]) {
+      console.log('[EB] sample tx fields:', JSON.stringify(firstData.transactions[0]))
+    }
+    allTxs.push(...(firstData.transactions ?? []))
+    continuationKey = firstData.continuation_key
+
+    while (continuationKey) {
+      console.log('[EB] fetching next page, continuation_key:', continuationKey.slice(0, 40) + '...')
+      const pageRes = await ebFetch(
+        `/accounts/${acct.uid}/transactions?continuation_key=${encodeURIComponent(continuationKey)}`,
+        appId, privKey,
+      )
+      if (!pageRes.ok) break
+      const pageData = await pageRes.json() as { transactions?: EbTransaction[]; continuation_key?: string }
+      allTxs.push(...(pageData.transactions ?? []))
+      continuationKey = pageData.continuation_key
+    }
+
+    console.log('[EB] account:', iban, '| total transactions:', allTxs.length)
 
     const closingBal = acct.balances?.find(b => b.balance_type === 'closingBooked') ?? acct.balances?.[0]
 
@@ -195,14 +219,14 @@ export async function ebExchangeAndSync(
       balanceDate:   dateTo,
     })
 
-    for (const tx of txData.transactions ?? []) {
+    for (const tx of allTxs) {
       const amount    = parseFloat(tx.transaction_amount.amount)
-      const isExpense = amount < 0
+      const isExpense = (tx.credit_debit_indicator === 'DBIT') || amount < 0
       mappedTransactions.push({
-        date:             tx.booking_date,
+        date:             tx.booking_date ?? tx.transaction_date ?? '',
         amount,
-        description:      tx.remittance_information_unstructured ?? '',
-        counterparty:     isExpense ? (tx.creditor_name ?? '') : (tx.debtor_name ?? ''),
+        description:      tx.remittance_information?.join(' ') ?? '',
+        counterparty:     isExpense ? (tx.creditor?.name ?? '') : (tx.debtor?.name ?? ''),
         counterpartyIban: isExpense ? (tx.creditor_account?.iban ?? '') : (tx.debtor_account?.iban ?? ''),
         accountIban:      iban,
       })

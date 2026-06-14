@@ -30,8 +30,10 @@ interface EbSyncResponse {
   error?: string
 }
 
-function mapTx(raw: EbWorkerTransaction): Transaction {
+function mapTx(raw: EbWorkerTransaction): Transaction | null {
+  if (!raw.date) return null
   const date     = new Date(raw.date)
+  if (isNaN(date.getTime())) return null
   const merchant = findMerchant(`${raw.description} ${raw.counterparty}`)
   return {
     id: `eb-${date.getTime()}-${Math.abs(raw.amount).toFixed(0)}-${(raw.counterparty ?? '').slice(0, 6)}-${raw.accountIban?.slice(-4) ?? ''}`,
@@ -78,7 +80,7 @@ export function useEnableBanking(
         })))
       }
 
-      onImport((data.transactions ?? []).map(mapTx))
+      onImport((data.transactions ?? []).map(mapTx).filter((t): t is Transaction => t !== null))
 
       localStorage.removeItem(EB_PENDING_KEY)
       const syncTime = new Date().toLocaleString('de-DE')
