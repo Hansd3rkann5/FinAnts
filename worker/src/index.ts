@@ -159,9 +159,9 @@ export default {
     // ── GET /auth — redirect to app after CF Access login ─────────────────
     if (request.method === 'GET' && path === '/auth') {
       const jwt = await getJwt(request)
-      const dest = new URL('https://hansd3rkann5.github.io/FinAnts/')
-      if (jwt) dest.searchParams.set('cf_jwt', jwt)
-      return new Response(null, { status: 302, headers: { Location: dest.toString() } })
+      const base = 'https://hansd3rkann5.github.io/FinAnts/'
+      const dest = jwt ? `${base}?cf_jwt=${encodeURIComponent(jwt)}#/settings` : `${base}#/settings`
+      return new Response(null, { status: 302, headers: { Location: dest } })
     }
 
     // ── GET /eb/aspsps ────────────────────────────────────────────────────
