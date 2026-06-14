@@ -1,22 +1,22 @@
-const KEY = 'finants_cf_jwt'
+const KEY = 'finants_api_key'
 
-export function getCfJwt(): string | null {
+export function getApiKey(): string | null {
   return localStorage.getItem(KEY)
 }
 
-export function setCfJwt(jwt: string): void {
-  localStorage.setItem(KEY, jwt)
+export function setApiKey(key: string): void {
+  localStorage.setItem(KEY, key)
 }
 
-export function clearCfJwt(): void {
+export function clearApiKey(): void {
   localStorage.removeItem(KEY)
 }
 
 export function cfHeaders(extra?: Record<string, string>): Record<string, string> {
-  const jwt = getCfJwt()
+  const apiKey = getApiKey()
   return {
     'Content-Type': 'application/json',
-    ...(jwt ? { 'Cf-Access-Jwt-Assertion': jwt } : {}),
+    ...(apiKey ? { 'X-Api-Key': apiKey } : {}),
     ...extra,
   }
 }

@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
@@ -6,7 +6,7 @@ import {
   ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn,
 } from 'lucide-react'
 import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
-import { getCfJwt, clearCfJwt } from '@/utils/cfAuth'
+import { getApiKey, setApiKey } from '@/utils/cfAuth'
 import { useEnableBanking } from '@/hooks/useEnableBanking'
 import { useManualBalance } from '@/hooks/useManualBalance'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -19,8 +19,7 @@ import { useAccounts } from '@/hooks/useAccounts'
 import { detectAndParse } from '@/utils/csvParser'
 import { useWorkerSync, type SyncStatus } from '@/hooks/useWorkerSync'
 
-const WORKER_URL  = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
-const CF_LOGIN_URL = `${WORKER_URL}/auth`
+const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
 function formatEur(v: number, maximumFractionDigits = 2) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
@@ -116,28 +115,11 @@ export function Settings() {
     manualBalance !== null ? String(manualBalance).replace('.', ',') : ''
   )
 
-  // CF Access auth state
-  const [cfEmail, setCfEmail]   = useState<string | null>(null)
-  const [cfChecked, setCfChecked] = useState(false)
+  // API key auth state
+  const [apiKey, setApiKeyState] = useState<string>(() => getApiKey() ?? '')
+  const [apiKeyInput, setApiKeyInput] = useState('')
 
-  const checkCfAuth = useCallback(() => {
-    const jwt = getCfJwt()
-    if (!jwt) { setCfChecked(true); return }
-    try {
-      const b64 = (s: string) => atob(s.replace(/-/g, '+').replace(/_/g, '/'))
-      const payload = JSON.parse(b64(jwt.split('.')[1])) as { exp?: number; email?: string }
-      if ((payload.exp ?? 0) < Math.floor(Date.now() / 1000)) {
-        clearCfJwt()
-      } else {
-        setCfEmail(payload.email ?? 'authenticated')
-      }
-    } catch {
-      clearCfJwt()
-    }
-    setCfChecked(true)
-  }, [])
-
-  useEffect(() => { checkCfAuth() }, [checkCfAuth])
+  useEffect(() => { setApiKeyInput(apiKey) }, [apiKey])
 
   const [syncDays, setSyncDays] = useState(90)
   const { sync, submitTan, dismissChallenge, status: syncStatus, message: syncMessage, lastSync, challenge } =
@@ -186,7 +168,7 @@ export function Settings() {
   }
 
   const workerCfg = { workerUrl: WORKER_URL }
-  const isAuth = cfChecked && !!cfEmail
+  const isAuth = !!apiKey
 
   return (
     <>
@@ -206,42 +188,36 @@ export function Settings() {
           icon={<ShieldCheck size={15} className={isAuth ? 'text-emerald-400' : 'text-white/30'} />}
           title="Zugang"
           badge={isAuth
-            ? <span className="text-[10px] text-emerald-400/70 border border-emerald-500/20 bg-emerald-500/10 rounded-pill px-2 py-0.5">Eingeloggt</span>
-            : cfChecked
-            ? <span className="text-[10px] text-red-400/70 border border-red-500/20 bg-red-500/10 rounded-pill px-2 py-0.5">Nicht eingeloggt</span>
-            : undefined}
-          statusText={isAuth ? cfEmail! : 'Cloudflare Access · Einmalig per E-Mail einloggen'}
-          defaultOpen={cfChecked && !cfEmail}
+            ? <span className="text-[10px] text-emerald-400/70 border border-emerald-500/20 bg-emerald-500/10 rounded-pill px-2 py-0.5">Verbunden</span>
+            : <span className="text-[10px] text-red-400/70 border border-red-500/20 bg-red-500/10 rounded-pill px-2 py-0.5">Kein Schlüssel</span>}
+          statusText={isAuth ? 'API Key gesetzt · Worker authentifiziert' : 'API Key eingeben um Bankabfragen zu starten'}
+          defaultOpen={!isAuth}
         >
-          {isAuth ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs text-white/40">
-                Eingeloggt als <span className="text-white/70">{cfEmail}</span>. Alle Bankabfragen laufen automatisch authentifiziert.
-              </p>
-              <PillButton
-                variant="ghost"
-                size="sm"
-                icon={<LogIn size={13} />}
-                onClick={() => { window.location.href = CF_LOGIN_URL }}
-              >
-                Erneut einloggen
-              </PillButton>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs text-white/40">
-                Einmalig per E-Mail-Code einloggen. Die Session bleibt 30 Tage aktiv.
-              </p>
-              <PillButton
-                variant="primary"
-                size="sm"
-                icon={<LogIn size={13} />}
-                onClick={() => { window.location.href = CF_LOGIN_URL }}
-              >
-                Einloggen
-              </PillButton>
-            </div>
-          )}
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-white/40">
+              Der API Key ist dein Worker Secret. Einmalig eingeben, wird sicher im Browser gespeichert.
+            </p>
+            <input
+              type="password"
+              value={apiKeyInput}
+              onChange={e => setApiKeyInput(e.target.value)}
+              placeholder="API Key eingeben…"
+              className="w-full bg-white/5 border border-white/10 rounded-card_sm px-3 py-2 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20"
+            />
+            <PillButton
+              variant="primary"
+              size="sm"
+              icon={<LogIn size={13} />}
+              onClick={() => {
+                const trimmed = apiKeyInput.trim()
+                if (!trimmed) return
+                setApiKey(trimmed)
+                setApiKeyState(trimmed)
+              }}
+            >
+              Speichern
+            </PillButton>
+          </div>
         </CollapsibleCard>
 
         {/* ── Kontostand ──────────────────────────────────────────────────── */}

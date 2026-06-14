@@ -10,61 +10,7 @@ export interface Env {
   ICONS: R2Bucket
   EB_APPLICATION_ID?: string
   EB_PRIVATE_KEY?: string
-}
-
-// ─── Cloudflare Access JWT validation ─────────────────────────────────────────
-
-const CF_TEAM_DOMAIN = 'https://shrill-morning-3412.cloudflareaccess.com'
-const CF_AUD         = '92a36b54ba18ba3e2947f9a46c9187d97c389bae0373b3cec1d49e7c3fbab1ce'
-
-let jwksCache: { keys: any[] } | null = null
-
-async function getJwks(): Promise<{ keys: any[] }> {
-  if (jwksCache) return jwksCache
-  const res = await fetch(`${CF_TEAM_DOMAIN}/cdn-cgi/access/certs`)
-  jwksCache = await res.json() as { keys: any[] }
-  return jwksCache
-}
-
-async function getJwt(request: Request): Promise<string | null> {
-  const header = request.headers.get('Cf-Access-Jwt-Assertion')
-  if (header) return header
-  const cookie = request.headers.get('Cookie') ?? ''
-  const m = cookie.match(/CF_Authorization=([^;]+)/)
-  return m ? m[1] : null
-}
-
-async function checkAuth(request: Request): Promise<boolean> {
-  const jwt = await getJwt(request)
-  if (!jwt) return false
-  try {
-    const parts = jwt.split('.')
-    if (parts.length !== 3) return false
-
-    const b64 = (s: string) => atob(s.replace(/-/g, '+').replace(/_/g, '/'))
-    const header  = JSON.parse(b64(parts[0]))
-    const payload = JSON.parse(b64(parts[1]))
-
-    if (payload.exp < Math.floor(Date.now() / 1000)) return false
-    if (payload.iss !== CF_TEAM_DOMAIN) return false
-    const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud]
-    if (!aud.includes(CF_AUD)) return false
-
-    const jwks = await getJwks()
-    const jwk  = jwks.keys.find((k: any) => k.kid === header.kid)
-    if (!jwk) return false
-
-    const key = await crypto.subtle.importKey(
-      'jwk', jwk,
-      { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-256' } },
-      false, ['verify'],
-    )
-    const sig  = Uint8Array.from(b64(parts[2]), c => c.charCodeAt(0))
-    const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
-    return crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, data)
-  } catch {
-    return false
-  }
+  API_KEY?: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -81,9 +27,14 @@ function corsHeaders(requestOrigin: string): Record<string, string> {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Api-Key',
     'Access-Control-Max-Age': '86400',
   }
+}
+
+function checkAuth(request: Request, env: Env): boolean {
+  if (!env.API_KEY) return false
+  return request.headers.get('X-Api-Key') === env.API_KEY
 }
 
 function jsonResponse(body: unknown, status: number, headers: Record<string, string>): Response {
@@ -135,30 +86,13 @@ export default {
 
     // ── GET /ping — auth check ────────────────────────────────────────────
     if (request.method === 'GET' && path === '/ping') {
-      const jwt = await getJwt(request)
-      if (!jwt || !await checkAuth(request)) {
-        return jsonResponse({ error: 'Unauthorized' }, 401, cors)
-      }
-      try {
-        const b64 = (s: string) => atob(s.replace(/-/g, '+').replace(/_/g, '/'))
-        const payload = JSON.parse(b64(jwt.split('.')[1]))
-        return jsonResponse({ ok: true, email: payload.email ?? 'authenticated' }, 200, cors)
-      } catch {
-        return jsonResponse({ ok: true, email: 'authenticated' }, 200, cors)
-      }
+      if (!checkAuth(request, env)) return jsonResponse({ error: 'Unauthorized' }, 401, cors)
+      return jsonResponse({ ok: true }, 200, cors)
     }
 
     // ── Auth check ────────────────────────────────────────────────────────
-    if (!await checkAuth(request)) {
+    if (!checkAuth(request, env)) {
       return jsonResponse({ error: 'Unauthorized' }, 401, cors)
-    }
-
-    // ── GET /auth — redirect to app after CF Access login ─────────────────
-    if (request.method === 'GET' && path === '/auth') {
-      const jwt = await getJwt(request)
-      const base = 'https://hansd3rkann5.github.io/FinAnts/'
-      const dest = jwt ? `${base}?cf_jwt=${encodeURIComponent(jwt)}#/settings` : `${base}#/settings`
-      return new Response(null, { status: 302, headers: { Location: dest } })
     }
 
     // ── GET /eb/aspsps ────────────────────────────────────────────────────
