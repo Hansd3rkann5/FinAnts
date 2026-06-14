@@ -18,6 +18,7 @@ import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useAccounts } from '@/hooks/useAccounts'
 import { detectAndParse } from '@/utils/csvParser'
 import { useWorkerSync, type SyncStatus } from '@/hooks/useWorkerSync'
+import { AntLoader } from '@/components/ui/AntLoader'
 
 const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
@@ -170,8 +171,17 @@ export function Settings() {
   const workerCfg = { workerUrl: WORKER_URL }
   const isAuth = !!apiKey
 
+  const showAntLoader = ebStatus === 'starting' || ebStatus === 'syncing' || syncStatus === 'syncing'
+  const antMessage =
+    ebStatus === 'syncing'    ? 'Buchungen werden abgerufen…'
+    : ebStatus === 'starting' ? 'Verbindung wird aufgebaut…'
+    : syncStatus === 'syncing' ? 'FinTS Synchronisation…'
+    : undefined
+
   return (
     <>
+      <AntLoader show={showAntLoader} message={antMessage} />
+
       {challenge && (
         <PhotoTanModal
           challenge={challenge}
