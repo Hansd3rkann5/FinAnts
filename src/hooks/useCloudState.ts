@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { Category, MerchantProfile } from '@/types'
-import { loadWorkerConfig } from './useWorkerSync'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
+import type { WorkerConfig } from './useWorkerSync'
 
 export interface TxOverride {
   categoryId: string
@@ -18,11 +18,13 @@ export interface CloudState {
 }
 
 const LAST_CLOUD_SYNC_KEY = 'finants_cloud_sync'
+const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
-async function pushToCloud(workerUrl: string, apiKey: string, state: CloudState): Promise<void> {
+async function pushToCloud(workerUrl: string, state: CloudState): Promise<void> {
   const res = await fetch(new URL('/state', workerUrl).toString(), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-Api-Key': apiKey },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(state),
   })
   if (!res.ok) {
@@ -31,9 +33,9 @@ async function pushToCloud(workerUrl: string, apiKey: string, state: CloudState)
   }
 }
 
-async function pullFromCloud(workerUrl: string, apiKey: string): Promise<CloudState | null> {
+async function pullFromCloud(workerUrl: string): Promise<CloudState | null> {
   const res = await fetch(new URL('/state', workerUrl).toString(), {
-    headers: { 'X-Api-Key': apiKey },
+    credentials: 'include',
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { error?: string }
@@ -50,14 +52,12 @@ export function useCloudSync() {
   const [message, setMessage] = useState('')
   const [lastSync, setLastSync] = useState<string | null>(() => localStorage.getItem(LAST_CLOUD_SYNC_KEY))
 
-  function resolveConfig(override?: { workerUrl: string; apiKey: string }) {
-    if (override?.workerUrl && override?.apiKey) return override
-    return loadWorkerConfig()
+  function resolveUrl(override?: WorkerConfig) {
+    return (override?.workerUrl ?? WORKER_URL).replace(/\/$/, '')
   }
 
-  const push = useCallback(async (override?: { workerUrl: string; apiKey: string }) => {
-    const cfg = resolveConfig(override)
-    if (!cfg) { setStatus('error'); setMessage('Worker nicht konfiguriert'); return }
+  const push = useCallback(async (override?: WorkerConfig) => {
+    const url = resolveUrl(override)
     setStatus('pushing')
     setMessage('')
     try {
@@ -74,7 +74,7 @@ export function useCloudSync() {
         merchantProfiles: ctx.merchantProfiles,
         txOverrides,
       }
-      await pushToCloud(cfg.workerUrl, cfg.apiKey, state)
+      await pushToCloud(url, state)
       const time = new Date().toLocaleString('de-DE')
       localStorage.setItem(LAST_CLOUD_SYNC_KEY, time)
       setLastSync(time)
@@ -86,13 +86,12 @@ export function useCloudSync() {
     }
   }, [ctx])
 
-  const pull = useCallback(async (override?: { workerUrl: string; apiKey: string }) => {
-    const cfg = resolveConfig(override)
-    if (!cfg) { setStatus('error'); setMessage('Worker nicht konfiguriert'); return }
+  const pull = useCallback(async (override?: WorkerConfig) => {
+    const url = resolveUrl(override)
     setStatus('pulling')
     setMessage('')
     try {
-      const state = await pullFromCloud(cfg.workerUrl, cfg.apiKey)
+      const state = await pullFromCloud(url)
       if (!state) throw new Error('Kein Backup vorhanden')
       ctx.applyCloudCategories(state.customCategories ?? [])
       ctx.applyCloudProfiles(state.merchantProfiles ?? [])
@@ -101,7 +100,7 @@ export function useCloudSync() {
       localStorage.setItem(LAST_CLOUD_SYNC_KEY, time)
       setLastSync(time)
       setStatus('success')
-      setMessage(`${(state.merchantProfiles ?? []).length} Profile, ${(state.customCategories ?? []).length} Kategorien geladen`)
+      setMessage('Kategorien & Profile synchronisiert')
     } catch (e) {
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Unbekannter Fehler')

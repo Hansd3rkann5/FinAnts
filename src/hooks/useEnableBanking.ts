@@ -9,7 +9,6 @@ const EB_LAST_SYNC_KEY = 'finants_eb_last_sync'
 
 interface PendingSession {
   workerUrl: string
-  apiKey: string
   days: number
 }
 
@@ -113,7 +112,7 @@ export function useEnableBanking(
     if (!raw) return
 
     const pending: PendingSession = JSON.parse(raw)
-    doSync({ workerUrl: pending.workerUrl, apiKey: pending.apiKey }, code, pending.days)
+    doSync({ workerUrl: pending.workerUrl }, code, pending.days)
   }, [doSync])
 
   const start = useCallback(async (
@@ -136,7 +135,7 @@ export function useEnableBanking(
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
 
       // Persist enough info to complete sync after redirect
-      const pending: PendingSession = { workerUrl: cfg.workerUrl, apiKey: cfg.apiKey, days }
+      const pending: PendingSession = { workerUrl: cfg.workerUrl, days }
       localStorage.setItem(EB_PENDING_KEY, JSON.stringify(pending))
 
       setStatus('awaiting_auth')

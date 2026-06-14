@@ -53,10 +53,11 @@ async function resizeToWebP(file: File, maxPx = 192): Promise<Blob> {
   })
 }
 
-async function uploadIcon(blob: Blob, workerUrl: string, apiKey: string): Promise<string> {
+async function uploadIcon(blob: Blob, workerUrl: string): Promise<string> {
   const res = await fetch(`${workerUrl.replace(/\/$/, '')}/upload-icon`, {
     method: 'POST',
-    headers: { 'Content-Type': blob.type, 'X-Api-Key': apiKey },
+    credentials: 'include',
+    headers: { 'Content-Type': blob.type },
     body: blob,
   })
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
@@ -170,8 +171,8 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
     try {
       const blob = await resizeToWebP(file)
       const cfg = loadWorkerConfig()
-      if (cfg?.workerUrl && cfg?.apiKey) {
-        setIcon(await uploadIcon(blob, cfg.workerUrl, cfg.apiKey))
+      if (cfg?.workerUrl) {
+        setIcon(await uploadIcon(blob, cfg.workerUrl))
       } else {
         const reader = new FileReader()
         reader.onload = ev => setIcon(ev.target?.result as string)
