@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
@@ -52,11 +52,21 @@ function ChartLine({ d, color, onDone }: { d: string; color: string; onDone: () 
       strokeLinecap="round"
       strokeLinejoin="round"
       vectorEffect="non-scaling-stroke"
-      pathLength={1}
-      strokeDasharray={1}
-      initial={{ strokeDashoffset: 1 }}
-      // 1→0 draws the line in from the left; 0→-1 wipes it away from the left.
-      animate={{ strokeDashoffset: [1, 0, 0, -1] }}
+      // pathLength / pathOffset are Framer Motion's normalised (0–1) equivalents
+      // of stroke-dasharray / stroke-dashoffset. Motion measures the real path
+      // length and manages the dash attributes itself, so we must NOT also set
+      // strokeDasharray / strokeDashoffset manually — that was the bug.
+      //
+      // pathLength = visible fraction of the path
+      // pathOffset = where the visible segment starts
+      //   draw  (left→right): pathLength 0→1, pathOffset 0   → visible [0, len] grows from left
+      //   hold:               pathLength 1,   pathOffset 0
+      //   erase (left→right): pathLength 1→0, pathOffset 0→1 → visible [off, 1], left edge sweeps right
+      initial={{ pathLength: 0, pathOffset: 0 }}
+      animate={{
+        pathLength: [0, 1, 1, 0],
+        pathOffset: [0, 0, 0, 1],
+      }}
       transition={{
         duration: LIFE,
         times: [0, DRAW / LIFE, (DRAW + HOLD) / LIFE, 1],
@@ -70,17 +80,29 @@ function ChartLine({ d, color, onDone }: { d: string; color: string; onDone: () 
 interface Line { id: number; d: string; color: string }
 
 function ChartAnimation() {
-  const [lines, setLines] = useState<Line[]>([])
+  // Seed the first line with literal values so the lazy initialiser never reads
+  // a ref during render (which React forbids). makePath() is a pure call and is
+  // fine to run here — the initialiser runs exactly once.
+  const [lines, setLines] = useState<Line[]>(() => [
+    { id: 0, d: makePath(), color: COLORS[0] },
+  ])
+
+  // Counters continue from 1 and are only ever touched inside the interval
+  // callback — i.e. outside of render, which is where ref access is allowed.
+  const idRef = useRef(1)
+  const colorRef = useRef(1)
 
   useEffect(() => {
-    let id = 0
-    let colorIdx = 0
-    const spawn = () => {
-      const line: Line = { id: id++, d: makePath(), color: COLORS[colorIdx++ % COLORS.length] }
-      setLines(prev => [...prev, line])
-    }
-    spawn()
-    const iv = setInterval(spawn, SPAWN * 1000)
+    const iv = setInterval(() => {
+      setLines(prev => [
+        ...prev,
+        {
+          id: idRef.current++,
+          d: makePath(),
+          color: COLORS[colorRef.current++ % COLORS.length],
+        },
+      ])
+    }, SPAWN * 1000)
     return () => clearInterval(iv)
   }, [])
 
@@ -111,9 +133,17 @@ interface ChartLoaderProps {
 
 export function ChartLoader({ show, message, onClose }: ChartLoaderProps) {
   const [dismissed, setDismissed] = useState(false)
+  const [prevShow, setPrevShow] = useState(show)
 
-  // Reset the dismiss flag whenever a fresh loading episode begins
-  useEffect(() => { if (show) setDismissed(false) }, [show])
+  // Reset the dismiss flag whenever a fresh loading episode begins.
+  // Adjusting state *during render* (React's recommended pattern for "reset
+  // state when a prop changes") avoids the "setState synchronously within an
+  // effect" cascading-render warning. React restarts the render immediately, so
+  // no extra commit/flicker happens.
+  if (show !== prevShow) {
+    setPrevShow(show)
+    if (show) setDismissed(false)
+  }
 
   if (typeof document === 'undefined') return null
 

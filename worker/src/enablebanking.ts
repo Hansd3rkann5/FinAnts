@@ -237,8 +237,12 @@ export async function ebExchangeAndSync(
     })
 
     for (const tx of allTxs) {
-      const amount    = parseFloat(tx.transaction_amount.amount)
-      const isExpense = (tx.credit_debit_indicator === 'DBIT') || amount < 0
+      // EnableBanking reports the amount as a positive magnitude with the
+      // direction in credit_debit_indicator (DBIT = outgoing). Apply the sign
+      // so expenses are negative — otherwise everything reads as income.
+      const rawAmount = parseFloat(tx.transaction_amount.amount)
+      const isExpense = (tx.credit_debit_indicator === 'DBIT') || rawAmount < 0
+      const amount    = isExpense ? -Math.abs(rawAmount) : Math.abs(rawAmount)
       mappedTransactions.push({
         date:             tx.booking_date ?? tx.transaction_date ?? '',
         amount,
