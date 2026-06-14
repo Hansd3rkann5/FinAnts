@@ -5,7 +5,6 @@ import type { Transaction, Account } from '@/types'
 
 export interface WorkerConfig {
   workerUrl: string
-  apiKey: string
 }
 
 export interface TanChallenge {
@@ -112,7 +111,8 @@ export function useWorkerSync(
       if (options?.tan) {
         res = await fetch(new URL('/tan', cfg.workerUrl).toString(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Api-Key': cfg.apiKey },
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tan: options.tan,
             dialogId: options.dialogId,
@@ -124,7 +124,7 @@ export function useWorkerSync(
       } else {
         const url = new URL(cfg.workerUrl)
         url.searchParams.set('days', String(days))
-        res = await fetch(url.toString(), { headers: { 'X-Api-Key': cfg.apiKey } })
+        res = await fetch(url.toString(), { credentials: 'include' })
       }
 
       if (res.status === 202) {

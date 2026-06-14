@@ -5,24 +5,75 @@ export interface Env {
   FINTS_BLZ?: string
   FINTS_USERNAME: string
   FINTS_PIN: string
-  /** Optional fallback IBAN to derive BLZ from. */
   FINTS_IBAN?: string
-  API_KEY: string
   ALLOWED_ORIGIN: string
   ICONS: R2Bucket
-  /** EnableBanking – set via: wrangler secret put EB_APPLICATION_ID */
   EB_APPLICATION_ID?: string
-  /** EnableBanking – set via: wrangler secret put EB_PRIVATE_KEY */
   EB_PRIVATE_KEY?: string
+}
+
+// ─── Cloudflare Access JWT validation ─────────────────────────────────────────
+
+const CF_TEAM_DOMAIN = 'https://shrill-morning-3412.cloudflareaccess.com'
+const CF_AUD         = 'ab7b540605742a2c199591d035e0f3cd'
+
+let jwksCache: { keys: any[] } | null = null
+
+async function getJwks(): Promise<{ keys: any[] }> {
+  if (jwksCache) return jwksCache
+  const res = await fetch(`${CF_TEAM_DOMAIN}/cdn-cgi/access/certs`)
+  jwksCache = await res.json() as { keys: any[] }
+  return jwksCache
+}
+
+async function checkAuth(request: Request): Promise<boolean> {
+  const jwt = request.headers.get('Cf-Access-Jwt-Assertion')
+  if (!jwt) return false
+  try {
+    const parts = jwt.split('.')
+    if (parts.length !== 3) return false
+
+    const b64 = (s: string) => atob(s.replace(/-/g, '+').replace(/_/g, '/'))
+    const header  = JSON.parse(b64(parts[0]))
+    const payload = JSON.parse(b64(parts[1]))
+
+    if (payload.exp < Math.floor(Date.now() / 1000)) return false
+    const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud]
+    if (!aud.includes(CF_AUD)) return false
+    if (payload.iss !== CF_TEAM_DOMAIN) return false
+
+    const jwks = await getJwks()
+    const jwk  = jwks.keys.find((k: any) => k.kid === header.kid)
+    if (!jwk) return false
+
+    const key = await crypto.subtle.importKey(
+      'jwk', jwk,
+      { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-256' } },
+      false, ['verify'],
+    )
+    const sig  = Uint8Array.from(b64(parts[2]), c => c.charCodeAt(0))
+    const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
+    return crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, data)
+  } catch {
+    return false
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function corsHeaders(origin: string): Record<string, string> {
+const ALLOWED_ORIGINS = [
+  'https://hansd3rkann5.github.io',
+  'http://localhost:5173',
+  'https://localhost:5173',
+]
+
+function corsHeaders(requestOrigin: string): Record<string, string> {
+  const origin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : ALLOWED_ORIGINS[0]
   return {
     'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Api-Key',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
   }
 }
@@ -32,12 +83,6 @@ function jsonResponse(body: unknown, status: number, headers: Record<string, str
     status,
     headers: { 'Content-Type': 'application/json', ...headers },
   })
-}
-
-function checkAuth(request: Request, env: Env): boolean {
-  const key = request.headers.get('X-Api-Key')
-    ?? new URL(request.url).searchParams.get('key')
-  return !!env.API_KEY && key === env.API_KEY
 }
 
 function resolveBlz(env: Env): string {
@@ -58,17 +103,17 @@ function formatError(e: unknown): string {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const origin = env.ALLOWED_ORIGIN ?? '*'
-    const cors = corsHeaders(origin)
+    const requestOrigin = request.headers.get('Origin') ?? ALLOWED_ORIGINS[0]
+    const cors = corsHeaders(requestOrigin)
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: cors })
     }
 
-    const url = new URL(request.url)
+    const url  = new URL(request.url)
     const path = url.pathname.replace(/\/$/, '')
 
-    // ── GET /icon/:key — public, no auth required ──────────────────────────
+    // ── GET /icon/:key — public, no auth ──────────────────────────────────
     if (request.method === 'GET' && /^\/icon\/.+/.test(path)) {
       if (!env.ICONS) return new Response('R2 not configured', { status: 503, headers: cors })
       const key = decodeURIComponent(path.slice('/icon/'.length))
@@ -80,11 +125,35 @@ export default {
       return new Response(obj.body, { headers: h })
     }
 
-    if (!checkAuth(request, env)) {
+    // ── GET /auth — redirect to app after CF Access login ─────────────────
+    if (request.method === 'GET' && path === '/auth') {
+      return new Response(null, {
+        status: 302,
+        headers: { ...cors, Location: 'https://hansd3rkann5.github.io/FinAnts/' },
+      })
+    }
+
+    // ── GET /ping — auth check ────────────────────────────────────────────
+    if (request.method === 'GET' && path === '/ping') {
+      const jwt = request.headers.get('Cf-Access-Jwt-Assertion')
+      if (!jwt || !await checkAuth(request)) {
+        return jsonResponse({ error: 'Unauthorized' }, 401, cors)
+      }
+      try {
+        const b64 = (s: string) => atob(s.replace(/-/g, '+').replace(/_/g, '/'))
+        const payload = JSON.parse(b64(jwt.split('.')[1]))
+        return jsonResponse({ ok: true, email: payload.email ?? 'authenticated' }, 200, cors)
+      } catch {
+        return jsonResponse({ ok: true, email: 'authenticated' }, 200, cors)
+      }
+    }
+
+    // ── Auth check ────────────────────────────────────────────────────────
+    if (!await checkAuth(request)) {
       return jsonResponse({ error: 'Unauthorized' }, 401, cors)
     }
 
-    // ── GET /eb/aspsps?country=DE — list supported banks ──────────────────
+    // ── GET /eb/aspsps ────────────────────────────────────────────────────
     if (request.method === 'GET' && path === '/eb/aspsps') {
       if (!env.EB_APPLICATION_ID || !env.EB_PRIVATE_KEY) {
         return jsonResponse({ error: 'EnableBanking nicht konfiguriert' }, 503, cors)
@@ -99,7 +168,7 @@ export default {
       }
     }
 
-    // ── POST /eb/start ─────────────────────────────────────────────────────
+    // ── POST /eb/start ────────────────────────────────────────────────────
     if (request.method === 'POST' && path === '/eb/start') {
       if (!env.EB_APPLICATION_ID || !env.EB_PRIVATE_KEY) {
         return jsonResponse({ error: 'EnableBanking nicht konfiguriert (EB_APPLICATION_ID, EB_PRIVATE_KEY)' }, 503, cors)
@@ -108,14 +177,14 @@ export default {
       try { body = await request.json() as typeof body } catch { return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors) }
 
       try {
-        const result = await ebStartAuth(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, body.redirect_url, body.aspsp_name ?? 'Commerzbank AG', body.aspsp_country ?? 'DE')
+        const result = await ebStartAuth(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, body.redirect_url, body.aspsp_name ?? 'Commerzbank', body.aspsp_country ?? 'DE')
         return jsonResponse(result, 200, cors)
       } catch (e) {
         return jsonResponse({ error: String(e) }, 502, cors)
       }
     }
 
-    // ── POST /eb/sync ──────────────────────────────────────────────────────
+    // ── POST /eb/sync ─────────────────────────────────────────────────────
     if (request.method === 'POST' && path === '/eb/sync') {
       if (!env.EB_APPLICATION_ID || !env.EB_PRIVATE_KEY) {
         return jsonResponse({ error: 'EnableBanking nicht konfiguriert' }, 503, cors)
@@ -135,7 +204,7 @@ export default {
       }
     }
 
-    // ── POST /upload-icon ──────────────────────────────────────────────────
+    // ── POST /upload-icon ─────────────────────────────────────────────────
     if (request.method === 'POST' && path.endsWith('/upload-icon')) {
       if (!env.ICONS) return jsonResponse({ error: 'R2 not configured' }, 503, cors)
       const contentType = request.headers.get('Content-Type') ?? 'image/webp'
@@ -150,7 +219,7 @@ export default {
       return jsonResponse({ url: iconUrl, key }, 200, cors)
     }
 
-    // ── GET /state ─────────────────────────────────────────────────────────
+    // ── GET /state ────────────────────────────────────────────────────────
     if (request.method === 'GET' && path === '/state') {
       if (!env.ICONS) return jsonResponse({ error: 'R2 not configured' }, 503, cors)
       const obj = await env.ICONS.get('state/user.json')
@@ -160,7 +229,7 @@ export default {
       return new Response(obj.body, { status: 200, headers: h })
     }
 
-    // ── PUT /state ─────────────────────────────────────────────────────────
+    // ── PUT /state ────────────────────────────────────────────────────────
     if (request.method === 'PUT' && path === '/state') {
       if (!env.ICONS) return jsonResponse({ error: 'R2 not configured' }, 503, cors)
       const body = await request.text()
@@ -178,11 +247,11 @@ export default {
 
     const cfg = { blz, username: env.FINTS_USERNAME, pin: env.FINTS_PIN }
 
-    // ── GET / or /sync ──────────────────────────────────────────────────────
+    // ── GET / or /sync ────────────────────────────────────────────────────
     const isSync = request.method === 'GET' && (path === '' || path.endsWith('/sync'))
     if (isSync) {
       const daysBack = Math.min(parseInt(url.searchParams.get('days') ?? '90'), 365)
-      const toDate = new Date()
+      const toDate   = new Date()
       const fromDate = new Date(toDate.getTime() - daysBack * 86_400_000)
 
       try {
@@ -197,7 +266,7 @@ export default {
       }
     }
 
-    // ── POST /tan ───────────────────────────────────────────────────────────
+    // ── POST /tan ─────────────────────────────────────────────────────────
     if (request.method === 'POST' && path.endsWith('/tan')) {
       let body: { tan: string; dialogId: string; secRef: number; secFun: string; days?: number }
       try {
@@ -212,7 +281,7 @@ export default {
       }
 
       const daysBack = Math.min(days, 365)
-      const toDate = new Date()
+      const toDate   = new Date()
       const fromDate = new Date(toDate.getTime() - daysBack * 86_400_000)
 
       try {

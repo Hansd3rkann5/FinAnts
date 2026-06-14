@@ -65,7 +65,8 @@ export function useEnableBanking(
     try {
       const res  = await fetch(`${cfg.workerUrl.replace(/\/$/, '')}/eb/sync`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Api-Key': cfg.apiKey },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, days }),
       })
       const data = await res.json() as EbSyncResponse
@@ -127,7 +128,8 @@ export function useEnableBanking(
       const redirectUrl = window.location.origin + import.meta.env.BASE_URL
       const res  = await fetch(`${cfg.workerUrl.replace(/\/$/, '')}/eb/start`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Api-Key': cfg.apiKey },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ redirect_url: redirectUrl, aspsp_name: aspspName, aspsp_country: aspspCountry }),
       })
       const data = await res.json() as { authorization_id: string; auth_url: string; error?: string }

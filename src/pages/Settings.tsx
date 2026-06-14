@@ -2,8 +2,8 @@ import { useRef, useState, useEffect } from 'react'
 import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
-  Wifi, Eye, EyeOff, CloudUpload, CloudDownload, Cloud,
-  ChevronDown, Wallet, Database, Link2,
+  Wifi, CloudUpload, CloudDownload, Cloud,
+  ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn,
 } from 'lucide-react'
 import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
 import { useEnableBanking } from '@/hooks/useEnableBanking'
@@ -16,12 +16,10 @@ import { PhotoTanModal } from '@/components/ui/PhotoTanModal'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useAccounts } from '@/hooks/useAccounts'
 import { detectAndParse } from '@/utils/csvParser'
-import {
-  useWorkerSync,
-  loadWorkerConfig,
-  saveWorkerConfig,
-  type SyncStatus,
-} from '@/hooks/useWorkerSync'
+import { useWorkerSync, type SyncStatus } from '@/hooks/useWorkerSync'
+
+const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
+
 function formatEur(v: number, maximumFractionDigits = 2) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
 }
@@ -51,7 +49,7 @@ function StatusBanner({ status, message }: { status: ImportStatus | SyncStatus |
       )}
       <span>
         {status === 'parsing' ? 'Datei wird verarbeitet…'
-          : status === 'syncing' ? 'Verbinde mit Commerzbank…'
+          : status === 'syncing' ? 'Verbinde mit Bank…'
           : message}
       </span>
     </motion.div>
@@ -59,13 +57,7 @@ function StatusBanner({ status, message }: { status: ImportStatus | SyncStatus |
 }
 
 function CollapsibleCard({
-  icon,
-  title,
-  badge,
-  statusText,
-  defaultOpen = false,
-  glow,
-  children,
+  icon, title, badge, statusText, defaultOpen = false, glow, children,
 }: {
   icon: React.ReactNode
   title: string
@@ -78,10 +70,7 @@ function CollapsibleCard({
   const [open, setOpen] = useState(defaultOpen)
   return (
     <GlassCard glow={glow}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2 text-left"
-      >
+      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-2 text-left">
         {icon}
         <span className="text-sm font-semibold text-white/90 flex-1">{title}</span>
         {badge}
@@ -93,11 +82,9 @@ function CollapsibleCard({
           <ChevronDown size={14} />
         </motion.span>
       </button>
-
       {!open && statusText && (
         <p className="text-[10px] text-white/30 mt-1.5 ml-5.5">{statusText}</p>
       )}
-
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -107,9 +94,7 @@ function CollapsibleCard({
             transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
             className="overflow-hidden"
           >
-            <div className="pt-4">
-              {children}
-            </div>
+            <div className="pt-4">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -125,47 +110,34 @@ export function Settings() {
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle')
   const [importMessage, setImportMessage] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
-
-  const [workerUrl, setWorkerUrl] = useState(import.meta.env.VITE_WORKER_URL ?? '')
-  const [apiKey, setApiKey] = useState(import.meta.env.VITE_WORKER_API_KEY ?? '')
-  const [showKey, setShowKey] = useState(false)
-  const [syncDays, setSyncDays] = useState(90)
-  const [configSaved, setConfigSaved] = useState(false)
-
   const [balanceInput, setBalanceInput] = useState(
     manualBalance !== null ? String(manualBalance).replace('.', ',') : ''
   )
 
-  const {
-    sync, submitTan, dismissChallenge,
-    status: syncStatus, message: syncMessage, lastSync, challenge,
-  } = useWorkerSync(importTransactions, setAccounts)
+  // CF Access auth state
+  const [cfEmail, setCfEmail]   = useState<string | null>(null)
+  const [cfChecked, setCfChecked] = useState(false)
 
-  const {
-    push: cloudPush, pull: cloudPull,
-    status: cloudStatus, message: cloudMessage, lastSync: cloudLastSync,
-  } = useCloudSync()
+  useEffect(() => {
+    fetch(`${WORKER_URL}/ping`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { email?: string } | null) => { if (d?.email) setCfEmail(d.email) })
+      .catch(() => {})
+      .finally(() => setCfChecked(true))
+  }, [])
+
+  const [syncDays, setSyncDays] = useState(90)
+  const { sync, submitTan, dismissChallenge, status: syncStatus, message: syncMessage, lastSync, challenge } =
+    useWorkerSync(importTransactions, setAccounts)
+
+  const { push: cloudPush, pull: cloudPull, status: cloudStatus, message: cloudMessage, lastSync: cloudLastSync } =
+    useCloudSync()
 
   const [ebBank,    setEbBank]    = useState('Commerzbank')
   const [ebCountry, setEbCountry] = useState('DE')
-  const [ebDays,    setEbDays]    = useState(90)
-  const {
-    start: ebStart,
-    status: ebStatus,
-    message: ebMessage,
-    lastSync: ebLastSync,
-  } = useEnableBanking(importTransactions, setAccounts)
-
-  useEffect(() => {
-    const cfg = loadWorkerConfig()
-    if (cfg) {
-      setWorkerUrl(cfg.workerUrl)
-      setApiKey(cfg.apiKey)
-      setConfigSaved(true)
-    }
-  }, [])
-
-  // ── CSV Import ──────────────────────────────────────────────────────────────
+  const [ebDays,    setEbDays]    = useState(365)
+  const { start: ebStart, status: ebStatus, message: ebMessage, lastSync: ebLastSync } =
+    useEnableBanking(importTransactions, setAccounts)
 
   async function handleFile(file: File) {
     setImportStatus('parsing')
@@ -195,25 +167,13 @@ export function Settings() {
     if (file) handleFile(file)
   }
 
-  // ── Worker sync ─────────────────────────────────────────────────────────────
-
-  function saveConfig() {
-    if (!workerUrl || !apiKey) return
-    saveWorkerConfig({ workerUrl: workerUrl.trim(), apiKey: apiKey.trim() })
-    setConfigSaved(true)
-  }
-
-  function handleSync() {
-    if (!workerUrl || !apiKey) return
-    sync({ workerUrl: workerUrl.trim(), apiKey: apiKey.trim() }, syncDays)
-  }
-
-  // ── Manual balance ──────────────────────────────────────────────────────────
-
   function handleSaveBalance() {
     const parsed = parseFloat(balanceInput.replace(',', '.'))
     if (!isNaN(parsed)) saveBalance(parsed)
   }
+
+  const workerCfg = { workerUrl: WORKER_URL }
+  const isAuth = cfChecked && !!cfEmail
 
   return (
     <>
@@ -227,6 +187,49 @@ export function Settings() {
       )}
 
       <div className="flex flex-col gap-3 px-4">
+
+        {/* ── Zugang ──────────────────────────────────────────────────────── */}
+        <CollapsibleCard
+          icon={<ShieldCheck size={15} className={isAuth ? 'text-emerald-400' : 'text-white/30'} />}
+          title="Zugang"
+          badge={isAuth
+            ? <span className="text-[10px] text-emerald-400/70 border border-emerald-500/20 bg-emerald-500/10 rounded-pill px-2 py-0.5">Eingeloggt</span>
+            : cfChecked
+            ? <span className="text-[10px] text-red-400/70 border border-red-500/20 bg-red-500/10 rounded-pill px-2 py-0.5">Nicht eingeloggt</span>
+            : undefined}
+          statusText={isAuth ? cfEmail! : 'Cloudflare Access · Einmalig per E-Mail einloggen'}
+          defaultOpen={cfChecked && !cfEmail}
+        >
+          {isAuth ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs text-white/40">
+                Eingeloggt als <span className="text-white/70">{cfEmail}</span>. Alle Bankabfragen laufen automatisch authentifiziert.
+              </p>
+              <PillButton
+                variant="ghost"
+                size="sm"
+                icon={<LogIn size={13} />}
+                onClick={() => { window.location.href = `${WORKER_URL}/auth` }}
+              >
+                Erneut einloggen
+              </PillButton>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs text-white/40">
+                Einmalig per E-Mail-Code einloggen. Die Session bleibt 30 Tage aktiv.
+              </p>
+              <PillButton
+                variant="primary"
+                size="sm"
+                icon={<LogIn size={13} />}
+                onClick={() => { window.location.href = `${WORKER_URL}/auth` }}
+              >
+                Einloggen
+              </PillButton>
+            </div>
+          )}
+        </CollapsibleCard>
 
         {/* ── Kontostand ──────────────────────────────────────────────────── */}
         <CollapsibleCard
@@ -253,12 +256,7 @@ export function Settings() {
                 className="w-full rounded-card_sm bg-white/4 border border-white/8 pl-7 pr-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-emerald-500/40 transition-colors duration-200"
               />
             </div>
-            <PillButton
-              variant="secondary"
-              size="sm"
-              disabled={!balanceInput}
-              onClick={handleSaveBalance}
-            >
+            <PillButton variant="secondary" size="sm" disabled={!balanceInput} onClick={handleSaveBalance}>
               Speichern
             </PillButton>
           </div>
@@ -267,118 +265,20 @@ export function Settings() {
           )}
         </CollapsibleCard>
 
-        {/* ── Automatischer Sync ──────────────────────────────────────────── */}
-        <CollapsibleCard
-          icon={<Wifi size={15} className="text-purple-400 shrink-0" />}
-          title="Automatischer Sync"
-          glow="purple"
-          badge={configSaved
-            ? <span className="text-[10px] text-purple-400/70 border border-purple-500/20 bg-purple-500/10 rounded-pill px-2 py-0.5">Konfiguriert</span>
-            : undefined}
-          statusText={configSaved
-            ? `Commerzbank · Zuletzt: ${lastSync ?? 'Noch nie'}`
-            : 'Commerzbank via Cloudflare Worker'}
-          defaultOpen={!configSaved}
-        >
-          <p className="text-xs text-white/40 mb-4">
-            Verbinde deine Commerzbank-Konten über deinen Cloudflare Worker.
-            Zugangsdaten werden nur lokal gespeichert.
-          </p>
-          <div className="flex flex-col gap-3">
-            <div>
-              <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">Worker-URL</label>
-              <input
-                type="url"
-                placeholder="https://finants-proxy.DEIN-ACCOUNT.workers.dev"
-                value={workerUrl}
-                onChange={e => { setWorkerUrl(e.target.value); setConfigSaved(false) }}
-                className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-purple-500/40 transition-colors duration-200"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">API Key</label>
-              <div className="relative">
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  placeholder="Dein geheimer API Key"
-                  value={apiKey}
-                  onChange={e => { setApiKey(e.target.value); setConfigSaved(false) }}
-                  className="w-full rounded-card_sm bg-white/4 border border-white/8 pl-3 pr-10 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-purple-500/40 transition-colors duration-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
-                >
-                  {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">
-                Zeitraum: letzte {syncDays} Tage
-              </label>
-              <div className="flex gap-2">
-                {[30, 60, 90, 180, 365].map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setSyncDays(d)}
-                    className="flex-1 py-1.5 rounded-pill text-xs border transition-all duration-150"
-                    style={{
-                      backgroundColor: syncDays === d ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.04)',
-                      borderColor: syncDays === d ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)',
-                      color: syncDays === d ? '#a78bfa' : 'rgba(255,255,255,0.4)',
-                    }}
-                  >
-                    {d === 365 ? '1J' : `${d}T`}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-2 mt-1">
-              {!configSaved && (
-                <PillButton variant="secondary" size="sm" disabled={!workerUrl || !apiKey} onClick={saveConfig}>
-                  Speichern
-                </PillButton>
-              )}
-              <PillButton
-                variant="primary"
-                size="sm"
-                disabled={!workerUrl || !apiKey || syncStatus === 'syncing'}
-                icon={<RefreshCw size={13} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />}
-                onClick={handleSync}
-              >
-                {syncStatus === 'syncing' ? 'Lädt…' : 'Jetzt synchronisieren'}
-              </PillButton>
-            </div>
-            <AnimatePresence>
-              {syncStatus !== 'idle' && syncStatus !== 'challenge' && (
-                <StatusBanner status={syncStatus} message={syncMessage} />
-              )}
-            </AnimatePresence>
-            {lastSync && (
-              <p className="text-[10px] text-white/25 text-center">Zuletzt synchronisiert: {lastSync}</p>
-            )}
-          </div>
-        </CollapsibleCard>
-
-        {/* ── EnableBanking (PSD2) ─────────────────────────────────────────── */}
+        {/* ── PSD2 Bankabfrage ─────────────────────────────────────────────── */}
         <CollapsibleCard
           icon={<Link2 size={15} className="text-blue-400 shrink-0" />}
-          title="EnableBanking (PSD2)"
+          title="Bankabfrage (PSD2)"
+          glow="blue"
           badge={ebLastSync
             ? <span className="text-[10px] text-blue-400/70 border border-blue-500/20 bg-blue-500/10 rounded-pill px-2 py-0.5">Verbunden</span>
             : undefined}
-          statusText={ebLastSync
-            ? `PSD2 · Zuletzt: ${ebLastSync}`
-            : 'Offizielle PSD2-Schnittstelle · Alternative zu FinTS'}
+          statusText={ebLastSync ? `Zuletzt: ${ebLastSync}` : 'Offizielle PSD2-Schnittstelle · Commerzbank'}
+          defaultOpen={!ebLastSync}
         >
           <p className="text-xs text-white/40 mb-4">
-            Verbinde deine Bank über die offizielle PSD2-Schnittstelle. Sicherer als FinTS,
-            direkt von der Bank unterstützt. Erfordert <span className="text-white/60">EB_APPLICATION_ID</span> und{' '}
-            <span className="text-white/60">EB_PRIVATE_KEY</span> als Worker-Secrets.
+            Verbindet dich direkt über die offizielle Bank-API. Du wirst zur Commerzbank weitergeleitet um die Verbindung zu autorisieren.
           </p>
-
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <div className="flex-1">
@@ -402,10 +302,9 @@ export function Settings() {
                 />
               </div>
             </div>
-
             <div>
               <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">
-                Zeitraum: letzte {ebDays} Tage
+                Zeitraum: letzte {ebDays === 365 ? '365 Tage (1 Jahr)' : `${ebDays} Tage`}
               </label>
               <div className="flex gap-2">
                 {[30, 60, 90, 180, 365].map(d => (
@@ -424,32 +323,79 @@ export function Settings() {
                 ))}
               </div>
             </div>
-
             <PillButton
               variant="primary"
               size="sm"
-              disabled={!workerUrl || !apiKey || ebStatus === 'starting' || ebStatus === 'syncing'}
+              disabled={!isAuth || ebStatus === 'starting' || ebStatus === 'syncing'}
               icon={<Link2 size={13} className={ebStatus === 'starting' || ebStatus === 'syncing' ? 'animate-pulse' : ''} />}
-              onClick={() => ebStart({ workerUrl: workerUrl.trim(), apiKey: apiKey.trim() }, ebBank, ebCountry, ebDays)}
+              onClick={() => ebStart(workerCfg, ebBank, ebCountry, ebDays)}
             >
-              {ebStatus === 'starting'      ? 'Starte Session…'
-               : ebStatus === 'awaiting_auth' ? 'Warte auf Bank-Auth…'
-               : ebStatus === 'syncing'       ? 'Importiere…'
-               : ebLastSync                   ? 'Erneut synchronisieren'
+              {!isAuth                         ? 'Zuerst einloggen'
+               : ebStatus === 'starting'       ? 'Starte Verbindung…'
+               : ebStatus === 'awaiting_auth'  ? 'Warte auf Bank…'
+               : ebStatus === 'syncing'        ? 'Importiere…'
+               : ebLastSync                    ? 'Erneut synchronisieren'
                : 'Mit Bank verbinden'}
             </PillButton>
-
             <AnimatePresence>
               {(ebStatus === 'success' || ebStatus === 'error') && (
-                <StatusBanner
-                  status={ebStatus === 'success' ? 'success' : 'error'}
-                  message={ebMessage}
-                />
+                <StatusBanner status={ebStatus === 'success' ? 'success' : 'error'} message={ebMessage} />
               )}
             </AnimatePresence>
-
             {ebLastSync && (
               <p className="text-[10px] text-white/25 text-center">Zuletzt synchronisiert: {ebLastSync}</p>
+            )}
+          </div>
+        </CollapsibleCard>
+
+        {/* ── FinTS Sync ──────────────────────────────────────────────────── */}
+        <CollapsibleCard
+          icon={<Wifi size={15} className="text-purple-400 shrink-0" />}
+          title="FinTS Sync"
+          glow="purple"
+          statusText={lastSync ? `Zuletzt: ${lastSync}` : 'Commerzbank via FinTS'}
+        >
+          <p className="text-xs text-white/40 mb-4">
+            Direktverbindung zu Commerzbank via FinTS-Protokoll.
+          </p>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">
+                Zeitraum: letzte {syncDays} Tage
+              </label>
+              <div className="flex gap-2">
+                {[30, 60, 90, 180, 365].map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setSyncDays(d)}
+                    className="flex-1 py-1.5 rounded-pill text-xs border transition-all duration-150"
+                    style={{
+                      backgroundColor: syncDays === d ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.04)',
+                      borderColor:     syncDays === d ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)',
+                      color:           syncDays === d ? '#a78bfa' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    {d === 365 ? '1J' : `${d}T`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <PillButton
+              variant="primary"
+              size="sm"
+              disabled={!isAuth || syncStatus === 'syncing'}
+              icon={<RefreshCw size={13} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />}
+              onClick={() => sync(workerCfg, syncDays)}
+            >
+              {!isAuth ? 'Zuerst einloggen' : syncStatus === 'syncing' ? 'Lädt…' : 'Jetzt synchronisieren'}
+            </PillButton>
+            <AnimatePresence>
+              {syncStatus !== 'idle' && syncStatus !== 'challenge' && (
+                <StatusBanner status={syncStatus} message={syncMessage} />
+              )}
+            </AnimatePresence>
+            {lastSync && (
+              <p className="text-[10px] text-white/25 text-center">Zuletzt synchronisiert: {lastSync}</p>
             )}
           </div>
         </CollapsibleCard>
@@ -458,30 +404,27 @@ export function Settings() {
         <CollapsibleCard
           icon={<Cloud size={15} className="text-blue-400 shrink-0" />}
           title="Cloud-Backup"
-          statusText={cloudLastSync
-            ? `Zuletzt: ${cloudLastSync}`
-            : 'Kategorien & Profile geräteübergreifend sichern'}
+          statusText={cloudLastSync ? `Zuletzt: ${cloudLastSync}` : 'Kategorien & Profile geräteübergreifend sichern'}
         >
           <p className="text-xs text-white/40 mb-4">
             Kategorien, Händler-Profile und Icons geräteübergreifend sichern.
-            Nutzt deinen konfigurierten Cloudflare Worker.
           </p>
           <div className="flex gap-2">
             <PillButton
               variant="secondary"
               size="sm"
-              disabled={cloudStatus === 'pushing' || cloudStatus === 'pulling'}
+              disabled={!isAuth || cloudStatus === 'pushing' || cloudStatus === 'pulling'}
               icon={<CloudUpload size={13} className={cloudStatus === 'pushing' ? 'animate-pulse' : ''} />}
-              onClick={() => cloudPush(workerUrl && apiKey ? { workerUrl, apiKey } : undefined)}
+              onClick={() => cloudPush(workerCfg)}
             >
               {cloudStatus === 'pushing' ? 'Lädt…' : 'Hochladen'}
             </PillButton>
             <PillButton
               variant="secondary"
               size="sm"
-              disabled={cloudStatus === 'pushing' || cloudStatus === 'pulling'}
+              disabled={!isAuth || cloudStatus === 'pushing' || cloudStatus === 'pulling'}
               icon={<CloudDownload size={13} className={cloudStatus === 'pulling' ? 'animate-pulse' : ''} />}
-              onClick={() => cloudPull(workerUrl && apiKey ? { workerUrl, apiKey } : undefined)}
+              onClick={() => cloudPull(workerCfg)}
             >
               {cloudStatus === 'pulling' ? 'Lädt…' : 'Herunterladen'}
             </PillButton>
@@ -519,9 +462,7 @@ export function Settings() {
           title="CSV-Import"
           statusText="Manueller Import via Commerzbank-Export"
         >
-          <p className="text-xs text-white/40 mb-4">
-            CSV-Export aus dem Commerzbank OnlineBanking hochladen.
-          </p>
+          <p className="text-xs text-white/40 mb-4">CSV-Export aus dem Commerzbank OnlineBanking hochladen.</p>
           <div
             onDragOver={e => e.preventDefault()}
             onDrop={onDrop}
@@ -552,24 +493,13 @@ export function Settings() {
           title="Daten"
           statusText={`${transactions.length} Buchungen · Lokal gespeichert`}
         >
-          <p className="text-xs text-white/40 mb-3">
-            Alle Daten verbleiben lokal auf deinem Gerät.
-          </p>
+          <p className="text-xs text-white/40 mb-3">Alle Daten verbleiben lokal auf deinem Gerät.</p>
           {!showConfirm ? (
-            <PillButton
-              variant="danger"
-              size="sm"
-              icon={<Trash2 size={13} />}
-              onClick={() => setShowConfirm(true)}
-            >
+            <PillButton variant="danger" size="sm" icon={<Trash2 size={13} />} onClick={() => setShowConfirm(true)}>
               Alle Daten löschen
             </PillButton>
           ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col gap-2"
-            >
+            <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
               <p className="text-xs text-red-400/80">Wirklich alle Buchungen löschen? Dies kann nicht rückgängig gemacht werden.</p>
               <div className="flex gap-2">
                 <PillButton variant="danger" size="sm" onClick={() => { clearAll(); setShowConfirm(false); setImportStatus('idle') }}>
@@ -594,6 +524,7 @@ export function Settings() {
             </span>
           </button>
         </GlassCard>
+
       </div>
     </>
   )
