@@ -166,6 +166,19 @@ export async function ebExchangeAndSync(
   const mappedAccounts: MappedAccount[]         = []
   const mappedTransactions: MappedTransaction[] = []
 
+  // The continuation_key returned by EnableBanking contains the bank's internal
+  // accountId (e.g. Commerzbank's XS2A ID), which differs from the EB session UID.
+  // Passing the session UID for subsequent pages causes a 422. We decode the key
+  // to extract the correct accountId for pagination requests.
+  function ckAccountId(ck: string): string | null {
+    try {
+      const b64 = ck.split('.')[0]
+      const padded = b64 + '='.repeat((4 - b64.length % 4) % 4)
+      const decoded = JSON.parse(atob(padded)) as { params?: { accountId?: string } }
+      return decoded.params?.accountId ?? null
+    } catch { return null }
+  }
+
   await Promise.all(accounts.map(async acct => {
     const iban = acct.identification?.iban ?? acct.uid
     console.log('[EB] fetching transactions for account:', iban)
@@ -192,12 +205,16 @@ export async function ebExchangeAndSync(
     continuationKey = firstData.continuation_key
 
     while (continuationKey) {
-      console.log('[EB] fetching next page, continuation_key:', continuationKey.slice(0, 40) + '...')
+      const pageId = ckAccountId(continuationKey) ?? acct.uid
+      console.log('[EB] fetching next page, pageId:', pageId, 'ck:', continuationKey.slice(0, 40) + '...')
       const pageRes = await ebFetch(
-        `/accounts/${acct.uid}/transactions?continuation_key=${continuationKey}`,
+        `/accounts/${pageId}/transactions?continuation_key=${continuationKey}`,
         appId, privKey,
       )
-      if (!pageRes.ok) break
+      if (!pageRes.ok) {
+        console.error('[EB] pagination failed:', pageRes.status, await pageRes.text())
+        break
+      }
       const pageData = await pageRes.json() as { transactions?: EbTransaction[]; continuation_key?: string }
       allTxs.push(...(pageData.transactions ?? []))
       continuationKey = pageData.continuation_key

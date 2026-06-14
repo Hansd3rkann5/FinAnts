@@ -77,9 +77,9 @@ export function Dashboard() {
   // Adjust manual balance by all booked transactions since the save date
   const manualBalance = (() => {
     if (baseBalance === null || balanceSavedAt === null) return null
-    const savedDate = new Date(balanceSavedAt)
+    const savedTs = new Date(balanceSavedAt).getTime()
     const delta = transactions
-      .filter(t => !t.isPending && t.date >= savedDate)
+      .filter(t => !t.isPending && t.date.getTime() >= savedTs)
       .reduce((s, t) => s + t.amount, 0)
     return baseBalance + delta
   })()
@@ -195,8 +195,8 @@ export function Dashboard() {
         </GlassCard>
       )}
 
-      {/* ── Kontostand (manuell, nur wenn kein FinTS) ────────────────────── */}
-      {accounts.length === 0 && manualBalance !== null && (
+      {/* ── Kontostand (manuell) ──────────────────────────────────────────── */}
+      {manualBalance !== null && (
         <GlassCard id="card-manual-balance" glow="purple" className="mx-4">
           <div className="flex items-center gap-2 mb-1">
             <Landmark size={14} className="text-purple-400" />

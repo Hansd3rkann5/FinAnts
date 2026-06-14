@@ -16,8 +16,14 @@ function parseGermanDate(str: string): Date {
 
 
 function parseGermanAmount(str: string): number {
-  const cleaned = str.trim().replace(/"/g, '').replace(/\./g, '').replace(',', '.')
-  return parseFloat(cleaned) || 0
+  const cleaned = str
+    .trim()
+    .replace(/"/g, '')
+    .replace(/−/g, '-')  // Commerzbank exports use Unicode MINUS SIGN (U+2212), not ASCII hyphen
+    .replace(/\./g, '')
+    .replace(',', '.')
+  const n = parseFloat(cleaned)
+  return isNaN(n) ? 0 : n
 }
 
 function cleanField(str: string): string {

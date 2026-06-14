@@ -1,12 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 
+// Leg cadence: one tripod touchdown every STEP seconds. The body bob and the
+// horizontal scurry are tuned to this so the legs visually "carry" the ant.
+const STEP = 0.16
+
 const ANT_CSS = `
-@keyframes ant-a { 0%,100%{transform:rotate(-24deg)} 50%{transform:rotate(24deg)} }
-@keyframes ant-b { 0%,100%{transform:rotate(24deg)}  50%{transform:rotate(-24deg)} }
+@keyframes ant-a { 0%,100%{transform:rotate(-26deg)} 50%{transform:rotate(28deg)} }
+@keyframes ant-b { 0%,100%{transform:rotate(28deg)}  50%{transform:rotate(-26deg)} }
+@keyframes ant-antenna { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(-7deg)} }
 `
 
-const T = '0.28s ease-in-out infinite'
+const LEG_ANIM = `${STEP * 2}s ease-in-out infinite`
 
 function Leg({
   x1, y1, x2, y2, kf,
@@ -17,7 +22,7 @@ function Leg({
     <line
       x1={x1} y1={y1} x2={x2} y2={y2}
       stroke="white" strokeWidth={2.4} strokeLinecap="round"
-      style={{ transformOrigin: `${x1}px ${y1}px`, animation: `ant-${kf} ${T}` }}
+      style={{ transformOrigin: `${x1}px ${y1}px`, animation: `ant-${kf} ${LEG_ANIM}` }}
     />
   )
 }
@@ -28,8 +33,8 @@ function AntSvg() {
       <style>{ANT_CSS}</style>
       <svg viewBox="0 0 102 64" width="102" height="64" aria-hidden>
         {/* Legs — drawn before body so body overlaps them.
-            kf "a" starts at -24deg, "b" at +24deg. Due to mirrored leg geometry,
-            same kf on top+bottom creates natural opposite-phase motion (tripod gait). */}
+            kf "a" starts at -26deg, "b" at +28deg. Mirrored leg geometry means
+            same kf on top+bottom creates the opposite-phase tripod gait. */}
         {/* Front pair */}
         <Leg x1={33} y1={25} x2={18} y2={14} kf="a" />
         <Leg x1={33} y1={38} x2={18} y2={49} kf="a" />
@@ -50,13 +55,17 @@ function AntSvg() {
         {/* Head */}
         <ellipse cx="22" cy="30" rx="11" ry="10" fill="white" />
 
-        {/* Antennae */}
-        <line x1="17" y1="22" x2="7" y2="11"
-          stroke="white" strokeWidth={1.8} strokeLinecap="round" />
-        <circle cx="7" cy="11" r="2.2" fill="white" />
-        <line x1="26" y1="21" x2="20" y2="9"
-          stroke="white" strokeWidth={1.8} strokeLinecap="round" />
-        <circle cx="20" cy="9" r="2.2" fill="white" />
+        {/* Antennae — twitch slightly out of phase to feel alive */}
+        <g style={{ transformOrigin: '17px 22px', animation: `ant-antenna ${STEP * 5}s ease-in-out infinite` }}>
+          <line x1="17" y1="22" x2="7" y2="11"
+            stroke="white" strokeWidth={1.8} strokeLinecap="round" />
+          <circle cx="7" cy="11" r="2.2" fill="white" />
+        </g>
+        <g style={{ transformOrigin: '26px 21px', animation: `ant-antenna ${STEP * 5}s ease-in-out infinite`, animationDelay: `${STEP}s` }}>
+          <line x1="26" y1="21" x2="20" y2="9"
+            stroke="white" strokeWidth={1.8} strokeLinecap="round" />
+          <circle cx="20" cy="9" r="2.2" fill="white" />
+        </g>
 
         {/* Eye */}
         <circle cx="18" cy="28" r="3" fill="rgba(0,0,0,0.35)" />
@@ -74,6 +83,14 @@ interface AntLoaderProps {
 export function AntLoader({ show, message }: AntLoaderProps) {
   if (typeof document === 'undefined') return null
 
+  const screenW = typeof window !== 'undefined' ? window.innerWidth : 400
+  const start = -120
+  const end = screenW + 120
+  const span = end - start
+  // Scurry → brief halt → scurry. The pauses (flat segments in `times`) are
+  // what break the smooth slide and read as a real insect stop-and-go gait.
+  const at = (frac: number) => start + span * frac
+
   return createPortal(
     <AnimatePresence>
       {show && (
@@ -87,14 +104,30 @@ export function AntLoader({ show, message }: AntLoaderProps) {
           {/* Blurred backdrop */}
           <div className="absolute inset-0 backdrop-blur-2xl bg-black/60" />
 
-          {/* Traversing ant */}
+          {/* Walking ant: outer = horizontal scurry, inner = step bob + tilt */}
           <div className="relative z-10 w-full h-24 overflow-hidden">
             <motion.div
-              className="absolute top-1/2 -translate-y-1/2"
-              animate={{ x: [-120, (typeof window !== 'undefined' ? window.innerWidth : 400) + 120] }}
-              transition={{ duration: 3.8, repeat: Infinity, ease: 'linear', repeatDelay: 0.2 }}
+              className="absolute top-1/2"
+              animate={{ x: [at(0), at(0.3), at(0.36), at(0.68), at(0.74), at(1)] }}
+              transition={{
+                duration: 5.2,
+                repeat: Infinity,
+                repeatDelay: 0.3,
+                ease: ['easeOut', 'easeIn', 'easeOut', 'easeIn', 'easeOut'],
+                times: [0, 0.28, 0.4, 0.72, 0.84, 1],
+              }}
             >
-              <AntSvg />
+              {/* Vertical bob + body tilt, synced to leg touchdowns */}
+              <motion.div
+                animate={{ y: [0, -3.5, 0], rotate: [-1.5, 1.5, -1.5] }}
+                transition={{
+                  duration: STEP * 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              >
+                <AntSvg />
+              </motion.div>
             </motion.div>
           </div>
 
