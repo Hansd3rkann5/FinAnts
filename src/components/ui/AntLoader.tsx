@@ -226,7 +226,8 @@ export function AntLoader({ show, message, onClose }: AntLoaderProps) {
           <button
             onClick={handleClose}
             aria-label="Schließen"
-            className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+            className="absolute right-4 z-10 w-9 h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+            style={{ top: 'max(1rem, env(safe-area-inset-top))' }}
           >
             <X size={18} />
           </button>
