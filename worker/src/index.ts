@@ -15,7 +15,7 @@ export interface Env {
 // ─── Cloudflare Access JWT validation ─────────────────────────────────────────
 
 const CF_TEAM_DOMAIN = 'https://shrill-morning-3412.cloudflareaccess.com'
-const CF_AUD         = 'ab7b540605742a2c199591d035e0f3cd'
+const CF_AUD         = '92a36b54ba18ba3e2947f9a46c9187d97c389bae0373b3cec1d49e7c3fbab1ce'
 
 let jwksCache: { keys: any[] } | null = null
 
@@ -45,14 +45,14 @@ async function checkAuth(request: Request): Promise<boolean> {
     const header  = JSON.parse(b64(parts[0]))
     const payload = JSON.parse(b64(parts[1]))
 
-    console.log('[Auth] iss:', payload.iss, 'aud:', JSON.stringify(payload.aud), 'exp:', payload.exp, 'email:', payload.email, 'kid:', header.kid)
-
-    if (payload.exp < Math.floor(Date.now() / 1000)) { console.log('[Auth] FAIL: expired'); return false }
-    if (payload.iss !== CF_TEAM_DOMAIN) { console.log('[Auth] FAIL: wrong iss, expected', CF_TEAM_DOMAIN); return false }
+    if (payload.exp < Math.floor(Date.now() / 1000)) return false
+    if (payload.iss !== CF_TEAM_DOMAIN) return false
+    const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud]
+    if (!aud.includes(CF_AUD)) return false
 
     const jwks = await getJwks()
     const jwk  = jwks.keys.find((k: any) => k.kid === header.kid)
-    if (!jwk) { console.log('[Auth] FAIL: kid not found in JWKS, available:', jwks.keys.map((k:any)=>k.kid)); return false }
+    if (!jwk) return false
 
     const key = await crypto.subtle.importKey(
       'jwk', jwk,
@@ -61,11 +61,8 @@ async function checkAuth(request: Request): Promise<boolean> {
     )
     const sig  = Uint8Array.from(b64(parts[2]), c => c.charCodeAt(0))
     const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
-    const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, data)
-    if (!ok) console.log('[Auth] FAIL: signature invalid')
-    return ok
-  } catch (e) {
-    console.log('[Auth] FAIL: exception', String(e))
+    return crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, data)
+  } catch {
     return false
   }
 }
