@@ -25,7 +25,7 @@ export function AppShell() {
           <div
             key={path}
             id={scrollId}
-            className="absolute inset-0 overflow-y-auto overscroll-contain px-0 pt-0 pb-28"
+            className="absolute inset-0 pt-6 overflow-y-auto overscroll-contain px-0 pb-28"
             style={{ display: pathname === path ? 'block' : 'none' }}
           >
             <Component />

@@ -3,7 +3,7 @@ import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
   Wifi, CloudUpload, CloudDownload, Cloud,
-  ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn,
+  ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn, Eye,
 } from 'lucide-react'
 import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
 import { getApiKey, setApiKey } from '@/utils/cfAuth'
@@ -171,16 +171,22 @@ export function Settings() {
   const workerCfg = { workerUrl: WORKER_URL }
   const isAuth = !!apiKey
 
+  const [previewLoader, setPreviewLoader] = useState(false)
   const showAntLoader = ebStatus === 'starting' || ebStatus === 'syncing' || syncStatus === 'syncing'
   const antMessage =
-    ebStatus === 'syncing'    ? 'Buchungen werden abgerufen…'
+    previewLoader              ? 'Vorschau · Ladeanimation'
+    : ebStatus === 'syncing'    ? 'Buchungen werden abgerufen…'
     : ebStatus === 'starting' ? 'Verbindung wird aufgebaut…'
     : syncStatus === 'syncing' ? 'FinTS Synchronisation…'
     : undefined
 
   return (
     <>
-      <AntLoader show={showAntLoader} message={antMessage} />
+      <AntLoader
+        show={showAntLoader || previewLoader}
+        message={antMessage}
+        onClose={() => setPreviewLoader(false)}
+      />
 
       {challenge && (
         <PhotoTanModal
@@ -511,6 +517,12 @@ export function Settings() {
             </motion.div>
           )}
         </CollapsibleCard>
+
+        <div className="flex justify-center">
+          <PillButton variant="ghost" size="sm" icon={<Eye size={13} />} onClick={() => setPreviewLoader(true)}>
+            Ladeanimation ansehen
+          </PillButton>
+        </div>
 
         <GlassCard padding="sm">
           <button
