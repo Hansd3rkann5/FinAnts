@@ -15,19 +15,20 @@ const PAD_X = 3   // keep end points off the very edge
 const PAD_Y = 9   // vertical breathing room for the random y-values
 const POINTS = 5
 
-// Lifecycle of a single line (seconds):
+// Lifecycle of a single line (seconds), three equal phases:
 //   draw  → revealed left→right (ease-in-out)
-//   lead  → fully drawn, held while its successor starts drawing
+//   hold  → fully drawn, held while its successor draws its first 2 points
 //   erase → wiped left→right (ease-in-out)
-// A new line spawns every DRAW seconds, so the previous line is erasing
-// left→right at the same time the new one draws left→right. The LEAD hold
-// means a new line is already a couple of points in before the old one begins
-// to vanish, giving the gentle overlap.
-const DRAW = 1.5
-const LEAD = 0.45
-const ERASE = 1.5
-const LIFE = DRAW + LEAD + ERASE
-const SPAWN = DRAW
+// A new line spawns every LIFE/2 seconds. With three equal phases that means
+// the steady state always holds exactly two lines: the old one erasing
+// left→right while the new one draws left→right, their fronts kept half the
+// width apart — so they overlap across ~2 of the chart's points.
+const PHASE = 1.2
+const DRAW = PHASE
+const HOLD = PHASE
+const ERASE = PHASE
+const LIFE = DRAW + HOLD + ERASE
+const SPAWN = LIFE / 2
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min)
 
@@ -58,7 +59,7 @@ function ChartLine({ d, color, onDone }: { d: string; color: string; onDone: () 
       animate={{ strokeDashoffset: [1, 0, 0, -1] }}
       transition={{
         duration: LIFE,
-        times: [0, DRAW / LIFE, (DRAW + LEAD) / LIFE, 1],
+        times: [0, DRAW / LIFE, (DRAW + HOLD) / LIFE, 1],
         ease: ['easeInOut', 'linear', 'easeInOut'],
       }}
       onAnimationComplete={onDone}

@@ -128,6 +128,53 @@ export function Dashboard() {
     ? filledMonths.reduce((b, m) => m.balance > b.balance ? m : b)
     : null
 
+  // ── Account-balance cards layout ────────────────────────────────────────────
+  // Gesamtvermögen (the aggregate) is only meaningful with more than one
+  // connected account, so it's hidden for a single account. The expandable
+  // accounts list ("dropdown") then lives in the Kontostand card when a manual
+  // balance is shown, otherwise it falls back into the Gesamtvermögen card so
+  // the accounts stay reachable.
+  const hasMultipleAccounts = accounts.length > 1
+  const dropdownInKontostand = hasMultipleAccounts && manualBalance !== null
+  const dropdownInWealth     = hasMultipleAccounts && manualBalance === null
+
+  const accountsToggle = (
+    <motion.button
+      type="button"
+      onClick={() => setShowAccounts(v => !v)}
+      className="ml-auto text-white/30 hover:text-white/60 flex items-center gap-1 text-[10px]"
+      whileTap={{ scale: 0.95 }}
+    >
+      {accounts.length} Konten
+      {showAccounts ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+    </motion.button>
+  )
+
+  const accountsList = (
+    <AnimatePresence>
+      {showAccounts && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+          className="overflow-hidden"
+        >
+          <div id="accounts-list" className="flex flex-col gap-2 pt-1">
+            {accounts.map(a => (
+              <AccountCard key={a.iban} account={a} onToggle={toggleIncluded} showToggle />
+            ))}
+            {accounts.some(a => !a.included) && (
+              <p className="text-[10px] text-white/25 text-center pt-1">
+                Ausgeblendete Konten fließen nicht ins Gesamtvermögen ein
+              </p>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+
   return (
     <div id="page-dashboard" className="flex flex-col gap-4">
       <div
@@ -143,21 +190,13 @@ export function Dashboard() {
         <TimeFilterBar value={timeFilter} onChange={handleTimeFilter} id="dash" periods={periods} />
       </div>
 
-      {/* ── FinTS Gesamtvermögen ──────────────────────────────────────────── */}
-      {accounts.length > 0 && (
+      {/* ── FinTS Gesamtvermögen (only meaningful with >1 account) ─────────── */}
+      {hasMultipleAccounts && (
         <GlassCard id="card-wealth" glow="purple" className="mx-4">
           <div className="flex items-center gap-2 mb-1">
             <Landmark size={14} className="text-purple-400" />
             <p className="text-xs text-white/40">Gesamtvermögen</p>
-            <motion.button
-              type="button"
-              onClick={() => setShowAccounts(v => !v)}
-              className="ml-auto text-white/30 hover:text-white/60 flex items-center gap-1 text-[10px]"
-              whileTap={{ scale: 0.95 }}
-            >
-              {accounts.length} Konten
-              {showAccounts ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-            </motion.button>
+            {dropdownInWealth && accountsToggle}
           </div>
 
           <motion.p
@@ -165,33 +204,12 @@ export function Dashboard() {
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className={`text-3xl font-bold mb-3 ${totalWealth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+            className={`text-3xl font-bold ${dropdownInWealth ? 'mb-3' : ''} ${totalWealth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
           >
             {formatEur(totalWealth, 2)}
           </motion.p>
 
-          <AnimatePresence>
-            {showAccounts && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-                className="overflow-hidden"
-              >
-                <div id="accounts-list" className="flex flex-col gap-2 pt-1">
-                  {accounts.map(a => (
-                    <AccountCard key={a.iban} account={a} onToggle={toggleIncluded} showToggle />
-                  ))}
-                  {accounts.some(a => !a.included) && (
-                    <p className="text-[10px] text-white/25 text-center pt-1">
-                      Ausgeblendete Konten fließen nicht ins Gesamtvermögen ein
-                    </p>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {dropdownInWealth && accountsList}
         </GlassCard>
       )}
 
@@ -204,16 +222,18 @@ export function Dashboard() {
             {balanceUpdatedAt && (
               <p className="ml-auto text-[10px] text-white/25">Stand: {balanceUpdatedAt}</p>
             )}
+            {dropdownInKontostand && accountsToggle}
           </div>
           <motion.p
             key={manualBalance}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className={`text-3xl font-bold ${manualBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+            className={`text-3xl font-bold ${dropdownInKontostand ? 'mb-3' : ''} ${manualBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
           >
             {formatEur(manualBalance, 2)}
           </motion.p>
+          {dropdownInKontostand && accountsList}
         </GlassCard>
       )}
 
