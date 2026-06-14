@@ -50,6 +50,13 @@ export function useTransactions() {
     setFromTransactions(rows.map(storedToTransaction))
   }, [setFromTransactions])
 
+  // Pull the canonical set from D1 and make the app mirror it. Used on mount
+  // and by pull-to-refresh. Throws on failure so callers can surface it.
+  const refresh = useCallback(async () => {
+    const rows = await fetchTransactions()
+    applyServerTransactions(rows)
+  }, [applyServerTransactions])
+
   // On mount: paint from cache instantly, then refresh from the canonical store.
   useEffect(() => {
     const cached = loadCache()
@@ -123,7 +130,7 @@ export function useTransactions() {
 
   return {
     transactions, recurringGroups, isLoaded,
-    importTransactions, applyServerTransactions,
+    importTransactions, applyServerTransactions, refresh,
     updateCategory, batchUpdateCategory, updateTransaction,
     removeRecurringGroup, clearAll,
   }

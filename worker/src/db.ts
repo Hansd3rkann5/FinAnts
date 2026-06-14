@@ -109,7 +109,12 @@ async function countRows(db: D1Database): Promise<number> {
 }
 
 export async function getTransactions(db: D1Database): Promise<StoredTx[]> {
-  const { results } = await db.prepare('SELECT * FROM transactions ORDER BY date DESC').all<DbRow>()
+  // Days newest-first; within a day, insertion order (rowid ASC) so the app
+  // mirrors the order the rows were imported in. Without the explicit rowid
+  // tiebreaker SQLite reverse-scans idx_tx_date and flips same-day rows.
+  const { results } = await db
+    .prepare('SELECT * FROM transactions ORDER BY date DESC, rowid ASC')
+    .all<DbRow>()
   return (results ?? []).map(rowToStored)
 }
 

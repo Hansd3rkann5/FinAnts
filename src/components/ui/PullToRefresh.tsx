@@ -6,7 +6,7 @@ const THRESHOLD = 64
 const MAX_HEIGHT = 56
 
 interface Props {
-  onRefresh: () => void
+  onRefresh: () => void | Promise<void>
   children: React.ReactNode
 }
 
@@ -52,7 +52,12 @@ export function PullToRefresh({ onRefresh, children }: Props) {
         state.current.height = 0
         setIndicatorHeight(MAX_HEIGHT)
         setRefreshing(true)
-        setTimeout(() => onRefresh(), 500)
+        setTimeout(async () => {
+          try { await onRefresh() } catch { /* keep UI responsive */ }
+          state.current.refreshing = false
+          setRefreshing(false)
+          setIndicatorHeight(0)
+        }, 500)
       } else {
         state.current.height = 0
         setIndicatorHeight(0)

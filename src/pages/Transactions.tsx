@@ -19,7 +19,7 @@ export function Transactions() {
   const { allList } = useAllCategories()
   const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Transaction | null>(null)
-  const { transactions, updateCategory, updateTransaction } = useTransactionsCtx()
+  const { transactions, updateCategory, updateTransaction, refresh } = useTransactionsCtx()
 
   const timeFiltered = useFilteredTransactions(transactions, timeFilter)
   const periods = useMemo(() => computeAvailablePeriods(transactions), [transactions])
@@ -40,7 +40,7 @@ export function Transactions() {
   }, [timeFiltered, filterCategory, search])
 
   return (
-    <PullToRefresh onRefresh={() => window.location.reload()}>
+    <PullToRefresh onRefresh={refresh}>
     <div id="page-transactions" className="flex flex-col gap-4">
       <div
         id="tx-sticky-filter"
