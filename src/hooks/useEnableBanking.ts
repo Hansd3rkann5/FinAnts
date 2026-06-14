@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { autoCategory } from '@/utils/categorizer'
-import { findMerchant } from '@/utils/merchantLogos'
-import type { Transaction, Account } from '@/types'
+import type { Account } from '@/types'
+import type { StoredTx } from '@/utils/transactionsApi'
 import type { WorkerConfig } from './useWorkerSync'
 import { cfHeaders } from '@/utils/cfAuth'
 
@@ -13,11 +12,6 @@ interface PendingSession {
   days: number
 }
 
-interface EbWorkerTransaction {
-  date: string; amount: number; description: string
-  counterparty: string; counterpartyIban: string; accountIban: string
-}
-
 interface EbWorkerAccount {
   iban: string; blz: string; accountNumber: string; owner: string
   description: string; type: string; currency: string; balance: number; balanceDate: string
@@ -25,34 +19,15 @@ interface EbWorkerAccount {
 
 interface EbSyncResponse {
   accounts: EbWorkerAccount[]
-  transactions: EbWorkerTransaction[]
-  meta: { accountCount: number; count: number; from: string; to: string; fetchedAt: string }
+  transactions: StoredTx[]
+  meta: { accountCount: number; count: number; added: number; from: string; to: string; fetchedAt: string }
   error?: string
-}
-
-function mapTx(raw: EbWorkerTransaction): Transaction | null {
-  if (!raw.date) return null
-  const date     = new Date(raw.date)
-  if (isNaN(date.getTime())) return null
-  const merchant = findMerchant(`${raw.description} ${raw.counterparty}`)
-  return {
-    id: `eb-${date.getTime()}-${Math.abs(raw.amount).toFixed(0)}-${(raw.counterparty ?? '').slice(0, 6)}-${raw.accountIban?.slice(-4) ?? ''}`,
-    date,
-    amount: raw.amount,
-    type: raw.amount >= 0 ? 'income' : 'expense',
-    description: raw.description,
-    counterparty: raw.counterparty,
-    iban: raw.counterpartyIban || undefined,
-    categoryId: autoCategory(raw.description, raw.counterparty),
-    merchantKey: merchant?.merchantKey,
-    isRecurring: false,
-  }
 }
 
 export type EbStatus = 'idle' | 'starting' | 'awaiting_auth' | 'syncing' | 'success' | 'error'
 
 export function useEnableBanking(
-  onImport: (txs: Transaction[]) => void,
+  onImport: (rows: StoredTx[]) => void,
   onAccounts?: (accounts: Omit<Account, 'included'>[]) => void,
 ) {
   const [status,   setStatus]   = useState<EbStatus>('idle')
@@ -81,14 +56,14 @@ export function useEnableBanking(
         })))
       }
 
-      onImport((data.transactions ?? []).map(mapTx).filter((t): t is Transaction => t !== null))
+      onImport(data.transactions ?? [])
 
       localStorage.removeItem(EB_PENDING_KEY)
       const syncTime = new Date().toLocaleString('de-DE')
       localStorage.setItem(EB_LAST_SYNC_KEY, syncTime)
       setLastSync(syncTime)
       setStatus('success')
-      setMessage(`${data.meta.count} Buchungen · ${data.meta.accountCount} Konten`)
+      setMessage(`${data.meta.added} neu · ${data.meta.count} gesamt · ${data.meta.accountCount} Konten`)
     } catch (e) {
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Verbindungsfehler')

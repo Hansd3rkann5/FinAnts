@@ -32,7 +32,7 @@ export function BottomNav() {
       />
       <div id="nav-pill" className="relative rounded-pill bg-white/[0.04] border border-white/[0.08] flex"
         style={{
-          backgroundColor: 'rgba(20, 20, 20, 0.7)',
+          backgroundColor: 'rgba(39, 0, 105, 0.59)',
           backdropFilter: 'blur(5px)',
           WebkitBackdropFilter: 'blur(5px)',
           marginInline: '24px',
@@ -52,20 +52,20 @@ export function BottomNav() {
               <motion.div
                 className={clsx(
                   'flex flex-col items-center gap-1 py-3 transition-colors duration-200',
-                  isActive ? 'text-purple-400' : 'text-white/40',
+                  isActive ? 'text-white/90' :'text-purple-400',
                 )}
                 whileTap={{ scale: 0.92 }}
                 transition={{ duration: 0.1 }}
               >
                 <div className="relative">
-                  <Icon size={22} strokeWidth={isActive ? 2.2 : 1.6} />
-                  {isActive && (
+                  <Icon size={22} strokeWidth={isActive ? 2.3 : 1.4} />
+                  {/* {isActive && (
                     <motion.div
                       layoutId="nav-dot"
                       className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-purple-400"
                       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                     />
-                  )}
+                  )} */}
                 </div>
                 <span className="text-[10px] font-medium">{label}</span>
               </motion.div>

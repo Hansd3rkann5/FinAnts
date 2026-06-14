@@ -105,7 +105,7 @@ function CollapsibleCard({
 }
 
 export function Settings() {
-  const { transactions, importTransactions, clearAll } = useTransactionsCtx()
+  const { transactions, importTransactions, applyServerTransactions, clearAll } = useTransactionsCtx()
   const { accounts, setAccounts, toggleIncluded } = useAccounts()
   const { baseBalance: manualBalance, updatedAt: balanceUpdatedAt, save: saveBalance } = useManualBalance()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -124,7 +124,7 @@ export function Settings() {
 
   const [syncDays, setSyncDays] = useState(90)
   const { sync, submitTan, dismissChallenge, status: syncStatus, message: syncMessage, lastSync, challenge } =
-    useWorkerSync(importTransactions, setAccounts)
+    useWorkerSync(applyServerTransactions, setAccounts)
 
   const { push: cloudPush, pull: cloudPull, status: cloudStatus, message: cloudMessage, lastSync: cloudLastSync } =
     useCloudSync()
@@ -133,7 +133,7 @@ export function Settings() {
   const [ebCountry, setEbCountry] = useState('DE')
   const [ebDays,    setEbDays]    = useState(365)
   const { start: ebStart, status: ebStatus, message: ebMessage, lastSync: ebLastSync } =
-    useEnableBanking(importTransactions, setAccounts)
+    useEnableBanking(applyServerTransactions, setAccounts)
 
   async function handleFile(file: File) {
     setImportStatus('parsing')
@@ -142,9 +142,9 @@ export function Settings() {
       const text = await file.text()
       const parsed = detectAndParse(text)
       if (parsed.length === 0) throw new Error('Keine Buchungen gefunden. Bitte prüfe das Dateiformat.')
-      importTransactions(parsed)
+      const meta = await importTransactions(parsed)
       setImportStatus('success')
-      setImportMessage(`${parsed.length} Buchungen importiert`)
+      setImportMessage(`${meta.added} neu von ${parsed.length} · ${meta.total} gesamt`)
     } catch (e) {
       setImportStatus('error')
       setImportMessage(e instanceof Error ? e.message : 'Unbekannter Fehler')

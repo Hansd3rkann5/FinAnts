@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react'
-import { autoCategory } from '@/utils/categorizer'
-import { findMerchant } from '@/utils/merchantLogos'
-import type { Transaction, Account } from '@/types'
+import type { Account } from '@/types'
+import type { StoredTx } from '@/utils/transactionsApi'
 
 export interface WorkerConfig {
   workerUrl: string
@@ -15,15 +14,6 @@ export interface TanChallenge {
   dialogId: string
   secRef: number
   secFun: string
-}
-
-interface WorkerTransaction {
-  date: string
-  amount: number
-  description: string
-  counterparty: string
-  counterpartyIban: string
-  accountIban: string
 }
 
 interface WorkerAccount {
@@ -40,8 +30,8 @@ interface WorkerAccount {
 
 interface WorkerSuccessResponse {
   accounts: WorkerAccount[]
-  transactions: WorkerTransaction[]
-  meta: { accountCount: number; count: number; from: string; to: string; fetchedAt: string }
+  transactions: StoredTx[]
+  meta: { accountCount: number; count: number; added: number; from: string; to: string; fetchedAt: string }
 }
 
 interface WorkerChallengeResponse {
@@ -68,27 +58,10 @@ export function loadLastSync(): string | null {
   return localStorage.getItem(LAST_SYNC_KEY)
 }
 
-function mapWorkerTx(raw: WorkerTransaction): Transaction {
-  const date = new Date(raw.date)
-  const merchant = findMerchant(`${raw.description} ${raw.counterparty}`)
-  return {
-    id: `worker-${date.getTime()}-${Math.abs(raw.amount).toFixed(0)}-${(raw.counterparty ?? '').slice(0, 6)}-${raw.accountIban?.slice(-4) ?? ''}`,
-    date,
-    amount: raw.amount,
-    type: raw.amount >= 0 ? 'income' : 'expense',
-    description: raw.description,
-    counterparty: raw.counterparty,
-    iban: raw.counterpartyIban || undefined,
-    categoryId: autoCategory(raw.description, raw.counterparty),
-    merchantKey: merchant?.merchantKey,
-    isRecurring: false,
-  }
-}
-
 export type SyncStatus = 'idle' | 'syncing' | 'challenge' | 'success' | 'error'
 
 export function useWorkerSync(
-  onImport: (txs: Transaction[]) => void,
+  onImport: (rows: StoredTx[]) => void,
   onAccounts?: (accounts: Omit<Account, 'included'>[]) => void,
 ) {
   const [status, setStatus] = useState<SyncStatus>('idle')
@@ -147,15 +120,14 @@ export function useWorkerSync(
         })))
       }
 
-      const transactions = (data.transactions ?? []).map(mapWorkerTx)
-      onImport(transactions)
+      onImport(data.transactions ?? [])
 
       const syncTime = new Date().toLocaleString('de-DE')
       localStorage.setItem(LAST_SYNC_KEY, syncTime)
       setLastSync(syncTime)
       setChallenge(null)
       setStatus('success')
-      setMessage(`${data.meta.count} Buchungen · ${data.meta.accountCount} Konten`)
+      setMessage(`${data.meta.added} neu · ${data.meta.count} gesamt · ${data.meta.accountCount} Konten`)
     } catch (e) {
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Verbindungsfehler')

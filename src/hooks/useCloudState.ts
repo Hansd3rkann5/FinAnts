@@ -15,7 +15,9 @@ export interface CloudState {
   updatedAt: string
   customCategories: Category[]
   merchantProfiles: MerchantProfile[]
-  txOverrides: Record<string, TxOverride>
+  // Retired: per-tx edits now live in the D1 store. Kept optional only so older
+  // backups still parse without error.
+  txOverrides?: Record<string, TxOverride>
 }
 
 const LAST_CLOUD_SYNC_KEY = 'finants_cloud_sync'
@@ -63,18 +65,11 @@ export function useCloudSync() {
     setStatus('pushing')
     setMessage('')
     try {
-      const txOverrides: Record<string, TxOverride> = {}
-      for (const t of ctx.transactions) {
-        if (t.categoryId || t.customLabel || t.customIcon) {
-          txOverrides[t.id] = { categoryId: t.categoryId, customLabel: t.customLabel, customIcon: t.customIcon }
-        }
-      }
       const state: CloudState = {
         version: 1,
         updatedAt: new Date().toISOString(),
         customCategories: ctx.customCategories,
         merchantProfiles: ctx.merchantProfiles,
-        txOverrides,
       }
       await pushToCloud(url, state)
       const time = new Date().toLocaleString('de-DE')
@@ -97,7 +92,6 @@ export function useCloudSync() {
       if (!state) throw new Error('Kein Backup vorhanden')
       ctx.applyCloudCategories(state.customCategories ?? [])
       ctx.applyCloudProfiles(state.merchantProfiles ?? [])
-      if (state.txOverrides) ctx.applyTxOverrides(state.txOverrides)
       const time = new Date().toLocaleString('de-DE')
       localStorage.setItem(LAST_CLOUD_SYNC_KEY, time)
       setLastSync(time)

@@ -16,3 +16,8 @@ ALLOWED_ORIGIN = "*"
 [[r2_buckets]]
 binding = "ICONS"
 bucket_name = "finants-icons"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "finants-db"
+database_id = "05a996af-64ac-4d63-86e9-13e57b649f6d"

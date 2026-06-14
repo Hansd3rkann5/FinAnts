@@ -1,5 +1,9 @@
 import { syncAll, blzFromIban } from './fints'
 import { ebStartAuth, ebExchangeAndSync, ebGetAspsps } from './enablebanking'
+import {
+  mergeTransactions, getTransactions, updateTransaction, clearTransactions, toStored,
+  type MergeInput, type StoredTx,
+} from './db'
 
 export interface Env {
   FINTS_BLZ?: string
@@ -8,6 +12,7 @@ export interface Env {
   FINTS_IBAN?: string
   ALLOWED_ORIGIN: string
   ICONS: R2Bucket
+  DB?: D1Database
   EB_APPLICATION_ID?: string
   EB_PRIVATE_KEY?: string
   API_KEY?: string
@@ -95,6 +100,44 @@ export default {
       return jsonResponse({ error: 'Unauthorized' }, 401, cors)
     }
 
+    // ── GET /transactions — canonical store ───────────────────────────────
+    if (request.method === 'GET' && path === '/transactions') {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      const transactions = await getTransactions(env.DB)
+      return jsonResponse({ transactions }, 200, cors)
+    }
+
+    // ── POST /transactions/merge — dedup + insert delta ───────────────────
+    if (request.method === 'POST' && path === '/transactions/merge') {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      let body: { transactions?: MergeInput[]; source?: string }
+      try { body = await request.json() as typeof body } catch { return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors) }
+      const meta = await mergeTransactions(env.DB, body.transactions ?? [], body.source ?? 'csv')
+      const transactions = await getTransactions(env.DB)
+      return jsonResponse({ transactions, meta }, 200, cors)
+    }
+
+    // ── POST /transactions/update — persist a per-tx edit ─────────────────
+    if (request.method === 'POST' && path === '/transactions/update') {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      let body: { id?: string; categoryId?: string; customLabel?: string; customIcon?: string }
+      try { body = await request.json() as typeof body } catch { return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors) }
+      if (!body.id) return jsonResponse({ error: 'id fehlt' }, 400, cors)
+      const patch: { categoryId?: string; customLabel?: string; customIcon?: string } = {}
+      if ('categoryId' in body)  patch.categoryId  = body.categoryId
+      if ('customLabel' in body) patch.customLabel = body.customLabel
+      if ('customIcon' in body)  patch.customIcon  = body.customIcon
+      await updateTransaction(env.DB, body.id, patch)
+      return jsonResponse({ ok: true }, 200, cors)
+    }
+
+    // ── POST /transactions/clear — wipe the store ─────────────────────────
+    if (request.method === 'POST' && path === '/transactions/clear') {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      await clearTransactions(env.DB)
+      return jsonResponse({ ok: true }, 200, cors)
+    }
+
     // ── GET /eb/aspsps ────────────────────────────────────────────────────
     if (request.method === 'GET' && path === '/eb/aspsps') {
       if (!env.EB_APPLICATION_ID || !env.EB_PRIVATE_KEY) {
@@ -140,7 +183,7 @@ export default {
 
       try {
         const result = await ebExchangeAndSync(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, body.code, fromDate, toDate)
-        return jsonResponse(buildSuccessBody(result, fromDate, toDate), 200, cors)
+        return jsonResponse(await buildSyncResponse(env, result, 'eb', fromDate, toDate), 200, cors)
       } catch (e) {
         return jsonResponse({ error: String(e) }, 502, cors)
       }
@@ -201,7 +244,7 @@ export default {
         if (result.challenge) {
           return jsonResponse({ challenge: result.challenge }, 202, cors)
         }
-        return jsonResponse(buildSuccessBody(result, fromDate, toDate), 200, cors)
+        return jsonResponse(await buildSyncResponse(env, result, 'fints', fromDate, toDate), 200, cors)
       } catch (e) {
         console.error('FinTS sync error:', e)
         return jsonResponse({ error: formatError(e) }, 502, cors)
@@ -231,7 +274,7 @@ export default {
         if (result.challenge) {
           return jsonResponse({ challenge: result.challenge }, 202, cors)
         }
-        return jsonResponse(buildSuccessBody(result, fromDate, toDate), 200, cors)
+        return jsonResponse(await buildSyncResponse(env, result, 'fints', fromDate, toDate), 200, cors)
       } catch (e) {
         console.error('FinTS TAN error:', e)
         return jsonResponse({ error: formatError(e) }, 502, cors)
@@ -242,17 +285,36 @@ export default {
   },
 }
 
-function buildSuccessBody(
-  result: { accounts: unknown[]; transactions: unknown[] },
+// Merge freshly fetched bank transactions into the canonical D1 store and
+// return the full deduped set. Without a DB binding it degrades to returning
+// just this batch (mapped to the canonical shape) so the app still renders.
+async function buildSyncResponse(
+  env: Env,
+  result: { accounts: unknown[]; transactions: MergeInput[] },
+  source: string,
   fromDate: Date,
   toDate: Date,
 ) {
+  let transactions: StoredTx[]
+  let added: number
+  let total: number
+  if (env.DB) {
+    const meta = await mergeTransactions(env.DB, result.transactions, source)
+    added = meta.added
+    total = meta.total
+    transactions = await getTransactions(env.DB)
+  } else {
+    transactions = await toStored(result.transactions, source)
+    added = transactions.length
+    total = transactions.length
+  }
   return {
     accounts: result.accounts,
-    transactions: result.transactions,
+    transactions,
     meta: {
       accountCount: result.accounts.length,
-      count: result.transactions.length,
+      count: total,
+      added,
       from: fromDate.toISOString().slice(0, 10),
       to: toDate.toISOString().slice(0, 10),
       fetchedAt: new Date().toISOString(),
