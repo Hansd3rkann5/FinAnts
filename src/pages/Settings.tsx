@@ -18,7 +18,7 @@ import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useAccounts } from '@/hooks/useAccounts'
 import { detectAndParse } from '@/utils/csvParser'
 import { useWorkerSync, type SyncStatus } from '@/hooks/useWorkerSync'
-import { AntLoader } from '@/components/ui/AntLoader'
+import { ChartLoader } from '@/components/ui/ChartLoader'
 
 const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
@@ -172,8 +172,8 @@ export function Settings() {
   const isAuth = !!apiKey
 
   const [previewLoader, setPreviewLoader] = useState(false)
-  const showAntLoader = ebStatus === 'starting' || ebStatus === 'syncing' || syncStatus === 'syncing'
-  const antMessage =
+  const showLoader = ebStatus === 'starting' || ebStatus === 'syncing' || syncStatus === 'syncing'
+  const loaderMessage =
     previewLoader              ? 'Vorschau · Ladeanimation'
     : ebStatus === 'syncing'    ? 'Buchungen werden abgerufen…'
     : ebStatus === 'starting' ? 'Verbindung wird aufgebaut…'
@@ -182,9 +182,9 @@ export function Settings() {
 
   return (
     <>
-      <AntLoader
-        show={showAntLoader || previewLoader}
-        message={antMessage}
+      <ChartLoader
+        show={showLoader || previewLoader}
+        message={loaderMessage}
         onClose={() => setPreviewLoader(false)}
       />
 
