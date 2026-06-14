@@ -125,14 +125,6 @@ export default {
       return new Response(obj.body, { headers: h })
     }
 
-    // ── GET /auth — redirect to app after CF Access login ─────────────────
-    if (request.method === 'GET' && path === '/auth') {
-      return new Response(null, {
-        status: 302,
-        headers: { ...cors, Location: 'https://hansd3rkann5.github.io/FinAnts/' },
-      })
-    }
-
     // ── GET /ping — auth check ────────────────────────────────────────────
     if (request.method === 'GET' && path === '/ping') {
       const jwt = request.headers.get('Cf-Access-Jwt-Assertion')
@@ -151,6 +143,14 @@ export default {
     // ── Auth check ────────────────────────────────────────────────────────
     if (!await checkAuth(request)) {
       return jsonResponse({ error: 'Unauthorized' }, 401, cors)
+    }
+
+    // ── GET /auth — redirect to app after CF Access login ─────────────────
+    if (request.method === 'GET' && path === '/auth') {
+      return new Response(null, {
+        status: 302,
+        headers: { ...cors, Location: 'https://hansd3rkann5.github.io/FinAnts/' },
+      })
     }
 
     // ── GET /eb/aspsps ────────────────────────────────────────────────────
