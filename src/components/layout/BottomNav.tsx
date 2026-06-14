@@ -33,8 +33,8 @@ export function BottomNav() {
       <div id="nav-pill" className="relative rounded-pill bg-white/[0.04] border border-white/[0.08] flex"
         style={{
           backgroundColor: 'rgba(20, 20, 20, 0.7)',
-          backdropFilter: 'blur(1px)',
-          WebkitBackdropFilter: 'blur(1px)',
+          backdropFilter: 'blur(5px)',
+          WebkitBackdropFilter: 'blur(5px)',
           marginInline: '24px',
           marginBottom: '24px',
           boxShadow: '0 4px 24px 10px rgba(10,10,10,0.8), 0 1px 80px 10px rgba(10,10,10,0.8)',
