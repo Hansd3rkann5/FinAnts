@@ -11,7 +11,12 @@ function load(): Category[] {
 }
 
 function save(cats: Category[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(cats))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cats))
+  } catch (e) {
+    // Cache only (categories also sync to the cloud blob) — don't crash on quota.
+    console.warn('[categories] cache write skipped:', e)
+  }
 }
 
 export function useCustomCategories() {

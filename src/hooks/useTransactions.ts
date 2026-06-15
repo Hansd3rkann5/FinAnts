@@ -28,8 +28,24 @@ function loadCache(): { transactions: Transaction[]; groups: RecurringGroup[] } 
 }
 
 function saveCache(transactions: Transaction[], groups: RecurringGroup[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions))
-  localStorage.setItem(STORAGE_GROUPS_KEY, JSON.stringify(groups))
+  try {
+    // Drop embedded data-URL icons before caching — a single base64 image can be
+    // hundreds of KB and duplicates across every matching row, which blows the
+    // localStorage quota. They're re-applied from patterns / R2 on the next load.
+    const slim = transactions.map(t =>
+      t.customIcon?.startsWith('data:') ? { ...t, customIcon: undefined } : t,
+    )
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(slim))
+    localStorage.setItem(STORAGE_GROUPS_KEY, JSON.stringify(groups))
+  } catch (e) {
+    // Quota exceeded / private-mode: the cache is only an offline nicety, so
+    // never let it crash the app — drop it and carry on (D1 is the source).
+    console.warn('[transactions] cache write skipped:', e)
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(STORAGE_GROUPS_KEY)
+    } catch { /* ignore */ }
+  }
 }
 
 export function useTransactions(merchantProfiles: MerchantProfile[]) {

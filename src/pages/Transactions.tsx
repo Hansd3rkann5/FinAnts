@@ -11,6 +11,7 @@ import { TransactionList } from '@/components/transactions/TransactionList'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { PillButton } from '@/components/ui/PillButton'
 import { PullToRefresh } from '@/components/ui/PullToRefresh'
+import { ChartLoader } from '@/components/ui/ChartLoader'
 
 export function Transactions() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month')
@@ -20,6 +21,14 @@ export function Transactions() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Transaction | null>(null)
   const { transactions, updateCategory, updateTransaction, refresh } = useTransactionsCtx()
+  const [refreshing, setRefreshing] = useState(false)
+
+  // Pull-to-refresh: show the full loading overlay until the DB fetch resolves
+  // and the UI has the fresh data, then hide it.
+  async function handleRefresh() {
+    setRefreshing(true)
+    try { await refresh() } finally { setRefreshing(false) }
+  }
 
   const timeFiltered = useFilteredTransactions(transactions, timeFilter)
   const periods = useMemo(() => computeAvailablePeriods(transactions), [transactions])
@@ -40,7 +49,12 @@ export function Transactions() {
   }, [timeFiltered, filterCategory, search])
 
   return (
-    <PullToRefresh onRefresh={refresh}>
+    <PullToRefresh onRefresh={handleRefresh}>
+    <ChartLoader
+      show={refreshing}
+      message="Buchungen werden aktualisiert…"
+      onClose={() => setRefreshing(false)}
+    />
     <div id="page-transactions" className="flex flex-col gap-4">
       <div
         id="tx-sticky-filter"

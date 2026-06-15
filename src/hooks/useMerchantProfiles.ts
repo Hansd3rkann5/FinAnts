@@ -22,7 +22,13 @@ function load(): MerchantProfile[] {
 }
 
 function persist(profiles: MerchantProfile[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles))
+  } catch (e) {
+    // localStorage is only a cache (profiles also live in the cloud blob);
+    // never let a quota error crash the app.
+    console.warn('[profiles] cache write skipped:', e)
+  }
 }
 
 export function resolveProfile(tx: Transaction, profiles: MerchantProfile[]): MerchantProfile | null {
