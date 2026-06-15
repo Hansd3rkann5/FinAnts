@@ -1,19 +1,32 @@
-import { useLocation } from 'react-router-dom'
+import { useCallback } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
 import { Dashboard } from '@/pages/Dashboard'
 import { Transactions } from '@/pages/Transactions'
 import { Settings } from '@/pages/Settings'
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
 
+// Order must mirror the BottomNav (left → right): Buchungen · Übersicht · Einstellungen
 const TABS = [
-  { path: '/',             Component: Dashboard,    scrollId: 'page-scroll-dashboard'    },
   { path: '/transactions', Component: Transactions, scrollId: 'page-scroll-transactions' },
+  { path: '/',             Component: Dashboard,    scrollId: 'page-scroll-dashboard'    },
   { path: '/settings',     Component: Settings,     scrollId: 'page-scroll-settings'     },
 ]
 
 export function AppShell() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const n = TABS.length
   const activeIndex = Math.max(0, TABS.findIndex(t => t.path === pathname))
+
+  const onPrev = useCallback(() => {
+    if (activeIndex > 0) navigate(TABS[activeIndex - 1].path)
+  }, [activeIndex, navigate])
+  const onNext = useCallback(() => {
+    if (activeIndex < TABS.length - 1) navigate(TABS[activeIndex + 1].path)
+  }, [activeIndex, navigate])
+
+  useSwipeNavigation('app-main', { onPrev, onNext })
 
   return (
     <div id="app-shell" className="flex-1 min-h-0 bg-bg-base text-white flex flex-col">
