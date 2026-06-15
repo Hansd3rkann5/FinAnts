@@ -11,11 +11,16 @@ import { useAllCategories } from '@/hooks/useAllCategories'
 import { MerchantLogo } from './MerchantLogo'
 import { findMerchant } from '@/utils/merchantLogos'
 import { AmountDisplay } from '@/components/ui/AmountDisplay'
+import { CategoryPicker } from '@/components/ui/CategoryPicker'
 import { resolveWorkerUrl } from '@/hooks/useWorkerSync'
 import { getApiKey } from '@/utils/cfAuth'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { resolveProfile } from '@/hooks/useMerchantProfiles'
 import { reportError } from '@/utils/notify'
+
+function formatEur(v: number) {
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(v)
+}
 
 const EMOJI_PRESETS = [
   '🛒','🍕','🍔','🍣','🍜','🥐','☕','🍷','🥤',
@@ -75,9 +80,12 @@ interface Props {
   onUpdate: (id: string, patch: Partial<Pick<Transaction, 'categoryId' | 'customLabel' | 'customIcon'>>) => void
 }
 
-export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: Props) {
-  useModalRegistration(tx !== null)
-  const { merchantProfiles, upsertProfile, transactions } = useTransactionsCtx()
+export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate }: Props) {
+  useModalRegistration(txProp !== null)
+  const { merchantProfiles, upsertProfile, transactions, setSplit, clearSplit } = useTransactionsCtx()
+  // Resolve the live version from context so split/category changes applied during
+  // this modal session are reflected immediately without the parent re-passing the prop.
+  const tx = txProp ? (transactions.find(t => t.id === txProp.id) ?? txProp) : null
   const profile = tx ? resolveProfile(tx, merchantProfiles) : null
 
   const [editing, setEditing] = useState(false)
@@ -94,7 +102,35 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
   const [existingProfileId, setExistingProfileId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // ── Split (chart-only overlay) ──────────────────────────────────────────────
+  const [splitting, setSplitting] = useState(false)
+  const [splitCatA, setSplitCatA] = useState('other')
+  const [splitCatB, setSplitCatB] = useState('other')
+  const [splitAmtA, setSplitAmtA] = useState('')          // magnitude string, German decimals
+  const [splitPickerFor, setSplitPickerFor] = useState<'A' | 'B' | null>(null)
+  const [splitMatchStrings, setSplitMatchStrings] = useState<string[]>([])
+  const [splitMatchMode, setSplitMatchMode] = useState<'exact' | 'contains'>('exact')
+
   const chips = useMemo(() => tx ? extractChips(tx) : [], [tx])
+
+  const splitAffectedCount = useMemo(() => {
+    if (!splitMatchStrings.length) return 0
+    return transactions.filter(t => {
+      const text = `${t.customLabel ?? ''} ${t.counterparty} ${t.description}`.toLowerCase()
+      return splitMatchStrings.some(ms => {
+        const m = ms.toLowerCase()
+        return splitMatchMode === 'exact'
+          ? (t.counterparty.toLowerCase() === m || (t.customLabel ?? '').toLowerCase() === m)
+          : text.includes(m)
+      })
+    }).length
+  }, [transactions, splitMatchStrings, splitMatchMode])
+
+  function toggleSplitChip(chip: string) {
+    setSplitMatchStrings(prev =>
+      prev.includes(chip) ? prev.filter(s => s !== chip) : [...prev, chip]
+    )
+  }
 
   const affectedCount = useMemo(() => {
     if (!matchStrings.length) return 0
@@ -139,6 +175,8 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
 
   function handleClose() {
     setEditing(false)
+    setSplitting(false)
+    setSplitPickerFor(null)
     onClose()
   }
 
@@ -159,6 +197,59 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
       onUpdate(tx.id, { customLabel: label.trim() || undefined, customIcon: icon, categoryId: category })
     }
     setEditing(false)
+  }
+
+  function openSplit() {
+    if (!tx) return
+    const existing = tx.splits
+    if (existing && existing.length === 2) {
+      setSplitCatA(existing[0].categoryId)
+      setSplitAmtA(String(Math.abs(existing[0].amount)).replace('.', ','))
+      setSplitCatB(existing[1].categoryId)
+    } else {
+      setSplitCatA(tx.categoryId)
+      setSplitAmtA('')
+      setSplitCatB('other')
+    }
+    setSplitMatchStrings([])
+    setSplitMatchMode('exact')
+    setSplitting(true)
+  }
+
+  function saveSplit() {
+    if (!tx) return
+    const total = tx.amount
+    const aMag = parseFloat(splitAmtA.replace(',', '.'))
+    if (!(aMag > 0 && aMag < Math.abs(total)) || splitCatA === splitCatB) return
+    const ratioA = aMag / Math.abs(total)
+
+    const targets = splitMatchStrings.length
+      ? transactions.filter(t => {
+          const text = `${t.customLabel ?? ''} ${t.counterparty} ${t.description}`.toLowerCase()
+          return splitMatchStrings.some(ms => {
+            const m = ms.toLowerCase()
+            return splitMatchMode === 'exact'
+              ? (t.counterparty.toLowerCase() === m || (t.customLabel ?? '').toLowerCase() === m)
+              : text.includes(m)
+          })
+        })
+      : [tx]
+
+    for (const t of targets) {
+      const sign = t.amount < 0 ? -1 : 1
+      const a = +(sign * ratioA * Math.abs(t.amount)).toFixed(2)
+      const b = +(t.amount - a).toFixed(2)
+      setSplit(t.id, [
+        { categoryId: splitCatA, amount: a },
+        { categoryId: splitCatB, amount: b },
+      ])
+    }
+    setSplitting(false)
+  }
+
+  function removeSplit() {
+    if (tx) clearSplit(tx.id)
+    setSplitting(false)
   }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -205,7 +296,7 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
             onClick={e => e.stopPropagation()}
             className="absolute bottom-0 left-0 right-0 z-50 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[92svh]"
-            style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)' }}
+            style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
           >
             <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-0 shrink-0" />
 
@@ -235,7 +326,14 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
               {/* Detail rows */}
               <div className="flex flex-col gap-px rounded-card overflow-hidden mb-5">
                 {[
-                  { label: 'Kategorie', value: cat ? `${cat.icon} ${cat.label}` : '' },
+                  tx.splits && tx.splits.length
+                    ? {
+                        label: 'Aufgeteilt',
+                        value: tx.splits
+                          .map(s => `${(allMap[s.categoryId] ?? CATEGORIES['other']).label}: ${formatEur(s.amount)}`)
+                          .join('  ·  '),
+                      }
+                    : { label: 'Kategorie', value: cat ? `${cat.icon} ${cat.label}` : '' },
                   tx.description ? { label: 'Buchungstext', value: tx.description } : null,
                   tx.iban ? { label: 'IBAN', value: tx.iban } : null,
                   tx.reference ? { label: 'Verwendungszweck', value: tx.reference } : null,
@@ -269,6 +367,125 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
                   </motion.button>
                 )}
               </AnimatePresence>
+
+              {/* ── Split (low-profile chart-only overlay) ── */}
+              {!editing && (
+                <AnimatePresence initial={false} mode="wait">
+                  {!splitting ? (
+                    <motion.button
+                      key="split-trigger"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      onClick={openSplit}
+                      className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 text-xs text-white/35 hover:text-white/60 transition-colors"
+                    >
+                      <SplitSquareHorizontal size={13} />
+                      {tx.splits?.length ? 'Aufteilung bearbeiten' : 'Betrag aufteilen'}
+                    </motion.button>
+                  ) : (
+                    <motion.div
+                      key="split-editor"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                      className="overflow-hidden"
+                    >
+                      {(() => {
+                        const total = tx.amount
+                        const aMag = parseFloat(splitAmtA.replace(',', '.')) || 0
+                        const bMag = Math.max(0, Math.abs(total) - aMag)
+                        const sign = total < 0 ? -1 : 1
+                        const catA = allMap[splitCatA] ?? CATEGORIES['other']
+                        const catB = allMap[splitCatB] ?? CATEGORIES['other']
+                        const valid = aMag > 0 && aMag < Math.abs(total) && splitCatA !== splitCatB
+                        return (
+                          <div className="mt-2 flex flex-col gap-2.5 rounded-card border border-white/10 bg-white/[0.04] p-3">
+                            <p className="text-[10px] text-white/40 uppercase tracking-wider">
+                              Betrag aufteilen ({formatEur(total)})
+                            </p>
+                            {/* Category A + amount */}
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => setSplitPickerFor('A')}
+                                className="flex-1 min-w-0 flex items-center gap-2 rounded-card_sm bg-white/6 border border-white/10 px-3 py-2 text-left active:scale-[0.98] transition-transform"
+                              >
+                                <span className="text-base leading-none shrink-0">{catA.icon}</span>
+                                <span className="text-sm text-white/80 truncate">{catA.label}</span>
+                              </button>
+                              <input
+                                type="text" inputMode="decimal" value={splitAmtA}
+                                onChange={e => setSplitAmtA(e.target.value)}
+                                placeholder="0,00"
+                                className="w-24 shrink-0 rounded-card_sm bg-white/6 border border-white/10 px-3 py-2 text-sm text-white text-right placeholder-white/25 outline-none focus:border-purple-500/50 transition-colors"
+                              />
+                            </div>
+                            {/* Category B + remainder */}
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => setSplitPickerFor('B')}
+                                className="flex-1 min-w-0 flex items-center gap-2 rounded-card_sm bg-white/6 border border-white/10 px-3 py-2 text-left active:scale-[0.98] transition-transform"
+                              >
+                                <span className="text-base leading-none shrink-0">{catB.icon}</span>
+                                <span className="text-sm text-white/80 truncate">{catB.label}</span>
+                              </button>
+                              <span className="w-24 shrink-0 text-right text-sm text-white/50 px-3 py-2">
+                                {formatEur(sign * bMag)}
+                              </span>
+                            </div>
+                            {/* Gilt für */}
+                            <div className="border-t border-white/8 pt-2.5">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-[10px] text-white/40 uppercase tracking-wider">Gilt für</span>
+                                <div className="flex rounded-card_sm overflow-hidden border border-white/10 ml-auto shrink-0">
+                                  {(['exact', 'contains'] as const).map(m => (
+                                    <button key={m} onClick={() => setSplitMatchMode(m)}
+                                      className={`text-[10px] px-2.5 py-1 transition-colors ${splitMatchMode === m ? 'bg-purple-500/30 text-purple-300' : 'text-white/30 hover:text-white/50'}`}
+                                    >{m === 'exact' ? 'Exakt' : 'Enthält'}</button>
+                                  ))}
+                                </div>
+                              </div>
+                              {splitMatchStrings.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                  {splitMatchStrings.map(s => (
+                                    <button key={s} onClick={() => toggleSplitChip(s)}
+                                      className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-purple-500/25 border border-purple-500/40 text-purple-300 active:scale-95 transition-all"
+                                    >{s}<X size={9} className="opacity-70" /></button>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="flex flex-wrap gap-1.5">
+                                {chips.filter(c => !splitMatchStrings.includes(c)).map(chip => (
+                                  <button key={chip} onClick={() => toggleSplitChip(chip)}
+                                    className="text-[11px] px-2 py-0.5 rounded-full border bg-white/4 border-white/10 text-white/50 hover:text-white/80 hover:border-white/25 transition-all active:scale-95"
+                                  >{chip}</button>
+                                ))}
+                              </div>
+                              {splitAffectedCount > 0 && (
+                                <p className="text-[10px] text-white/30 mt-1.5">
+                                  {splitAffectedCount} Buchung{splitAffectedCount !== 1 ? 'en' : ''} betroffen
+                                </p>
+                              )}
+                            </div>
+                            {/* Actions */}
+                            <div className="flex gap-2 pt-1">
+                              <button onClick={() => setSplitting(false)}
+                                className="flex-1 py-2 rounded-card border border-white/10 text-xs text-white/50 hover:text-white/70 transition-colors"
+                              >Abbrechen</button>
+                              {tx.splits?.length ? (
+                                <button onClick={removeSplit}
+                                  className="flex-1 py-2 rounded-card border border-white/10 text-xs text-red-400/70 hover:text-red-400 transition-colors"
+                                >Entfernen</button>
+                              ) : null}
+                              <button onClick={saveSplit} disabled={!valid}
+                                className="flex-1 py-2 rounded-card bg-purple-600/80 hover:bg-purple-600 disabled:opacity-30 disabled:hover:bg-purple-600/80 text-xs text-white font-medium transition-colors"
+                              >Speichern</button>
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              )}
 
               {/* ── Edit form ── */}
               <AnimatePresence initial={false}>
@@ -457,6 +674,13 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
               </AnimatePresence>
             </div>
           </motion.div>
+
+          <CategoryPicker
+            open={splitPickerFor !== null}
+            current={splitPickerFor === 'A' ? splitCatA : splitCatB}
+            onSelect={id => (splitPickerFor === 'A' ? setSplitCatA(id) : setSplitCatB(id))}
+            onClose={() => setSplitPickerFor(null)}
+          />
         </>
       )}
     </AnimatePresence>,
