@@ -20,14 +20,15 @@ export function Transactions() {
   const { allList } = useAllCategories()
   const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Transaction | null>(null)
-  const { transactions, updateCategory, updateTransaction, refresh } = useTransactionsCtx()
+  const { transactions, updateCategory, updateTransaction, refreshAll } = useTransactionsCtx()
   const [refreshing, setRefreshing] = useState(false)
 
-  // Pull-to-refresh: show the full loading overlay until the DB fetch resolves
-  // and the UI has the fresh data, then hide it.
+  // Pull-to-refresh: download everything from the cloud — categories + merchant
+  // patterns (R2) and the transactions (D1). This is how a new device pulls the
+  // data after its API key is entered. Loading overlay until it resolves.
   async function handleRefresh() {
     setRefreshing(true)
-    try { await refresh() } finally { setRefreshing(false) }
+    try { await refreshAll() } finally { setRefreshing(false) }
   }
 
   const timeFiltered = useFilteredTransactions(transactions, timeFilter)
