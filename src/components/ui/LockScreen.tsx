@@ -74,7 +74,10 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
               key={i}
               onClick={() => press(k)}
               disabled={!k}
-              className={`h-16 rounded-card_sm flex items-center justify-center text-2xl font-light transition-colors ${
+              style={
+                {borderRadius: '999px',}
+              }
+              className={`h-16 flex items-center justify-center text-2xl font-light transition-colors ${
                 k ? 'bg-white/6 border border-white/8 active:bg-white/15' : 'opacity-0 pointer-events-none'
               }`}
             >
