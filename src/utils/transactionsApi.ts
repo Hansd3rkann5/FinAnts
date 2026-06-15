@@ -51,12 +51,35 @@ export interface MergeResult {
   meta: { added: number; total: number }
 }
 
+// PayPal direct-debits arrive with "PayPal Europe …" as the counterparty, but
+// the real merchant is buried in the purpose text, e.g.
+//   "…/PP.1165.PP/. Takeaway.com Payments B.V., Ihr Einkauf bei Takeaway.com…"
+// Extract that merchant (the token right before ", Ihr Einkauf bei"). Returns
+// undefined for non-PayPal rows, empty purposes, or PayPal-to-PayPal transfers.
+export function extractPaypalMerchant(counterparty?: string | null, description?: string | null): string | undefined {
+  if (!/paypal/i.test(counterparty ?? '')) return undefined
+  // Prefer the clean copy after the last " · " (Commerzbank joins a wrapped
+  // Buchungstext with the un-wrapped Verwendungszweck); else de-wrap newlines.
+  const desc = description ?? ''
+  const candidates = desc.includes(' · ') ? [desc.split(' · ').pop()!, desc] : [desc]
+  for (const c of candidates) {
+    const text = c.replace(/[\r\n]/g, '').replace(/\s{2,}/g, ' ')
+    const m = text.match(/[/.]\s+([^,]{2,}?),\s*Ihr Einkauf bei/i)
+    const name = m?.[1]?.trim()
+    // Reject if the capture reached back over the reference prefix (a real
+    // merchant name never contains a long digit-run, "PP.####", or "PayPal").
+    if (name && !/paypal/i.test(name) && !/\d{5,}/.test(name) && !/PP\.\d/i.test(name)) return name
+  }
+  return undefined
+}
+
 // Enrich canonical rows into Transactions, applying matching merchant patterns.
 // Precedence per field: explicit per-tx D1 value → matching profile → derived
 // fallback. So a pattern's icon/label/category auto-applies to every matching
 // transaction (existing or newly imported) unless that row was edited directly.
 export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[]): Transaction[] {
   return rows.map(r => {
+    const ppMerchant = extractPaypalMerchant(r.counterparty, r.description)
     const tx: Transaction = {
       id: r.id,
       date: new Date(r.date),
@@ -67,13 +90,15 @@ export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[]
       iban: r.iban ?? undefined,
       reference: r.reference ?? undefined,
       categoryId: '',
-      merchantKey: findMerchant(`${r.description} ${r.counterparty}`)?.merchantKey,
+      // For PayPal, look up the logo by the real merchant rather than "PayPal".
+      merchantKey: findMerchant(ppMerchant ?? `${r.description} ${r.counterparty}`)?.merchantKey,
       customLabel: r.customLabel ?? undefined,
       customIcon: r.customIcon ?? undefined,
     }
     const profile = resolveProfile(tx, profiles)
     tx.categoryId  = r.categoryId  ?? profile?.categoryId ?? autoCategory(r.description, r.counterparty)
-    tx.customLabel = r.customLabel ?? profile?.label      ?? undefined
+    // Bezeichnung: explicit edit → pattern → extracted PayPal merchant.
+    tx.customLabel = r.customLabel ?? profile?.label      ?? ppMerchant ?? undefined
     tx.customIcon  = r.customIcon  ?? profile?.customIcon  ?? undefined
     return tx
   })
