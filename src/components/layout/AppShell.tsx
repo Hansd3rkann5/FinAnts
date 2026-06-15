@@ -35,7 +35,7 @@ export function AppShell() {
         <div
           ref={trackRef}
           className="flex h-full"
-          style={{ width: `${n * 100}%` }}
+          style={{ width: `${n * 100}%`, willChange: 'transform', backfaceVisibility: 'hidden' }}
         >
           {TABS.map(({ path, Component, scrollId }) => (
             <div
