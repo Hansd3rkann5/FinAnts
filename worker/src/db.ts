@@ -168,14 +168,20 @@ export async function mergeTransactions(
   const incoming = rows.filter(r => !r.isPending && r.date)
 
   const { results: existing } = await db
-    .prepare('SELECT id, date, amount, counterparty, source FROM transactions')
-    .all<{ id: string; date: string; amount: number; counterparty: string; source: string | null }>()
+    .prepare('SELECT id, date, amount, counterparty, source, category_id, custom_label, custom_icon FROM transactions')
+    .all<{ id: string; date: string; amount: number; counterparty: string; source: string | null;
+           category_id: string | null; custom_label: string | null; custom_icon: string | null }>()
 
-  const index = new Map<string, { id: string; day: number; source: string | null }[]>()
+  type Existing = {
+    id: string; day: number; source: string | null
+    category_id: string | null; custom_label: string | null; custom_icon: string | null
+  }
+  const index = new Map<string, Existing[]>()
   for (const e of existing ?? []) {
     const k = matchKey(e.amount, e.counterparty)
     const arr = index.get(k) ?? []
-    arr.push({ id: e.id, day: dayNumber(e.date), source: e.source })
+    arr.push({ id: e.id, day: dayNumber(e.date), source: e.source,
+               category_id: e.category_id, custom_label: e.custom_label, custom_icon: e.custom_icon })
     index.set(k, arr)
   }
 
@@ -187,7 +193,7 @@ export async function mergeTransactions(
   for (const r of incoming) {
     const day = dayNumber(r.date)
     const candidates = (index.get(matchKey(r.amount, r.counterparty)) ?? []).filter(c => !claimed.has(c.id))
-    let best: { id: string; day: number; source: string | null } | null = null
+    let best: Existing | null = null
     let bestDiff = Infinity
     for (const c of candidates) {
       const diff = Math.abs(day - c.day)
@@ -197,7 +203,14 @@ export async function mergeTransactions(
       claimed.add(best.id)
       if (incomingRank > rankOf(best.source)) {
         toDelete.push(best.id)   // incoming source wins → replace existing
-        toInsertRows.push(r)
+        // Carry over the existing row's user/enrichment overrides so a re-pull
+        // doesn't wipe them (incoming explicit values still win).
+        toInsertRows.push({
+          ...r,
+          categoryId:  r.categoryId  ?? best.category_id  ?? undefined,
+          customLabel: r.customLabel ?? best.custom_label ?? undefined,
+          customIcon:  r.customIcon  ?? best.custom_icon  ?? undefined,
+        })
       }
       // else: existing row wins → skip incoming
     } else {

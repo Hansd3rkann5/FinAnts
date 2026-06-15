@@ -51,7 +51,9 @@ export function TransactionCard({ transaction: tx, onCategoryChange, onClick, in
               </p>
               <p className="text-xs text-white/40 truncate mt-0.5 leading-tight">
                 {displayLabel
-                  ? (tx.counterparty || tx.description || '')
+                  ? (/paypal/i.test(tx.counterparty)
+                      ? (tx.description || '')                 // PayPal: show the note, not "PayPal Europe…"
+                      : (tx.counterparty || tx.description || ''))
                   : (tx.description !== tx.counterparty ? tx.description : '')}
               </p>
             </div>

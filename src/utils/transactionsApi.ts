@@ -77,6 +77,14 @@ export function extractPaypalMerchant(counterparty?: string | null, description?
 // Precedence per field: explicit per-tx D1 value → matching profile → derived
 // fallback. So a pattern's icon/label/category auto-applies to every matching
 // transaction (existing or newly imported) unless that row was edited directly.
+// PayPal SEPA boilerplate carries no info; once a row has a real label we hide
+// it. A short note (from the PayPal-history match) is kept as the description.
+function cleanPaypalDescription(counterparty: string, description: string): string {
+  if (!/paypal/i.test(counterparty)) return description
+  if (/End-to-End|Mandatsref|Gläubiger|PP\.\d/i.test(description)) return ''
+  return description
+}
+
 export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[]): Transaction[] {
   return rows.map(r => {
     const ppMerchant = extractPaypalMerchant(r.counterparty, r.description)
@@ -85,7 +93,7 @@ export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[]
       date: new Date(r.date),
       amount: r.amount,
       type: (r.type as Transaction['type']) || (r.amount >= 0 ? 'income' : 'expense'),
-      description: r.description,
+      description: cleanPaypalDescription(r.counterparty, r.description),
       counterparty: r.counterparty,
       iban: r.iban ?? undefined,
       reference: r.reference ?? undefined,

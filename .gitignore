@@ -29,3 +29,7 @@ dist-ssr
 # Cloudflare Worker secrets (never commit)
 worker/.dev.vars
 worker/node_modules
+
+# Personal PayPal exports + extracted data (never commit)
+PayPal_*.rtf
+paypal*.csv
