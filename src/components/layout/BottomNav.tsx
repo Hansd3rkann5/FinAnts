@@ -25,8 +25,8 @@ export function BottomNav() {
         id="nav-glass"
         className="absolute top-0 bottom-0 rounded-t-[35px]"
         style={{
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          backdropFilter: 'blur(5px)',
+          WebkitBackdropFilter: 'blur(5px)',
           marginInline: '24px',
         }}
       />

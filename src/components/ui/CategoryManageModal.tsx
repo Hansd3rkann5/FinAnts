@@ -107,8 +107,8 @@ export function CategoryManageModal({ open, onClose }: Props) {
                 onClick={openCreate}
                 className="absolute bottom-4 left-4 right-4 flex items-center justify-center gap-2 py-4 rounded-card_sm border border-white/10 text-sm text-white/50 hover:text-white/70 transition-colors active:opacity-60"
                 style={{
-                  backdropFilter: 'blur(1px)',
-                  WebkitBackdropFilter: 'blur(6px)',
+                  backdropFilter: 'blur(5px)',
+                  WebkitBackdropFilter: 'blur(5px)',
                   background: 'rgba(30, 30, 30, 0.7)',
                   boxShadow: '0 40px 20px 20px rgba(10,10,10,0.7), 0 10px 20px 10px rgba(10,10,10,0.7)',
                 }}

@@ -61,9 +61,9 @@ export function Transactions() {
         id="tx-sticky-filter"
         className="sticky top-0 z-30"
         style={{
-          backdropFilter: 'blur(6px)',
+          backdropFilter: 'blur(5px)',
           paddingTop: '50px',
-          WebkitBackdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(5px)',
           backgroundColor: 'rgba(10, 10, 20, 0.75)',
           boxShadow: '0 -4px 24px 10px rgba(10,10,10,0.8), 0 -1px 80px 10px rgba(10,10,10,0.8)',
         }}

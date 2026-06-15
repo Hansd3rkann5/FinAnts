@@ -122,7 +122,7 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
         <motion.div
           id={`tf-pill-${id}`}
           className="absolute z-20 overflow-hidden bg-linear-to-r from-purple-600/70 to-blue-600/70 border border-purple-500/40 shadow-lg shadow-black/30"
-          style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+          style={{ backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)' }}
           initial={false}
           animate={{ left: pos.left, top: pos.top - 1, width: pos.width, borderRadius: open ? 14 : 20 }}
           transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
