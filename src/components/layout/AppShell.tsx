@@ -27,7 +27,7 @@ export function AppShell() {
 
   return (
     <div id="app-shell" className="flex-1 min-h-0 bg-bg-base text-white flex flex-col">
-      <main id="app-main" className="mt-12 flex-1 overflow-hidden relative" style={{ height: '100vh' }}>
+      <main id="app-main" className="flex-1 overflow-hidden relative" style={{ height: '100vh' }}>
         {/* Filmstrip: pages sit side-by-side in navbar order; the track follows
             the finger during a horizontal swipe (transform managed by
             usePagerSwipe) and snaps to a page on release. All pages stay
@@ -41,7 +41,7 @@ export function AppShell() {
             <div
               key={path}
               id={scrollId}
-              className="h-full overflow-y-auto overscroll-contain pt-6 px-0 pb-28"
+              className="h-full overflow-y-auto overscroll-contain px-0 pb-28"
               style={{ width: `${100 / n}%` }}
             >
               <Component />

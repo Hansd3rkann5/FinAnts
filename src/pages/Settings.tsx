@@ -221,7 +221,17 @@ export function Settings() {
       )}
 
       <div className="flex flex-col gap-3 px-4">
-
+        <div
+        id="dash-sticky-filter"
+        className="sticky top-0 z-30 pt-2 mb-5"
+        style={{
+          backdropFilter: 'blur(5px)',
+          paddingTop: '40px',
+          WebkitBackdropFilter: 'blur(5px)',
+          backgroundColor: 'rgba(10, 10, 20, 0.75)',
+          boxShadow: '0 -4px 24px 10px rgba(10,10,10,0.8), 0 -1px 80px 10px rgba(10,10,10,0.8)',
+        }}
+      ></div>
         {/* ── Zugang ──────────────────────────────────────────────────────── */}
         <CollapsibleCard
           icon={<ShieldCheck size={15} className={isAuth ? 'text-emerald-400' : 'text-white/30'} />}

@@ -59,10 +59,11 @@ export function Transactions() {
     <div id="page-transactions" className="flex flex-col gap-4">
       <div
         id="tx-sticky-filter"
-        className="sticky top-0 z-30 pt-2 pb-2"
+        className="sticky top-0 z-30"
         style={{
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          backdropFilter: 'blur(6px)',
+          paddingTop: '50px',
+          WebkitBackdropFilter: 'blur(6px)',
           backgroundColor: 'rgba(10, 10, 20, 0.75)',
           boxShadow: '0 -4px 24px 10px rgba(10,10,10,0.8), 0 -1px 80px 10px rgba(10,10,10,0.8)',
         }}

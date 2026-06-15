@@ -22,7 +22,7 @@ interface Props {
   periods?: AvailablePeriods
 }
 
-export function TimeFilterBar({ value, onChange, periods }: Props) {
+export function TimeFilterBar({ value, onChange, id = 'default', periods }: Props) {
   const mode = getFilterMode(value)
   const activeIndex = Math.max(0, MODES.findIndex(m => m.value === mode))
   const hasPicker = mode !== 'all'
@@ -101,11 +101,12 @@ export function TimeFilterBar({ value, onChange, periods }: Props) {
   }
 
   return (
-    <div className="px-4">
-      <div ref={barRef} className="relative flex rounded-pill bg-white/5 border border-white/8 p-1 gap-0.5">
+    <div id={`tf-${id}`} className="px-4">
+      <div id={`tf-bar-${id}`} ref={barRef} className="relative flex rounded-pill bg-white/5 border border-white/8 p-1 gap-0.5">
         {MODES.map((opt, i) => (
           <button
             key={opt.value}
+            id={`tf-mode-${opt.value}-${id}`}
             ref={el => { btnRefs.current[i] = el }}
             onClick={() => clickMode(opt.value)}
             className="relative flex-1 py-1.5 text-xs font-medium rounded-pill z-10"
@@ -119,12 +120,15 @@ export function TimeFilterBar({ value, onChange, periods }: Props) {
         {/* The active pill itself — slides between modes and expands downward
             to hold the period options (no separate dropdown element). */}
         <motion.div
-          className="absolute z-20 overflow-hidden bg-linear-to-r from-purple-600/80 to-blue-600/80 border border-purple-500/40 shadow-lg shadow-black/30"
+          id={`tf-pill-${id}`}
+          className="absolute z-20 overflow-hidden bg-linear-to-r from-purple-600/70 to-blue-600/70 border border-purple-500/40 shadow-lg shadow-black/30"
+          style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
           initial={false}
-          animate={{ left: pos.left, top: pos.top, width: pos.width, borderRadius: open ? 14 : 9999 }}
+          animate={{ left: pos.left, top: pos.top - 1, width: pos.width, borderRadius: open ? 14 : 20 }}
           transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
         >
           <button
+            id={`tf-pill-label-${id}`}
             onClick={() => hasPicker && setOpen(o => !o)}
             className="flex w-full items-center justify-center text-xs font-medium text-white"
             style={{ height: pos.height }}
@@ -141,12 +145,13 @@ export function TimeFilterBar({ value, onChange, periods }: Props) {
                 transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
                 className="overflow-hidden"
               >
-                <div ref={listRef} className="max-h-44 overflow-y-auto border-t border-white/20 pb-1">
+                <div id={`tf-options-${id}`} ref={listRef} className="max-h-44 overflow-y-auto border-t border-white/20 pb-1">
                   {options.map(opt => {
                     const active = value === opt.value
                     return (
                       <button
                         key={String(opt.value)}
+                        id={`tf-opt-${String(opt.value).replace(/\//g, '-')}-${id}`}
                         data-active={active}
                         onClick={() => selectPeriod(opt.value)}
                         className={`block w-full text-center px-2 py-1.5 text-xs font-medium transition-colors ${
