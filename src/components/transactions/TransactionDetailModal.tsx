@@ -296,7 +296,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
             onClick={e => e.stopPropagation()}
             className="absolute bottom-0 left-0 right-0 z-50 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[92svh]"
-            style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+            style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
           >
             <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-0 shrink-0" />
 

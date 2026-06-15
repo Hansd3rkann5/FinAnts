@@ -4,12 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronDown, ChevronUp } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { CATEGORIES } from '@/data/categories'
-import { categoryPortions } from '@/utils/chartCompute'
+import { CATEGORIES, isExcluded, EXCLUDE_CATEGORY_ID } from '@/data/categories'
+import { categoryPortions, filterByTimeFilter } from '@/utils/chartCompute'
 import { useModalRegistration } from '@/hooks/useModalRegistration'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useAllCategories } from '@/hooks/useAllCategories'
-import type { Transaction } from '@/types'
+import type { Transaction, TimeFilter } from '@/types'
 
 function formatEur(v: number) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(v)
@@ -19,20 +19,25 @@ interface Props {
   open: boolean
   onClose: () => void
   onTransactionSelect: (tx: Transaction) => void
+  filter?: TimeFilter
 }
 
-export function CategoryBreakdownModal({ open, onClose, onTransactionSelect }: Props) {
+export function CategoryBreakdownModal({ open, onClose, onTransactionSelect, filter }: Props) {
   useModalRegistration(open)
   const { transactions } = useTransactionsCtx()
   const { allMap } = useAllCategories()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const categoryEntries = useMemo(() => {
-    // Expand each transaction into its category portions (split overlay): a split
-    // tx appears under each of its categories with its portion amount.
+    const scoped = filter ? filterByTimeFilter(transactions, filter) : transactions
+    // Mirror useBalanceSummary exactly: booked transactions only, expense portions
+    // only (amount < 0), exclude the excluded category. This keeps the totals here
+    // in sync with what the pie chart shows.
+    const booked = scoped.filter(t => !t.isPending && !isExcluded(t))
     const map = new Map<string, { tx: Transaction; amount: number }[]>()
-    for (const tx of transactions) {
+    for (const tx of booked) {
       for (const p of categoryPortions(tx)) {
+        if (p.categoryId === EXCLUDE_CATEGORY_ID) continue
         if (!map.has(p.categoryId)) map.set(p.categoryId, [])
         map.get(p.categoryId)!.push({ tx, amount: p.amount })
       }
@@ -41,10 +46,13 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect }: P
       .map(([catId, items]) => ({
         cat: allMap[catId] ?? CATEGORIES['other'],
         items: items.sort((a, b) => b.tx.date.getTime() - a.tx.date.getTime()),
-        total: items.reduce((sum, it) => sum + it.amount, 0),
+        // Total = expense sum only (absolute), matching the pie chart. Positive
+        // transactions in the same category are visible in the list but don't
+        // affect this total.
+        total: items.filter(it => it.amount < 0).reduce((sum, it) => sum + Math.abs(it.amount), 0),
       }))
-      .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
-  }, [transactions, allMap])
+      .sort((a, b) => b.total - a.total)
+  }, [transactions, filter, allMap])
 
   return createPortal(
     <>
@@ -105,8 +113,8 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect }: P
                             <p className="text-sm text-white/80">{cat.label}</p>
                             <p className="text-[10px] text-white/30">{items.length} Buchung{items.length !== 1 ? 'en' : ''}</p>
                           </div>
-                          <p className={`text-sm font-semibold shrink-0 mr-1 ${total < 0 ? 'text-white/60' : 'text-emerald-400'}`}>
-                            {total >= 0 ? '+' : ''}{formatEur(total)}
+                          <p className="text-sm font-semibold shrink-0 mr-1 text-white/60">
+                            {formatEur(total)}
                           </p>
                           {isExpanded
                             ? <ChevronUp size={14} className="shrink-0 text-white/30" />
