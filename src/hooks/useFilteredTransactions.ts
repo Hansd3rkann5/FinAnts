@@ -1,26 +1,13 @@
 import { useMemo } from 'react'
-import { startOfWeek, startOfMonth, startOfYear, isAfter } from 'date-fns'
 import type { Transaction, TimeFilter, BalanceSummary, CategorySummary } from '@/types'
 import { isExcluded } from '@/data/categories'
+import { filterByTimeFilter } from '@/utils/chartCompute'
 
 export function useFilteredTransactions(transactions: Transaction[], filter: TimeFilter) {
-  return useMemo(() => {
-    const now = new Date()
-    let cutoff: Date | null = null
-
-    switch (filter) {
-      case 'week':  cutoff = startOfWeek(now, { weekStartsOn: 1 }); break
-      case 'month': cutoff = startOfMonth(now); break
-      case 'year':  cutoff = startOfYear(now); break
-      case 'all':   cutoff = null; break
-    }
-
-    const filtered = cutoff
-      ? transactions.filter(t => isAfter(t.date, cutoff!))
-      : transactions
-
-    return filtered
-  }, [transactions, filter])
+  // Delegate to the shared range filter so encoded filters (a specific
+  // month/year/week, e.g. "month/2025/8") work — the previous switch only
+  // matched the base cases and let a specific month fall through to "all".
+  return useMemo(() => filterByTimeFilter(transactions, filter), [transactions, filter])
 }
 
 export function useBalanceSummary(transactions: Transaction[]): BalanceSummary {
