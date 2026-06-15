@@ -33,12 +33,16 @@ function persist(profiles: MerchantProfile[]) {
 }
 
 export function resolveProfile(tx: Transaction, profiles: MerchantProfile[]): MerchantProfile | null {
-  const text = `${tx.counterparty} ${tx.description}`.toLowerCase()
+  // Match against the Bezeichnung (customLabel) too — for PayPal et al. the real
+  // merchant lives there, not in the counterparty/Buchungstext.
+  const label = (tx.customLabel ?? '').toLowerCase()
+  const cp = tx.counterparty.toLowerCase()
+  const text = `${label} ${cp} ${tx.description}`.toLowerCase()
   const matches = profiles.filter(p =>
     p.matchStrings.some(ms => {
       const m = ms.toLowerCase()
       return p.matchMode === 'exact'
-        ? tx.counterparty.toLowerCase() === m
+        ? (cp === m || label === m)
         : text.includes(m)
     })
   )

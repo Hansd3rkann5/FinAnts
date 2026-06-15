@@ -30,7 +30,9 @@ const EMOJI_PRESETS = [
 ]
 
 function extractChips(tx: Transaction): string[] {
-  const text = `${tx.counterparty} ${tx.description}`
+  // Include the Bezeichnung (customLabel) so e.g. the PayPal merchant name —
+  // which is the main display name but not in the Buchungstext — is selectable.
+  const text = `${tx.customLabel ?? ''} ${tx.counterparty} ${tx.description}`
   const tokens = text.split(/[^a-zA-ZäöüÄÖÜß]+/)
     .filter(t => t.length >= 3 && !/^\d+$/.test(t))
   return [...new Set(tokens.map(t => t.toUpperCase()))].slice(0, 14)
@@ -97,11 +99,11 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
   const affectedCount = useMemo(() => {
     if (!matchStrings.length) return 0
     return transactions.filter(t => {
-      const text = `${t.counterparty} ${t.description}`.toLowerCase()
+      const text = `${t.customLabel ?? ''} ${t.counterparty} ${t.description}`.toLowerCase()
       return matchStrings.some(ms => {
         const m = ms.toLowerCase()
         return matchMode === 'exact'
-          ? t.counterparty.toLowerCase() === m
+          ? (t.counterparty.toLowerCase() === m || (t.customLabel ?? '').toLowerCase() === m)
           : text.includes(m)
       })
     }).length

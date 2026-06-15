@@ -100,7 +100,9 @@ export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[]
       categoryId: '',
       // For PayPal, look up the logo by the real merchant rather than "PayPal".
       merchantKey: findMerchant(ppMerchant ?? `${r.description} ${r.counterparty}`)?.merchantKey,
-      customLabel: r.customLabel ?? undefined,
+      // Expose the merchant name as the Bezeichnung up front so resolveProfile
+      // can match patterns against it (the final value is set again below).
+      customLabel: r.customLabel ?? ppMerchant ?? undefined,
       customIcon: r.customIcon ?? undefined,
     }
     const profile = resolveProfile(tx, profiles)

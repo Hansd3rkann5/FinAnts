@@ -19,7 +19,7 @@ function SubChip({
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all border ${
+      className={`shrink-0 px-3 py-2.5 rounded-full text-xs font-medium transition-all border ${
         active
           ? 'bg-purple-500/25 border-purple-500/40 text-purple-200'
           : 'bg-white/5 border-white/8 text-white/40 hover:text-white/70 hover:bg-white/10'
@@ -111,7 +111,7 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
             className="overflow-hidden"
           >
             <div ref={subRef} className="overflow-x-auto">
-              <div className="flex gap-1.5 pb-0.5 px-0.5">
+              <div className="flex gap-1.5 pb-0.5 px-4">
                 <SubChip
                   label="Aktuell"
                   active={value === mode}
