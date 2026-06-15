@@ -73,9 +73,20 @@ function counterpartyIbanOf(r: MergeInput): string {
   return r.iban ?? r.counterpartyIban ?? ''
 }
 
+// IBANs must match across sources, but CSV exports may contain spaces
+// (DE89 3704 …) while EnableBanking returns them unspaced — strip all
+// whitespace so they key identically.
+function normIban(s?: string | null): string {
+  return (s ?? '').replace(/\s+/g, '').toLowerCase()
+}
+
 function makeBase(r: MergeInput): string {
+  // Source-independent dedup: counterparty/description are intentionally
+  // excluded because CSV and EnableBanking format them differently for the same
+  // transaction. account + date + amount, plus the occurrence index added by
+  // toStored, is enough to match the same transaction across both sources.
   const cents = Math.round(r.amount * 100)
-  return [norm(r.accountIban), normDate(r.date), cents, norm(r.counterparty), norm(r.description)].join('|')
+  return [normIban(r.accountIban), normDate(r.date), cents].join('|')
 }
 
 async function sha256hex(input: string): Promise<string> {
