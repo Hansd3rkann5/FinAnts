@@ -3,7 +3,7 @@ import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
   Wifi, CloudUpload, CloudDownload, Cloud,
-  ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn, Eye,
+  ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn, Eye, Copy, Bug,
 } from 'lucide-react'
 import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
 import { getApiKey, setApiKey } from '@/utils/cfAuth'
@@ -19,6 +19,7 @@ import { useAccounts } from '@/hooks/useAccounts'
 import { detectAndParse } from '@/utils/csvParser'
 import { useWorkerSync, type SyncStatus } from '@/hooks/useWorkerSync'
 import { ChartLoader } from '@/components/ui/ChartLoader'
+import { useErrorLog, notify } from '@/utils/notify'
 
 const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
@@ -108,6 +109,7 @@ export function Settings() {
   const { transactions, importTransactions, applyServerTransactions, clearAll } = useTransactionsCtx()
   const { accounts, setAccounts, toggleIncluded } = useAccounts()
   const { baseBalance: manualBalance, updatedAt: balanceUpdatedAt, save: saveBalance } = useManualBalance()
+  const { entries: errorLog, clear: clearErrorLog } = useErrorLog()
   const fileRef = useRef<HTMLInputElement>(null)
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle')
   const [importMessage, setImportMessage] = useState('')
@@ -515,6 +517,49 @@ export function Settings() {
                 </PillButton>
               </div>
             </motion.div>
+          )}
+        </CollapsibleCard>
+
+        {/* ── Fehlerprotokoll ──────────────────────────────────────────────── */}
+        <CollapsibleCard
+          icon={<Bug size={15} className="text-white/40 shrink-0" />}
+          title="Fehlerprotokoll"
+          statusText={errorLog.length ? `${errorLog.length} Fehler protokolliert` : 'Keine Fehler'}
+        >
+          {errorLog.length === 0 ? (
+            <p className="text-xs text-white/40">Keine Fehler aufgezeichnet.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+                {[...errorLog].reverse().map(e => (
+                  <div key={e.id} className="rounded-card_sm border border-white/8 bg-white/[0.03] p-2">
+                    <p className="text-[11px] font-medium text-white/70">
+                      {e.context}
+                      <span className="text-white/30"> · {new Date(e.time).toLocaleString('de-DE')}</span>
+                    </p>
+                    <p className="text-[11px] text-white/45 break-words">{e.message}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <PillButton
+                  variant="secondary"
+                  size="sm"
+                  icon={<Copy size={13} />}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(JSON.stringify(errorLog, null, 2))
+                      notify('Fehlerprotokoll kopiert')
+                    } catch { /* clipboard unavailable */ }
+                  }}
+                >
+                  Kopieren
+                </PillButton>
+                <PillButton variant="ghost" size="sm" icon={<Trash2 size={13} />} onClick={clearErrorLog}>
+                  Leeren
+                </PillButton>
+              </div>
+            </div>
           )}
         </CollapsibleCard>
 

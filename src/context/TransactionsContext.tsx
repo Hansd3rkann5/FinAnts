@@ -3,6 +3,7 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { useMerchantProfiles } from '@/hooks/useMerchantProfiles'
 import { useCustomCategories } from '@/hooks/useCustomCategories'
 import { pushCloudState, pullCloudState } from '@/utils/cloudSync'
+import { reportError } from '@/utils/notify'
 
 type TransactionsCtx =
   ReturnType<typeof useTransactions> &
@@ -37,7 +38,7 @@ function useAutoSyncPatterns(
           merchantProfiles: state.merchantProfiles ?? [],
         })
       })
-      .catch(err => console.warn('[patterns] cloud pull failed:', err))
+      .catch(err => reportError('Sync fehlgeschlagen', err))
       .finally(() => { if (active) hydrated.current = true })
     return () => { active = false }
   }, [applyCloudCategories, applyCloudProfiles])
@@ -50,7 +51,7 @@ function useAutoSyncPatterns(
     const t = setTimeout(() => {
       pushCloudState({ version: 1, updatedAt: new Date().toISOString(), customCategories, merchantProfiles })
         .then(() => { lastSyncedJson.current = snapshot })
-        .catch(err => console.warn('[patterns] cloud push failed:', err))
+        .catch(err => reportError('Sync fehlgeschlagen', err))
     }, 1200)
     return () => clearTimeout(t)
   }, [customCategories, merchantProfiles])

@@ -2,6 +2,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { reportError } from './utils/notify'
+
+// Backstop: log + toast any error that escapes a try/catch or a rejected promise.
+window.addEventListener('error', e => reportError('window', e.error ?? e.message))
+window.addEventListener('unhandledrejection', e => reportError('promise', e.reason))
 
 // Polyfill crypto.randomUUID for iOS < 15.4
 if (!('randomUUID' in crypto)) {

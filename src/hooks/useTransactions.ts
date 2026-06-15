@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Transaction, RecurringGroup, MerchantProfile } from '@/types'
 import { detectRecurring } from '@/utils/recurringDetector'
+import { reportError } from '@/utils/notify'
 import {
   fetchTransactions, mergeTransactions, updateTransactionRemote, clearTransactionsRemote,
   enrichTransactions, transactionToMergeRow,
@@ -40,7 +41,7 @@ function saveCache(transactions: Transaction[], groups: RecurringGroup[]) {
   } catch (e) {
     // Quota exceeded / private-mode: the cache is only an offline nicety, so
     // never let it crash the app — drop it and carry on (D1 is the source).
-    console.warn('[transactions] cache write skipped:', e)
+    reportError('Speicher voll', e)
     try {
       localStorage.removeItem(STORAGE_KEY)
       localStorage.removeItem(STORAGE_GROUPS_KEY)
@@ -88,7 +89,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[]) {
     let active = true
     fetchTransactions()
       .then(rows => { if (active) applyServerTransactions(rows) })
-      .catch(err => console.warn('[transactions] cloud load failed, using cache:', err))
+      .catch(err => reportError('Laden fehlgeschlagen', err))
     return () => { active = false }
   }, [applyServerTransactions])
 
@@ -124,7 +125,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[]) {
       return updated
     })
     patchRaw(new Set([id]), { categoryId })
-    updateTransactionRemote(id, { categoryId }).catch(e => console.warn('[transactions] update failed:', e))
+    updateTransactionRemote(id, { categoryId }).catch(e => reportError('Speichern fehlgeschlagen', e))
   }, [recurringGroups])
 
   const batchUpdateCategory = useCallback((ids: string[], categoryId: Transaction['categoryId']) => {
@@ -136,7 +137,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[]) {
     })
     patchRaw(idSet, { categoryId })
     Promise.all(ids.map(id => updateTransactionRemote(id, { categoryId })))
-      .catch(e => console.warn('[transactions] batch update failed:', e))
+      .catch(e => reportError('Speichern fehlgeschlagen', e))
   }, [recurringGroups])
 
   const updateTransaction = useCallback((id: string, patch: Partial<Pick<Transaction, 'categoryId' | 'customLabel' | 'customIcon'>>) => {
@@ -150,7 +151,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[]) {
     if ('customLabel' in patch) rawPatch.customLabel = patch.customLabel ?? null
     if ('customIcon' in patch)  rawPatch.customIcon  = patch.customIcon  ?? null
     patchRaw(new Set([id]), rawPatch)
-    updateTransactionRemote(id, patch).catch(e => console.warn('[transactions] update failed:', e))
+    updateTransactionRemote(id, patch).catch(e => reportError('Speichern fehlgeschlagen', e))
   }, [recurringGroups])
 
   const removeRecurringGroup = useCallback((id: string) => {
@@ -167,7 +168,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[]) {
     setRecurringGroups([])
     localStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(STORAGE_GROUPS_KEY)
-    try { await clearTransactionsRemote() } catch (e) { console.warn('[transactions] clear failed:', e) }
+    try { await clearTransactionsRemote() } catch (e) { reportError('Löschen fehlgeschlagen', e) }
   }, [])
 
   return {

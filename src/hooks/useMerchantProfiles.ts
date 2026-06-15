@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import type { MerchantProfile, Transaction } from '@/types'
+import { reportError } from '@/utils/notify'
 
 const STORAGE_KEY = 'finants_merchant_profiles'
 
@@ -27,7 +28,7 @@ function persist(profiles: MerchantProfile[]) {
   } catch (e) {
     // localStorage is only a cache (profiles also live in the cloud blob);
     // never let a quota error crash the app.
-    console.warn('[profiles] cache write skipped:', e)
+    reportError('Speicher voll', e)
   }
 }
 

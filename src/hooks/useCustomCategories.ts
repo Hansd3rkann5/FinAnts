@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import type { Category } from '@/types'
+import { reportError } from '@/utils/notify'
 
 const STORAGE_KEY = 'finants_custom_categories'
 
@@ -15,7 +16,7 @@ function save(cats: Category[]) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cats))
   } catch (e) {
     // Cache only (categories also sync to the cloud blob) — don't crash on quota.
-    console.warn('[categories] cache write skipped:', e)
+    reportError('Speicher voll', e)
   }
 }
 
