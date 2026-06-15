@@ -16,6 +16,15 @@ export const CATEGORIES: Record<string, Category> = {
   income:        { id: 'income',        label: 'Einnahmen',      color: '#4ade80', icon: '💵' },
   transfer:      { id: 'transfer',      label: 'Überweisungen',  color: '#94a3b8', icon: '↔️' },
   other:         { id: 'other',         label: 'Sonstiges',      color: '#6b7280', icon: '📋' },
+  exclude:       { id: 'exclude',       label: 'Exclude',        color: '#475569', icon: '🚫' },
 }
 
 export const CATEGORY_LIST = Object.values(CATEGORIES)
+
+// Transactions in this category are ignored by every calculation (balances,
+// statistics, charts, recurring detection). They stay visible in the list so
+// they can be managed / re-categorised.
+export const EXCLUDE_CATEGORY_ID = 'exclude'
+export function isExcluded(t: { categoryId: string }): boolean {
+  return t.categoryId === EXCLUDE_CATEGORY_ID
+}

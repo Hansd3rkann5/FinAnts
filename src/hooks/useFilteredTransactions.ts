@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { startOfWeek, startOfMonth, startOfYear, isAfter } from 'date-fns'
 import type { Transaction, TimeFilter, BalanceSummary, CategorySummary } from '@/types'
+import { isExcluded } from '@/data/categories'
 
 export function useFilteredTransactions(transactions: Transaction[], filter: TimeFilter) {
   return useMemo(() => {
@@ -24,7 +25,7 @@ export function useFilteredTransactions(transactions: Transaction[], filter: Tim
 
 export function useBalanceSummary(transactions: Transaction[]): BalanceSummary {
   return useMemo(() => {
-    const booked = transactions.filter(t => !t.isPending)
+    const booked = transactions.filter(t => !t.isPending && !isExcluded(t))
     const totalIncome = booked.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
     const totalExpenses = Math.abs(booked.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0))
     const balance = totalIncome - totalExpenses

@@ -1,5 +1,6 @@
 import type { Transaction, RecurringGroup } from '@/types'
 import { differenceInDays } from 'date-fns'
+import { isExcluded } from '@/data/categories'
 
 const FREQ_WINDOWS = {
   weekly:    { min: 5,   max: 9 },
@@ -25,6 +26,7 @@ export function detectRecurring(transactions: Transaction[]): {
   const byKey = new Map<string, Transaction[]>()
 
   for (const tx of transactions) {
+    if (isExcluded(tx)) continue   // excluded transactions never count as recurring
     const key = groupKey(tx)
     const group = byKey.get(key) ?? []
     group.push(tx)

@@ -11,6 +11,7 @@ import { CategoryBadge } from '@/components/ui/CategoryBadge'
 import { CategoryPicker } from '@/components/ui/CategoryPicker'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { resolveProfile } from '@/hooks/useMerchantProfiles'
+import { isExcluded } from '@/data/categories'
 
 interface Props {
   transaction: Transaction
@@ -27,12 +28,13 @@ export function TransactionCard({ transaction: tx, onCategoryChange, onClick, in
   const displayLabel = tx.customLabel ?? profile?.label
   const displayIcon  = tx.customIcon  ?? profile?.customIcon
   const merchantKey  = tx.merchantKey ?? findMerchant(`${tx.description ?? ''} ${tx.counterparty ?? ''}`)?.merchantKey
+  const excluded = isExcluded(tx)
 
   return (
     <>
       <motion.div
         initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={{ opacity: excluded ? 0.45 : 1, y: 0 }}
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1], delay: Math.min(index * 0.04, 0.3) }}
         onClick={() => onClick?.(tx)}
         data-component="tx-card"

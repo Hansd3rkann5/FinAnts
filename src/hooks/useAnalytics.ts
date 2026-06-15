@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { Transaction } from '@/types'
 import { computeMonthlyData } from '@/utils/chartCompute'
+import { isExcluded } from '@/data/categories'
 
 // Re-export types for backward compatibility with chart components
 export type { MonthPoint, SpendingPoint, CategoryTrendPoint, TopMerchant } from '@/utils/chartCompute'
@@ -14,7 +15,7 @@ export interface AnalyticsSummary {
 
 export function useAnalytics(transactions: Transaction[]): AnalyticsSummary {
   return useMemo(() => {
-    const booked = transactions.filter(t => !t.isPending)
+    const booked = transactions.filter(t => !t.isPending && !isExcluded(t))
     const monthly = computeMonthlyData(transactions, 'year')
     const filledMonths = monthly.filter(m => m.expenses > 0 || m.income > 0)
 

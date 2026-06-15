@@ -11,6 +11,7 @@ import { useFilteredTransactions, useBalanceSummary } from '@/hooks/useFilteredT
 import { useAccounts } from '@/hooks/useAccounts'
 import { useManualBalance } from '@/hooks/useManualBalance'
 import { useAllCategories } from '@/hooks/useAllCategories'
+import { isExcluded } from '@/data/categories'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { useChartFilter } from '@/hooks/useChartFilter'
 import {
@@ -79,7 +80,7 @@ export function Dashboard() {
     if (baseBalance === null || balanceSavedAt === null) return null
     const savedTs = new Date(balanceSavedAt).getTime()
     const delta = transactions
-      .filter(t => !t.isPending && t.date.getTime() >= savedTs)
+      .filter(t => !t.isPending && !isExcluded(t) && t.date.getTime() >= savedTs)
       .reduce((s, t) => s + t.amount, 0)
     return baseBalance + delta
   })()

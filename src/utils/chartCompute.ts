@@ -7,6 +7,7 @@ import {
 } from 'date-fns'
 import { de } from 'date-fns/locale'
 import type { Transaction, TimeFilter } from '@/types'
+import { isExcluded } from '@/data/categories'
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ export function computeAvailablePeriods(transactions: Transaction[]): AvailableP
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function booked(txs: Transaction[]) { return txs.filter(t => !t.isPending) }
+function booked(txs: Transaction[]) { return txs.filter(t => !t.isPending && !isExcluded(t)) }
 
 // ── MonthlyBarChart data ──────────────────────────────────────────────────────
 
