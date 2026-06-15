@@ -40,6 +40,9 @@ export interface Transaction {
   isPending?: boolean
   customLabel?: string
   customIcon?: string  // emoji or data URL
+  /** Chart-only overlay: split the amount across categories (signed, sums to `amount`).
+   *  Stored in the R2 settings blob, never in the D1 transaction row. */
+  splits?: { categoryId: string; amount: number }[]
 }
 
 export interface MerchantProfile {

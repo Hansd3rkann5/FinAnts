@@ -6,6 +6,7 @@ import { autoCategory } from './categorizer'
 import { findMerchant } from './merchantLogos'
 import { loadWorkerConfig } from '@/hooks/useWorkerSync'
 import { resolveProfile } from '@/hooks/useMerchantProfiles'
+import type { SplitMap } from '@/hooks/useTxSplits'
 import type { Transaction, MerchantProfile } from '@/types'
 
 const DEFAULT_WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
@@ -85,9 +86,10 @@ function cleanPaypalDescription(counterparty: string, description: string): stri
   return description
 }
 
-export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[]): Transaction[] {
+export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[], splits: SplitMap = {}): Transaction[] {
   return rows.map(r => {
     const ppMerchant = extractPaypalMerchant(r.counterparty, r.description)
+    const split = splits[r.id]
     const tx: Transaction = {
       id: r.id,
       date: new Date(r.date),
@@ -110,6 +112,7 @@ export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[]
     // Bezeichnung: explicit edit → pattern → extracted PayPal merchant.
     tx.customLabel = r.customLabel ?? profile?.label      ?? ppMerchant ?? undefined
     tx.customIcon  = r.customIcon  ?? profile?.customIcon  ?? undefined
+    tx.splits = split && split.length ? split : undefined   // chart-only category split overlay
     return tx
   })
 }

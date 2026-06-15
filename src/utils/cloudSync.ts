@@ -17,6 +17,8 @@ export interface CloudState {
   updatedAt: string
   customCategories: Category[]
   merchantProfiles: MerchantProfile[]
+  // Chart-only category splits, keyed by transaction id (D1 rows untouched).
+  txSplits?: Record<string, { categoryId: string; amount: number }[]>
   // Retired: per-tx edits live in D1. Optional only so older backups still parse.
   txOverrides?: Record<string, { categoryId: string; customLabel?: string; customIcon?: string }>
 }

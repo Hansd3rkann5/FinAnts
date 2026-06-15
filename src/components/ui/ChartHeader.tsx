@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SlidersHorizontal, Link2, Check } from 'lucide-react'
 import { format } from 'date-fns'
@@ -42,6 +43,15 @@ export function ChartHeader({
 }: Props) {
   const [open, setOpen] = useState(false)
   const mode = getFilterMode(effectiveFilter)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [anchor, setAnchor] = useState({ right: 0, top: 0 })
+
+  // Anchor the portalled dropdown under the settings button (right-aligned).
+  useLayoutEffect(() => {
+    if (!open) return
+    const r = btnRef.current?.getBoundingClientRect()
+    if (r) setAnchor({ right: window.innerWidth - r.right, top: r.bottom + 6 })
+  }, [open])
 
   // Specific period chips — most recent first
   const specificChips = useMemo((): { value: TimeFilter; label: string }[] => {
@@ -91,6 +101,7 @@ export function ChartHeader({
       <div id={chartId ? `chart-${chartId}-settings-wrapper` : undefined} className="relative shrink-0">
         <button
           id={chartId ? `btn-${chartId}-settings` : undefined}
+          ref={btnRef}
           onClick={() => setOpen(v => !v)}
           aria-label="Zeitraum wählen"
           className={`w-6 h-6 flex items-center justify-center rounded-full transition-colors ${
@@ -102,20 +113,28 @@ export function ChartHeader({
           <SlidersHorizontal size={11} />
         </button>
 
-        <AnimatePresence>
+        {createPortal(
+          <AnimatePresence>
           {open && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+              <div className="fixed inset-0 z-100" onClick={() => setOpen(false)} />
 
-              {/* Dropdown — anchored right, expands leftward */}
+              {/* Dropdown — portalled to body (so its backdrop-filter isn't
+                  no-op'd by the GlassCard's own backdrop-filter), anchored under
+                  the settings button and expanding leftward. */}
               <motion.div
                 id={chartId ? `dropdown-${chartId}` : undefined}
                 initial={{ opacity: 0, scale: 0.88, y: -4 }}
                 animate={{ opacity: 1, scale: 1,   y:  0 }}
                 exit={{    opacity: 0, scale: 0.88, y: -4 }}
                 transition={{ duration: 0.14, ease: [0.4, 0, 0.2, 1] }}
-                style={{ transformOrigin: 'top right' }}
-                className="absolute right-0 top-7 z-20 bg-[#1a1535]/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-xl overflow-hidden"
+                style={{
+                  transformOrigin: 'top right',
+                  backgroundColor: 'rgba(39, 0, 105, 0.59)',
+                  right: anchor.right, top: anchor.top,
+                  backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                }}
+                className="fixed z-110 border border-white/10 rounded-xl shadow-xl overflow-hidden"
               >
                 <div className="flex h-30">
                   {/* Left column: period picker — slides in/out, constrained to mode column height */}
@@ -129,6 +148,7 @@ export function ChartHeader({
                         exit={{ maxWidth: 0, opacity: 0 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                         className="h-full border-r border-white/8 overflow-hidden"
+                        style={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}
                       >
                         <div className="flex flex-col py-1 h-full overflow-y-auto" style={{ minWidth: 88 }}>
                           <button
@@ -167,6 +187,7 @@ export function ChartHeader({
                   <div
                     id={chartId ? `dropdown-${chartId}-modes` : undefined}
                     className="flex flex-col py-1 w-24 shrink-0"
+                    style={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}
                   >
                     {MODE_OPTIONS.map(opt => (
                       <button
@@ -188,7 +209,9 @@ export function ChartHeader({
               </motion.div>
             </>
           )}
-        </AnimatePresence>
+          </AnimatePresence>,
+          document.body,
+        )}
       </div>
 
       {/* Sync toggle */}

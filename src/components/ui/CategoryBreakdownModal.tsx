@@ -5,6 +5,7 @@ import { X, ChevronDown, ChevronUp } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { CATEGORIES } from '@/data/categories'
+import { categoryPortions } from '@/utils/chartCompute'
 import { useModalRegistration } from '@/hooks/useModalRegistration'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useAllCategories } from '@/hooks/useAllCategories'
@@ -27,17 +28,20 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect }: P
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const categoryEntries = useMemo(() => {
-    const map = new Map<string, Transaction[]>()
+    // Expand each transaction into its category portions (split overlay): a split
+    // tx appears under each of its categories with its portion amount.
+    const map = new Map<string, { tx: Transaction; amount: number }[]>()
     for (const tx of transactions) {
-      const key = tx.categoryId
-      if (!map.has(key)) map.set(key, [])
-      map.get(key)!.push(tx)
+      for (const p of categoryPortions(tx)) {
+        if (!map.has(p.categoryId)) map.set(p.categoryId, [])
+        map.get(p.categoryId)!.push({ tx, amount: p.amount })
+      }
     }
     return [...map.entries()]
-      .map(([catId, txs]) => ({
+      .map(([catId, items]) => ({
         cat: allMap[catId] ?? CATEGORIES['other'],
-        txs: txs.sort((a, b) => b.date.getTime() - a.date.getTime()),
-        total: txs.reduce((sum, t) => sum + t.amount, 0),
+        items: items.sort((a, b) => b.tx.date.getTime() - a.tx.date.getTime()),
+        total: items.reduce((sum, it) => sum + it.amount, 0),
       }))
       .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
   }, [transactions, allMap])
@@ -76,7 +80,7 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect }: P
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  {categoryEntries.map(({ cat, txs, total }) => {
+                  {categoryEntries.map(({ cat, items, total }) => {
                     const isExpanded = expandedId === cat.id
                     return (
                       <div
@@ -99,7 +103,7 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect }: P
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-white/80">{cat.label}</p>
-                            <p className="text-[10px] text-white/30">{txs.length} Buchung{txs.length !== 1 ? 'en' : ''}</p>
+                            <p className="text-[10px] text-white/30">{items.length} Buchung{items.length !== 1 ? 'en' : ''}</p>
                           </div>
                           <p className={`text-sm font-semibold shrink-0 mr-1 ${total < 0 ? 'text-white/60' : 'text-emerald-400'}`}>
                             {total >= 0 ? '+' : ''}{formatEur(total)}
@@ -121,20 +125,23 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect }: P
                             >
                               <div className="border-t mx-3 mb-1" style={{ borderColor: `${cat.color}20` }} />
                               <div className="pb-2">
-                                {txs.map(tx => (
+                                {items.map(({ tx, amount }) => (
                                   <button
                                     key={tx.id}
                                     onClick={() => onTransactionSelect(tx)}
                                     className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/4 active:bg-white/6 transition-colors rounded-card_sm"
                                   >
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-xs text-white/70 truncate">{tx.customLabel ?? tx.counterparty}</p>
+                                      <p className="text-xs text-white/70 truncate">
+                                        {tx.customLabel ?? tx.counterparty}
+                                        {tx.splits && tx.splits.length ? <span className="text-white/30"> · geteilt</span> : null}
+                                      </p>
                                       <p className="text-[10px] text-white/30">
                                         {format(tx.date, 'dd. MMM yyyy', { locale: de })}
                                       </p>
                                     </div>
-                                    <p className={`text-xs font-medium shrink-0 ${tx.amount < 0 ? 'text-white/60' : 'text-emerald-400'}`}>
-                                      {tx.amount >= 0 ? '+' : ''}{formatEur(tx.amount)}
+                                    <p className={`text-xs font-medium shrink-0 ${amount < 0 ? 'text-white/60' : 'text-emerald-400'}`}>
+                                      {amount >= 0 ? '+' : ''}{formatEur(amount)}
                                     </p>
                                   </button>
                                 ))}

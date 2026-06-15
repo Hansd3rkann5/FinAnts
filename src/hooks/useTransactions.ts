@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Transaction, RecurringGroup, MerchantProfile } from '@/types'
+import type { SplitMap } from '@/hooks/useTxSplits'
 import { detectRecurring } from '@/utils/recurringDetector'
 import { reportError } from '@/utils/notify'
 import {
@@ -49,16 +50,18 @@ function saveCache(transactions: Transaction[], groups: RecurringGroup[]) {
   }
 }
 
-export function useTransactions(merchantProfiles: MerchantProfile[]) {
+export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: SplitMap = {}) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [recurringGroups, setRecurringGroups] = useState<RecurringGroup[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Latest canonical rows + profiles, kept in refs so the callbacks below stay
-  // stable (the mount fetch must not re-run when profiles change).
+  // Latest canonical rows + profiles + splits, kept in refs so the callbacks
+  // below stay stable (the mount fetch must not re-run when these change).
   const rawRowsRef = useRef<StoredTx[]>([])
   const profilesRef = useRef(merchantProfiles)
   profilesRef.current = merchantProfiles
+  const splitsRef = useRef(txSplits)
+  splitsRef.current = txSplits
 
   // Detect recurring, set state + refresh cache.
   const setFromTransactions = useCallback((enriched: Transaction[]) => {
@@ -71,7 +74,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[]) {
   // Enrich canonical rows (applying merchant patterns) and display them.
   const applyServerTransactions = useCallback((rows: StoredTx[]) => {
     rawRowsRef.current = rows
-    setFromTransactions(enrichTransactions(rows, profilesRef.current))
+    setFromTransactions(enrichTransactions(rows, profilesRef.current, splitsRef.current))
   }, [setFromTransactions])
 
   // Pull the canonical set from D1 and make the app mirror it.
@@ -93,12 +96,13 @@ export function useTransactions(merchantProfiles: MerchantProfile[]) {
     return () => { active = false }
   }, [applyServerTransactions])
 
-  // Re-enrich live when patterns change (e.g. an edit, or the cloud auto-pull),
-  // so existing transactions pick up the updated icon/label/category.
+  // Re-enrich live when patterns or splits change (an edit, or the cloud
+  // auto-pull), so existing transactions pick up the updated icon/label/category
+  // and chart split overlay.
   useEffect(() => {
     if (rawRowsRef.current.length === 0) return
-    setFromTransactions(enrichTransactions(rawRowsRef.current, merchantProfiles))
-  }, [merchantProfiles, setFromTransactions])
+    setFromTransactions(enrichTransactions(rawRowsRef.current, merchantProfiles, txSplits))
+  }, [merchantProfiles, txSplits, setFromTransactions])
 
   // CSV import → merge delta server-side, then display the canonical set.
   // Pending rows aren't persisted (their key changes once booked), so we keep
@@ -108,7 +112,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[]) {
     const { transactions: merged, meta } = await mergeTransactions(rows, 'csv')
     rawRowsRef.current = merged
     const pending = raw.filter(t => t.isPending)
-    setFromTransactions([...pending, ...enrichTransactions(merged, profilesRef.current)])
+    setFromTransactions([...pending, ...enrichTransactions(merged, profilesRef.current, splitsRef.current)])
     return meta
   }, [setFromTransactions])
 

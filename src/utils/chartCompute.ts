@@ -7,7 +7,7 @@ import {
 } from 'date-fns'
 import { de } from 'date-fns/locale'
 import type { Transaction, TimeFilter } from '@/types'
-import { isExcluded } from '@/data/categories'
+import { isExcluded, EXCLUDE_CATEGORY_ID } from '@/data/categories'
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -116,6 +116,13 @@ export function computeAvailablePeriods(transactions: Transaction[]): AvailableP
 
 function booked(txs: Transaction[]) { return txs.filter(t => !t.isPending && !isExcluded(t)) }
 
+// A transaction's category breakdown: its split parts (chart-only overlay) if
+// any, else the whole amount under its single category. Used by every
+// per-category aggregation so a split is attributed across both categories.
+export function categoryPortions(tx: Transaction): { categoryId: string; amount: number }[] {
+  return tx.splits && tx.splits.length ? tx.splits : [{ categoryId: tx.categoryId, amount: tx.amount }]
+}
+
 // ── MonthlyBarChart data ──────────────────────────────────────────────────────
 
 export function computeMonthlyData(txs: Transaction[], filter: TimeFilter): MonthPoint[] {
@@ -204,8 +211,12 @@ export function computeCategoryTrends(
   const monthCount = mode === 'week' ? 2 : mode === 'month' ? 3 : mode === 'year' ? 6 : 12
 
   const catTotals = new Map<string, number>()
-  for (const t of b.filter(t => t.amount < 0)) {
-    catTotals.set(t.categoryId, (catTotals.get(t.categoryId) ?? 0) + Math.abs(t.amount))
+  for (const t of b) {
+    for (const p of categoryPortions(t)) {
+      if (p.amount < 0 && p.categoryId !== EXCLUDE_CATEGORY_ID) {
+        catTotals.set(p.categoryId, (catTotals.get(p.categoryId) ?? 0) + Math.abs(p.amount))
+      }
+    }
   }
   const topCats = Array.from(catTotals.entries())
     .sort((a, b) => b[1] - a[1])
@@ -220,7 +231,8 @@ export function computeCategoryTrends(
     const m = b.filter(t => t.date >= start && t.date <= end && t.amount < 0)
     const point: CategoryTrendPoint = { month: format(d, 'MMM', { locale: de }), key: format(d, 'yyyy-MM') }
     for (const catId of topCats) {
-      point[catId] = Math.abs(m.filter(t => t.categoryId === catId).reduce((s, t) => s + t.amount, 0))
+      point[catId] = Math.abs(m.reduce((s, t) =>
+        s + categoryPortions(t).reduce((ps, p) => p.categoryId === catId && p.amount < 0 ? ps + p.amount : ps, 0), 0))
     }
     return point
   })
