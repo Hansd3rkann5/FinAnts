@@ -3,7 +3,7 @@ import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
   Wifi, CloudUpload, CloudDownload, Cloud,
-  ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn, Eye, Copy, Bug,
+  ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn, Eye, Copy, Bug, Lock, ScanFace,
 } from 'lucide-react'
 import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
 import { getApiKey, setApiKey } from '@/utils/cfAuth'
@@ -20,6 +20,7 @@ import { detectAndParse } from '@/utils/csvParser'
 import { useWorkerSync, type SyncStatus } from '@/hooks/useWorkerSync'
 import { ChartLoader } from '@/components/ui/ChartLoader'
 import { useErrorLog, notify } from '@/utils/notify'
+import { isLockEnabled, hasBiometric, webauthnSupported, enableLock, disableLock } from '@/utils/appLock'
 
 const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
@@ -110,7 +111,27 @@ export function Settings() {
   const { accounts, setAccounts, toggleIncluded } = useAccounts()
   const { baseBalance: manualBalance, updatedAt: balanceUpdatedAt, save: saveBalance } = useManualBalance()
   const { entries: errorLog, clear: clearErrorLog } = useErrorLog()
+  const [lockEnabled, setLockEnabled] = useState(isLockEnabled())
+  const [pinInput, setPinInput] = useState('')
+  const [useFaceId, setUseFaceId] = useState(webauthnSupported())
   const fileRef = useRef<HTMLInputElement>(null)
+
+  async function activateLock() {
+    if (pinInput.length < 4) return
+    try {
+      const { biometric } = await enableLock(pinInput, useFaceId)
+      setLockEnabled(true)
+      setPinInput('')
+      notify('App-Sperre aktiviert', biometric ? 'Face ID + PIN' : 'Nur PIN')
+    } catch (e) {
+      notify('Aktivierung fehlgeschlagen', e instanceof Error ? e.message : '')
+    }
+  }
+
+  function deactivateLock() {
+    disableLock()
+    setLockEnabled(false)
+  }
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle')
   const [importMessage, setImportMessage] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
@@ -517,6 +538,49 @@ export function Settings() {
                 </PillButton>
               </div>
             </motion.div>
+          )}
+        </CollapsibleCard>
+
+        {/* ── App-Sperre (Face ID / PIN) ───────────────────────────────────── */}
+        <CollapsibleCard
+          icon={<Lock size={15} className="text-white/40 shrink-0" />}
+          title="App-Sperre"
+          statusText={lockEnabled ? (hasBiometric() ? 'Face ID + PIN aktiv' : 'PIN aktiv') : 'Aus'}
+        >
+          {!lockEnabled ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs text-white/40">
+                Beim Öffnen der App nach Face&nbsp;ID / Touch&nbsp;ID oder einer PIN fragen. Die PIN ist
+                auch der Ersatz, falls die Biometrie nicht klappt.
+              </p>
+              <input
+                type="password"
+                inputMode="numeric"
+                placeholder="PIN (4–8 Ziffern)"
+                value={pinInput}
+                onChange={e => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-purple-500/40 transition-colors text-center tracking-[0.3em]"
+              />
+              {webauthnSupported() && (
+                <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
+                  <input type="checkbox" checked={useFaceId} onChange={e => setUseFaceId(e.target.checked)} />
+                  <ScanFace size={14} className="text-purple-300/80" />
+                  Face&nbsp;ID / Touch&nbsp;ID verwenden
+                </label>
+              )}
+              <PillButton size="sm" icon={<Lock size={13} />} onClick={activateLock} disabled={pinInput.length < 4}>
+                Aktivieren
+              </PillButton>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-white/40">
+                {hasBiometric() ? 'Face ID / Touch ID + PIN aktiv.' : 'PIN aktiv.'} Wird beim nächsten Öffnen abgefragt.
+              </p>
+              <PillButton variant="danger" size="sm" icon={<Trash2 size={13} />} onClick={deactivateLock}>
+                Sperre deaktivieren
+              </PillButton>
+            </div>
           )}
         </CollapsibleCard>
 
