@@ -304,7 +304,7 @@ async function buildSyncResponse(
     total = meta.total
     transactions = await getTransactions(env.DB)
   } else {
-    transactions = await toStored(result.transactions, source)
+    transactions = toStored(result.transactions, source)
     added = transactions.length
     total = transactions.length
   }

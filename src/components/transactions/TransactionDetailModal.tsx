@@ -74,7 +74,7 @@ interface Props {
 
 export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: Props) {
   useModalRegistration(tx !== null)
-  const { merchantProfiles, upsertProfile, transactions, batchUpdateCategory } = useTransactionsCtx()
+  const { merchantProfiles, upsertProfile, transactions } = useTransactionsCtx()
   const profile = tx ? resolveProfile(tx, merchantProfiles) : null
 
   const [editing, setEditing] = useState(false)
@@ -142,24 +142,19 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
   function save() {
     if (!tx) return
     if (matchStrings.length > 0) {
+      // Store label + icon + category on the pattern; it drives every matching
+      // transaction (existing and future) live via enrichment. Clear any per-tx
+      // override on this row so it falls back to the pattern.
       upsertProfile(existingProfileId, matchStrings, matchMode, {
         label: label.trim() || undefined,
         customIcon: icon,
+        categoryId: category,
       })
-      const matchingIds = transactions
-        .filter(t => {
-          const text = `${t.counterparty} ${t.description}`.toLowerCase()
-          return matchStrings.some(ms => {
-            const m = ms.toLowerCase()
-            return matchMode === 'exact'
-              ? t.counterparty.toLowerCase() === m
-              : text.includes(m)
-          })
-        })
-        .map(t => t.id)
-      batchUpdateCategory(matchingIds, category)
+      onUpdate(tx.id, { customLabel: undefined, customIcon: undefined, categoryId: undefined })
+    } else {
+      // No pattern → a one-off edit stored only on this transaction.
+      onUpdate(tx.id, { customLabel: label.trim() || undefined, customIcon: icon, categoryId: category })
     }
-    onUpdate(tx.id, { customLabel: undefined, customIcon: undefined, categoryId: category })
     setEditing(false)
   }
 

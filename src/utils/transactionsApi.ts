@@ -5,7 +5,8 @@ import { cfHeaders } from './cfAuth'
 import { autoCategory } from './categorizer'
 import { findMerchant } from './merchantLogos'
 import { loadWorkerConfig } from '@/hooks/useWorkerSync'
-import type { Transaction } from '@/types'
+import { resolveProfile } from '@/hooks/useMerchantProfiles'
+import type { Transaction, MerchantProfile } from '@/types'
 
 const DEFAULT_WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
@@ -50,23 +51,32 @@ export interface MergeResult {
   meta: { added: number; total: number }
 }
 
-export function storedToTransaction(r: StoredTx): Transaction {
-  const date = new Date(r.date)
-  const merchant = findMerchant(`${r.description} ${r.counterparty}`)
-  return {
-    id: r.id,
-    date,
-    amount: r.amount,
-    type: (r.type as Transaction['type']) || (r.amount >= 0 ? 'income' : 'expense'),
-    description: r.description,
-    counterparty: r.counterparty,
-    iban: r.iban ?? undefined,
-    reference: r.reference ?? undefined,
-    categoryId: r.categoryId ?? autoCategory(r.description, r.counterparty),
-    merchantKey: merchant?.merchantKey,
-    customLabel: r.customLabel ?? undefined,
-    customIcon: r.customIcon ?? undefined,
-  }
+// Enrich canonical rows into Transactions, applying matching merchant patterns.
+// Precedence per field: explicit per-tx D1 value → matching profile → derived
+// fallback. So a pattern's icon/label/category auto-applies to every matching
+// transaction (existing or newly imported) unless that row was edited directly.
+export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[]): Transaction[] {
+  return rows.map(r => {
+    const tx: Transaction = {
+      id: r.id,
+      date: new Date(r.date),
+      amount: r.amount,
+      type: (r.type as Transaction['type']) || (r.amount >= 0 ? 'income' : 'expense'),
+      description: r.description,
+      counterparty: r.counterparty,
+      iban: r.iban ?? undefined,
+      reference: r.reference ?? undefined,
+      categoryId: '',
+      merchantKey: findMerchant(`${r.description} ${r.counterparty}`)?.merchantKey,
+      customLabel: r.customLabel ?? undefined,
+      customIcon: r.customIcon ?? undefined,
+    }
+    const profile = resolveProfile(tx, profiles)
+    tx.categoryId  = r.categoryId  ?? profile?.categoryId ?? autoCategory(r.description, r.counterparty)
+    tx.customLabel = r.customLabel ?? profile?.label      ?? undefined
+    tx.customIcon  = r.customIcon  ?? profile?.customIcon  ?? undefined
+    return tx
+  })
 }
 
 export function transactionToMergeRow(t: Transaction): MergeRow {

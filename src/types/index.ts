@@ -48,6 +48,8 @@ export interface MerchantProfile {
   matchMode: 'exact' | 'contains'
   label?: string
   customIcon?: string
+  /** Category applied to every transaction matching this pattern. */
+  categoryId?: string
 }
 
 export interface Account {

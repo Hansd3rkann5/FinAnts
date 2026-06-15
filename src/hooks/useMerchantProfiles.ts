@@ -47,7 +47,7 @@ export function useMerchantProfiles() {
     profileId: string | null,
     matchStrings: string[],
     matchMode: 'exact' | 'contains',
-    patch: { label?: string; customIcon?: string },
+    patch: { label?: string; customIcon?: string; categoryId?: string },
   ) => {
     setMerchantProfiles(prev => {
       let next: MerchantProfile[]

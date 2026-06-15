@@ -1,67 +1,21 @@
 import { useState, useCallback } from 'react'
-import type { Category, MerchantProfile } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import type { WorkerConfig } from './useWorkerSync'
-import { cfHeaders } from '@/utils/cfAuth'
-
-export interface TxOverride {
-  categoryId: string
-  customLabel?: string
-  customIcon?: string
-}
-
-export interface CloudState {
-  version: 1
-  updatedAt: string
-  customCategories: Category[]
-  merchantProfiles: MerchantProfile[]
-  // Retired: per-tx edits now live in the D1 store. Kept optional only so older
-  // backups still parse without error.
-  txOverrides?: Record<string, TxOverride>
-}
+import { pushCloudState, pullCloudState, type CloudState } from '@/utils/cloudSync'
 
 const LAST_CLOUD_SYNC_KEY = 'finants_cloud_sync'
-const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
-
-async function pushToCloud(workerUrl: string, state: CloudState): Promise<void> {
-  const res = await fetch(new URL('/state', workerUrl).toString(), {
-    method: 'PUT',
-    credentials: 'include',
-    headers: cfHeaders(),
-    body: JSON.stringify(state),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as { error?: string }
-    throw new Error(err.error ?? `HTTP ${res.status}`)
-  }
-}
-
-async function pullFromCloud(workerUrl: string): Promise<CloudState | null> {
-  const res = await fetch(new URL('/state', workerUrl).toString(), {
-    credentials: 'include',
-    headers: cfHeaders(),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as { error?: string }
-    throw new Error(err.error ?? `HTTP ${res.status}`)
-  }
-  return res.json() as Promise<CloudState | null>
-}
 
 export type CloudSyncStatus = 'idle' | 'pushing' | 'pulling' | 'success' | 'error'
 
+// Manual Cloud-Backup buttons. Categories + merchant profiles now also sync
+// automatically (see TransactionsContext); these remain as an explicit force.
 export function useCloudSync() {
   const ctx = useTransactionsCtx()
   const [status, setStatus] = useState<CloudSyncStatus>('idle')
   const [message, setMessage] = useState('')
   const [lastSync, setLastSync] = useState<string | null>(() => localStorage.getItem(LAST_CLOUD_SYNC_KEY))
 
-  function resolveUrl(override?: WorkerConfig) {
-    return (override?.workerUrl ?? WORKER_URL).replace(/\/$/, '')
-  }
-
-  const push = useCallback(async (override?: WorkerConfig) => {
-    const url = resolveUrl(override)
+  const push = useCallback(async (_override?: WorkerConfig) => {
     setStatus('pushing')
     setMessage('')
     try {
@@ -71,7 +25,7 @@ export function useCloudSync() {
         customCategories: ctx.customCategories,
         merchantProfiles: ctx.merchantProfiles,
       }
-      await pushToCloud(url, state)
+      await pushCloudState(state)
       const time = new Date().toLocaleString('de-DE')
       localStorage.setItem(LAST_CLOUD_SYNC_KEY, time)
       setLastSync(time)
@@ -83,12 +37,11 @@ export function useCloudSync() {
     }
   }, [ctx])
 
-  const pull = useCallback(async (override?: WorkerConfig) => {
-    const url = resolveUrl(override)
+  const pull = useCallback(async (_override?: WorkerConfig) => {
     setStatus('pulling')
     setMessage('')
     try {
-      const state = await pullFromCloud(url)
+      const state = await pullCloudState()
       if (!state) throw new Error('Kein Backup vorhanden')
       ctx.applyCloudCategories(state.customCategories ?? [])
       ctx.applyCloudProfiles(state.merchantProfiles ?? [])

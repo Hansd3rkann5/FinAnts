@@ -1,8 +1,10 @@
 // ─── D1 transaction store ────────────────────────────────────────────────────
 //
-// Canonical store for all transactions. The primary key is a deterministic
-// dedup hash derived from the transaction's natural fields, so re-importing the
-// same CSV or re-pulling the same bank window only inserts the delta.
+// Canonical store for all transactions. Rows get a random unique id; de-dup is
+// done explicitly at merge time by matching amount + counterparty within a small
+// date window (see mergeTransactions), so the same transaction imported from
+// CSV and EnableBanking — which book it on slightly different dates — collapses
+// to a single row, keeping the better-structured source.
 
 // Input accepted by the merge endpoint. Covers both the client `Transaction`
 // shape (counterparty iban in `iban`) and the worker's `MappedTransaction`
@@ -73,25 +75,26 @@ function counterpartyIbanOf(r: MergeInput): string {
   return r.iban ?? r.counterpartyIban ?? ''
 }
 
-// IBANs must match across sources, but CSV exports may contain spaces
-// (DE89 3704 …) while EnableBanking returns them unspaced — strip all
-// whitespace so they key identically.
-function normIban(s?: string | null): string {
-  return (s ?? '').replace(/\s+/g, '').toLowerCase()
+// Cross-source dedup tuning. EnableBanking books a transaction ~1 day after the
+// CSV Buchungstag, so the same transaction carries a slightly different date in
+// each source. We therefore match on amount + counterparty within a small date
+// window (not the exact date), and — when an incoming row matches an existing
+// one — keep the better-structured source (EB > FinTS > CSV).
+const DEDUP_TOL_DAYS = 2
+const SOURCE_RANK: Record<string, number> = { csv: 1, fints: 2, eb: 3 }
+function rankOf(source?: string | null): number {
+  return SOURCE_RANK[source ?? ''] ?? 0
 }
 
-function makeBase(r: MergeInput): string {
-  // Source-independent dedup: counterparty/description are intentionally
-  // excluded because CSV and EnableBanking format them differently for the same
-  // transaction. account + date + amount, plus the occurrence index added by
-  // toStored, is enough to match the same transaction across both sources.
-  const cents = Math.round(r.amount * 100)
-  return [normIban(r.accountIban), normDate(r.date), cents].join('|')
+// The same transaction across sources shares amount + counterparty. Date is
+// compared separately within DEDUP_TOL_DAYS, so recurring same-amount merchants
+// that are weeks apart are NOT collapsed.
+function matchKey(amount: number, counterparty?: string | null): string {
+  return `${Math.round(amount * 100)}|${norm(counterparty)}`
 }
 
-async function sha256hex(input: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input))
-  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('')
+function dayNumber(dateStr: string): number {
+  return Math.floor(new Date(dateStr).getTime() / 86_400_000)
 }
 
 // ─── Operations ──────────────────────────────────────────────────────────────
@@ -129,21 +132,13 @@ export async function getTransactions(db: D1Database): Promise<StoredTx[]> {
   return (results ?? []).map(rowToStored)
 }
 
-// Derive canonical rows (with deterministic ids) from raw input. Pending rows
-// are skipped — their key changes once they book, which would otherwise leave a
-// stale duplicate. Identical rows within one batch get an occurrence index so
-// genuine same-day/same-amount duplicates stay distinct yet idempotent.
-export async function toStored(rows: MergeInput[], source: string): Promise<StoredTx[]> {
-  const persistable = rows.filter(r => !r.isPending && r.date)
-  const baseCounts = new Map<string, number>()
-  const out: StoredTx[] = []
-  for (const r of persistable) {
-    const base = makeBase(r)
-    const occ = baseCounts.get(base) ?? 0
-    baseCounts.set(base, occ + 1)
-    const id = await sha256hex(`${base}|${occ}`)
-    out.push({
-      id,
+// Map raw input rows to stored rows with fresh unique ids. Pending rows are
+// skipped — their booking date (and thus identity) is still volatile.
+export function toStored(rows: MergeInput[], source: string): StoredTx[] {
+  return rows
+    .filter(r => !r.isPending && r.date)
+    .map(r => ({
+      id: crypto.randomUUID(),
       date: normDate(r.date),
       amount: r.amount,
       type: r.type ?? (r.amount >= 0 ? 'income' : 'expense'),
@@ -156,40 +151,81 @@ export async function toStored(rows: MergeInput[], source: string): Promise<Stor
       customLabel: r.customLabel ?? null,
       customIcon: r.customIcon ?? null,
       source,
-    })
-  }
-  return out
+    }))
 }
 
-// Insert only the delta. `meta.changes` is the number of rows actually inserted
-// (0 for an ignored conflict), giving `added`.
+// Merge a batch into the canonical store with cross-source de-duplication.
+// For each incoming row we look for an existing row with the same amount +
+// counterparty whose date is within DEDUP_TOL_DAYS. If found, we keep whichever
+// source ranks higher — replacing the existing row when the incoming one wins
+// (e.g. an EB pull supersedes the matching CSV row). Unmatched rows are
+// inserted. Returns net-new count + total.
 export async function mergeTransactions(
   db: D1Database,
   rows: MergeInput[],
   source: string,
 ): Promise<{ added: number; total: number }> {
-  const derived = await toStored(rows, source)
-  const now = new Date().toISOString()
+  const incoming = rows.filter(r => !r.isPending && r.date)
 
-  const stmts = derived.map(t =>
-    db.prepare(
-      `INSERT INTO transactions
-         (id, date, amount, type, description, counterparty, iban, account_iban, reference, category_id, custom_label, custom_icon, source, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-       ON CONFLICT(id) DO NOTHING`,
-    ).bind(
-      t.id, t.date, t.amount, t.type, t.description, t.counterparty,
-      t.iban, t.accountIban, t.reference, t.categoryId, t.customLabel, t.customIcon, t.source, now,
-    ),
-  )
+  const { results: existing } = await db
+    .prepare('SELECT id, date, amount, counterparty, source FROM transactions')
+    .all<{ id: string; date: string; amount: number; counterparty: string; source: string | null }>()
 
-  let added = 0
-  if (stmts.length) {
-    const results = await db.batch(stmts)
-    added = results.reduce((sum, res) => sum + (res.meta?.changes ?? 0), 0)
+  const index = new Map<string, { id: string; day: number; source: string | null }[]>()
+  for (const e of existing ?? []) {
+    const k = matchKey(e.amount, e.counterparty)
+    const arr = index.get(k) ?? []
+    arr.push({ id: e.id, day: dayNumber(e.date), source: e.source })
+    index.set(k, arr)
   }
+
+  const claimed = new Set<string>()   // existing rows already matched this batch
+  const toDelete: string[] = []
+  const toInsertRows: MergeInput[] = []
+  const incomingRank = rankOf(source)
+
+  for (const r of incoming) {
+    const day = dayNumber(r.date)
+    const candidates = (index.get(matchKey(r.amount, r.counterparty)) ?? []).filter(c => !claimed.has(c.id))
+    let best: { id: string; day: number; source: string | null } | null = null
+    let bestDiff = Infinity
+    for (const c of candidates) {
+      const diff = Math.abs(day - c.day)
+      if (diff <= DEDUP_TOL_DAYS && diff < bestDiff) { best = c; bestDiff = diff }
+    }
+    if (best) {
+      claimed.add(best.id)
+      if (incomingRank > rankOf(best.source)) {
+        toDelete.push(best.id)   // incoming source wins → replace existing
+        toInsertRows.push(r)
+      }
+      // else: existing row wins → skip incoming
+    } else {
+      toInsertRows.push(r)
+    }
+  }
+
+  const toInsert = toStored(toInsertRows, source)
+  const now = new Date().toISOString()
+  const stmts: D1PreparedStatement[] = []
+  for (const id of toDelete) {
+    stmts.push(db.prepare('DELETE FROM transactions WHERE id = ?').bind(id))
+  }
+  for (const t of toInsert) {
+    stmts.push(
+      db.prepare(
+        `INSERT INTO transactions
+           (id, date, amount, type, description, counterparty, iban, account_iban, reference, category_id, custom_label, custom_icon, source, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ).bind(
+        t.id, t.date, t.amount, t.type, t.description, t.counterparty,
+        t.iban, t.accountIban, t.reference, t.categoryId, t.customLabel, t.customIcon, t.source, now,
+      ),
+    )
+  }
+  if (stmts.length) await db.batch(stmts)
   const total = await countRows(db)
-  return { added, total }
+  return { added: toInsert.length - toDelete.length, total }
 }
 
 export async function updateTransaction(
