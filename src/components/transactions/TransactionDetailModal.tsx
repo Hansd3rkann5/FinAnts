@@ -11,10 +11,11 @@ import { useAllCategories } from '@/hooks/useAllCategories'
 import { MerchantLogo } from './MerchantLogo'
 import { findMerchant } from '@/utils/merchantLogos'
 import { AmountDisplay } from '@/components/ui/AmountDisplay'
-import { loadWorkerConfig } from '@/hooks/useWorkerSync'
+import { resolveWorkerUrl } from '@/hooks/useWorkerSync'
 import { getApiKey } from '@/utils/cfAuth'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { resolveProfile } from '@/hooks/useMerchantProfiles'
+import { reportError } from '@/utils/notify'
 
 const EMOJI_PRESETS = [
   '🛒','🍕','🍔','🍣','🍜','🥐','☕','🍷','🥤',
@@ -165,17 +166,14 @@ export function TransactionDetailModal({ transaction: tx, onClose, onUpdate }: P
     setUploadError('')
     setUploading(true)
     try {
+      // Always upload to R2 → the icon is stored as a small /icon/<id> URL.
+      // (Embedding a base64 data URL here would bloat localStorage and matching
+      // transactions, which previously blew the storage quota.)
       const blob = await resizeToWebP(file)
-      const cfg = loadWorkerConfig()
-      if (cfg?.workerUrl) {
-        setIcon(await uploadIcon(blob, cfg.workerUrl))
-      } else {
-        const reader = new FileReader()
-        reader.onload = ev => setIcon(ev.target?.result as string)
-        reader.readAsDataURL(blob)
-      }
+      setIcon(await uploadIcon(blob, resolveWorkerUrl()))
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Upload fehlgeschlagen')
+      reportError('Icon-Upload', err)
     } finally {
       setUploading(false)
     }

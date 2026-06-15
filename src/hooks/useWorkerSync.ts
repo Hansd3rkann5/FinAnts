@@ -54,6 +54,14 @@ export function saveWorkerConfig(cfg: WorkerConfig) {
   localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg))
 }
 
+const DEFAULT_WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
+
+// The worker base URL — saved config if present, otherwise the built-in default.
+// Use this everywhere instead of gating on loadWorkerConfig() (which is usually null).
+export function resolveWorkerUrl(): string {
+  return (loadWorkerConfig()?.workerUrl ?? DEFAULT_WORKER_URL).replace(/\/$/, '')
+}
+
 export function loadLastSync(): string | null {
   return localStorage.getItem(LAST_SYNC_KEY)
 }
