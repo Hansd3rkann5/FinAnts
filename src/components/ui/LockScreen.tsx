@@ -43,7 +43,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-200 flex flex-col items-center justify-center bg-bg-base text-white px-8"
+    <div className="fixed inset-0 z-250 flex flex-col items-center justify-center bg-bg-base text-white px-8"
          style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="flex flex-col items-center gap-6 w-full max-w-xs">
         <div className="text-3xl">🐜</div>
@@ -75,7 +75,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
               onClick={() => press(k)}
               disabled={!k}
               className={`h-16 rounded-card_sm flex items-center justify-center text-2xl font-light transition-colors ${
-                k ? 'bg-white/[0.06] border border-white/8 active:bg-white/15' : 'opacity-0 pointer-events-none'
+                k ? 'bg-white/6 border border-white/8 active:bg-white/15' : 'opacity-0 pointer-events-none'
               }`}
             >
               {k === 'del' ? <Delete size={22} className="text-white/60" /> : k}

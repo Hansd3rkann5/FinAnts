@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { TransactionsProvider } from './context/TransactionsContext'
 import { ModalProvider } from './context/ModalContext'
@@ -9,25 +9,34 @@ import { LockScreen } from './components/ui/LockScreen'
 import { isLockEnabled } from './utils/appLock'
 
 export default function App() {
-  // Gate the whole app (incl. data load) behind the lock until unlocked.
+  // Locked on first open, and re-locked whenever the app is backgrounded
+  // (home screen / app switch). The LockScreen is an opaque overlay so the app
+  // stays mounted underneath — no reload/re-fetch on every return.
   const [locked, setLocked] = useState(isLockEnabled)
+
+  useEffect(() => {
+    const relock = () => { if (document.hidden && isLockEnabled()) setLocked(true) }
+    document.addEventListener('visibilitychange', relock)
+    window.addEventListener('pagehide', relock)
+    return () => {
+      document.removeEventListener('visibilitychange', relock)
+      window.removeEventListener('pagehide', relock)
+    }
+  }, [])
 
   return (
     <ErrorBoundary>
       <ToastHost />
-      {locked ? (
-        <LockScreen onUnlock={() => setLocked(false)} />
-      ) : (
-        <HashRouter>
-          <ModalProvider>
-            <TransactionsProvider>
-              <Routes>
-                <Route path="/*" element={<AppShell />} />
-              </Routes>
-            </TransactionsProvider>
-          </ModalProvider>
-        </HashRouter>
-      )}
+      <HashRouter>
+        <ModalProvider>
+          <TransactionsProvider>
+            <Routes>
+              <Route path="/*" element={<AppShell />} />
+            </Routes>
+          </TransactionsProvider>
+        </ModalProvider>
+      </HashRouter>
+      {locked && <LockScreen onUnlock={() => setLocked(false)} />}
     </ErrorBoundary>
   )
 }
