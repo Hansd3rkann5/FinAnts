@@ -46,10 +46,7 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect, fil
       .map(([catId, items]) => ({
         cat: allMap[catId] ?? CATEGORIES['other'],
         items: items.sort((a, b) => b.tx.date.getTime() - a.tx.date.getTime()),
-        // Total = expense sum only (absolute), matching the pie chart. Positive
-        // transactions in the same category are visible in the list but don't
-        // affect this total.
-        total: items.filter(it => it.amount < 0).reduce((sum, it) => sum + Math.abs(it.amount), 0),
+        total: items.reduce((sum, it) => sum + it.amount, 0),
       }))
       .sort((a, b) => b.total - a.total)
   }, [transactions, filter, allMap])
@@ -113,8 +110,8 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect, fil
                             <p className="text-sm text-white/80">{cat.label}</p>
                             <p className="text-[10px] text-white/30">{items.length} Buchung{items.length !== 1 ? 'en' : ''}</p>
                           </div>
-                          <p className="text-sm font-semibold shrink-0 mr-1 text-white/60">
-                            {formatEur(total)}
+                          <p className={`text-sm font-semibold shrink-0 mr-1 ${total >= 0 ? 'text-emerald-400' : 'text-white/60'}`}>
+                            {total >= 0 ? '+' : ''}{formatEur(total)}
                           </p>
                           {isExpanded
                             ? <ChevronUp size={14} className="shrink-0 text-white/30" />

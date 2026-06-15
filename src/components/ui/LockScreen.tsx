@@ -43,8 +43,13 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-250 flex flex-col items-center justify-center bg-bg-base text-white px-8"
-         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="fixed inset-0 z-250 flex flex-col items-center justify-center text-white px-8"
+         style={{
+          backgroundColor: 'rgba(26,26,40,0.6)',
+          paddingTop: 'env(safe-area-inset-top)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          }}>
       <div className="flex flex-col items-center gap-6 w-full max-w-xs">
         <div className="text-3xl">🐜</div>
         <p className="text-sm text-white/50">FinAnts ist gesperrt</p>
