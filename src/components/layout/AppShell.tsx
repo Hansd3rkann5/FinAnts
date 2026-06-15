@@ -1,10 +1,10 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
 import { Dashboard } from '@/pages/Dashboard'
 import { Transactions } from '@/pages/Transactions'
 import { Settings } from '@/pages/Settings'
-import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
+import { usePagerSwipe } from '@/hooks/useSwipeNavigation'
 
 // Order must mirror the BottomNav (left → right): Buchungen · Übersicht · Einstellungen
 const TABS = [
@@ -18,25 +18,24 @@ export function AppShell() {
   const navigate = useNavigate()
   const n = TABS.length
   const activeIndex = Math.max(0, TABS.findIndex(t => t.path === pathname))
+  const trackRef = useRef<HTMLDivElement>(null)
 
-  const onPrev = useCallback(() => {
-    if (activeIndex > 0) navigate(TABS[activeIndex - 1].path)
-  }, [activeIndex, navigate])
-  const onNext = useCallback(() => {
-    if (activeIndex < TABS.length - 1) navigate(TABS[activeIndex + 1].path)
-  }, [activeIndex, navigate])
+  const goTo = useCallback((i: number) => navigate(TABS[i].path), [navigate])
 
-  useSwipeNavigation('app-main', { onPrev, onNext })
+  // Live, finger-following swipe; the hook drives the track's transform.
+  usePagerSwipe(trackRef, n, activeIndex, goTo)
 
   return (
     <div id="app-shell" className="flex-1 min-h-0 bg-bg-base text-white flex flex-col">
       <main id="app-main" className="mt-12 flex-1 overflow-hidden relative" style={{ height: '100vh' }}>
-        {/* Filmstrip: pages sit side-by-side in navbar order; the track slides to
-            the active tab, so the swipe direction mirrors the page's position in
-            the navbar. All pages stay mounted (scroll position + state kept). */}
+        {/* Filmstrip: pages sit side-by-side in navbar order; the track follows
+            the finger during a horizontal swipe (transform managed by
+            usePagerSwipe) and snaps to a page on release. All pages stay
+            mounted (scroll position + state kept). */}
         <div
-          className="flex h-full transition-transform duration-300 ease-out"
-          style={{ width: `${n * 100}%`, transform: `translateX(-${activeIndex * (100 / n)}%)` }}
+          ref={trackRef}
+          className="flex h-full"
+          style={{ width: `${n * 100}%` }}
         >
           {TABS.map(({ path, Component, scrollId }) => (
             <div
