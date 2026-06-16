@@ -1,4 +1,6 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import type { Transaction } from '@/types'
 import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
@@ -19,7 +21,7 @@ import { useAccounts } from '@/hooks/useAccounts'
 import { detectAndParse } from '@/utils/csvParser'
 import { useWorkerSync, type SyncStatus } from '@/hooks/useWorkerSync'
 import { ChartLoader } from '@/components/ui/ChartLoader'
-import { useErrorLog, notify } from '@/utils/notify'
+import { useErrorLog, notify, fetchErrorLogRemote, clearErrorLogRemote, type RemoteLoggedError } from '@/utils/notify'
 import { isLockEnabled, hasBiometric, webauthnSupported, enableLock, disableLock } from '@/utils/appLock'
 
 const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
@@ -107,10 +109,12 @@ function CollapsibleCard({
 }
 
 export function Settings() {
-  const { transactions, importTransactions, applyServerTransactions, clearAll } = useTransactionsCtx()
+  const { transactions, importTransactions, importLocalOnly, applyServerTransactions, clearAll } = useTransactionsCtx()
   const { accounts, setAccounts, toggleIncluded } = useAccounts()
   const { baseBalance: manualBalance, updatedAt: balanceUpdatedAt, save: saveBalance } = useManualBalance()
   const { entries: errorLog, clear: clearErrorLog } = useErrorLog()
+  const [remoteErrors, setRemoteErrors] = useState<RemoteLoggedError[] | null>(null)
+  const [remoteErrorsLoading, setRemoteErrorsLoading] = useState(false)
   const [lockEnabled, setLockEnabled] = useState(isLockEnabled())
   const [pinInput, setPinInput] = useState('')
   const [useFaceId, setUseFaceId] = useState(webauthnSupported())
@@ -132,6 +136,26 @@ export function Settings() {
     disableLock()
     setLockEnabled(false)
   }
+
+  async function loadRemoteErrors() {
+    setRemoteErrorsLoading(true)
+    try {
+      setRemoteErrors(await fetchErrorLogRemote())
+    } catch (e) {
+      notify('Globales Protokoll konnte nicht geladen werden', e instanceof Error ? e.message : '')
+    } finally {
+      setRemoteErrorsLoading(false)
+    }
+  }
+
+  async function handleClearRemoteErrors() {
+    try {
+      await clearErrorLogRemote()
+      setRemoteErrors([])
+    } catch (e) {
+      notify('Leeren fehlgeschlagen', e instanceof Error ? e.message : '')
+    }
+  }
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle')
   const [importMessage, setImportMessage] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
@@ -141,9 +165,10 @@ export function Settings() {
 
   // API key auth state
   const [apiKey, setApiKeyState] = useState<string>(() => getApiKey() ?? '')
-  const [apiKeyInput, setApiKeyInput] = useState('')
+  const [apiKeyInput, setApiKeyInput] = useState<string>(() => getApiKey() ?? '')
 
-  useEffect(() => { setApiKeyInput(apiKey) }, [apiKey])
+  const [pendingParsed, setPendingParsed] = useState<Transaction[] | null>(null)
+  const [localImportOpen, setLocalImportOpen] = useState(false)
 
   const [syncDays, setSyncDays] = useState(90)
   const { sync, submitTan, dismissChallenge, status: syncStatus, message: syncMessage, lastSync, challenge } =
@@ -165,6 +190,12 @@ export function Settings() {
       const text = await file.text()
       const parsed = detectAndParse(text)
       if (parsed.length === 0) throw new Error('Keine Buchungen gefunden. Bitte prüfe das Dateiformat.')
+      if (!getApiKey()) {
+        setPendingParsed(parsed)
+        setLocalImportOpen(true)
+        setImportStatus('idle')
+        return
+      }
       const meta = await importTransactions(parsed)
       setImportStatus('success')
       setImportMessage(`${meta.added} neu von ${parsed.length} · ${meta.total} gesamt`)
@@ -172,6 +203,21 @@ export function Settings() {
       setImportStatus('error')
       setImportMessage(e instanceof Error ? e.message : 'Unbekannter Fehler')
     }
+  }
+
+  function handleConfirmLocal() {
+    if (!pendingParsed) return
+    const meta = importLocalOnly(pendingParsed)
+    setPendingParsed(null)
+    setLocalImportOpen(false)
+    setImportStatus('success')
+    setImportMessage(`${meta.added} neu von ${pendingParsed.length} · ${meta.total} gesamt (nur lokal)`)
+  }
+
+  function handleAbortLocal() {
+    setPendingParsed(null)
+    setLocalImportOpen(false)
+    setImportStatus('idle')
   }
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -635,6 +681,61 @@ export function Settings() {
               </div>
             </div>
           )}
+
+          <div className="mt-4 pt-4 border-t border-white/8">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] text-white/60 uppercase tracking-wider">Geräteübergreifend (Server)</p>
+              <PillButton
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw size={12} className={remoteErrorsLoading ? 'animate-spin' : ''} />}
+                onClick={loadRemoteErrors}
+                disabled={remoteErrorsLoading || !getApiKey()}
+              >
+                {remoteErrors === null ? 'Laden' : 'Aktualisieren'}
+              </PillButton>
+            </div>
+            {!getApiKey() ? (
+              <p className="text-xs text-white/40">Kein API-Key hinterlegt — globales Protokoll nicht verfügbar.</p>
+            ) : remoteErrors === null ? (
+              <p className="text-xs text-white/40">Noch nicht geladen.</p>
+            ) : remoteErrors.length === 0 ? (
+              <p className="text-xs text-white/40">Keine Fehler aufgezeichnet.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+                  {remoteErrors.map(e => (
+                    <div key={e.id} className="rounded-card_sm border border-white/8 bg-white/[0.03] p-2">
+                      <p className="text-[11px] font-medium text-white/70">
+                        {e.context}
+                        <span className="text-white/30"> · {new Date(e.time).toLocaleString('de-DE')}</span>
+                        {e.device && <span className="text-white/30"> · {e.device.slice(0, 40)}</span>}
+                      </p>
+                      <p className="text-[11px] text-white/45 break-words">{e.message}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <PillButton
+                    variant="secondary"
+                    size="sm"
+                    icon={<Copy size={13} />}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(JSON.stringify(remoteErrors, null, 2))
+                        notify('Globales Protokoll kopiert')
+                      } catch { /* clipboard unavailable */ }
+                    }}
+                  >
+                    Kopieren
+                  </PillButton>
+                  <PillButton variant="ghost" size="sm" icon={<Trash2 size={13} />} onClick={handleClearRemoteErrors}>
+                    Leeren
+                  </PillButton>
+                </div>
+              </div>
+            )}
+          </div>
         </CollapsibleCard>
 
         <div className="flex justify-center">
@@ -656,6 +757,59 @@ export function Settings() {
         </GlassCard>
 
       </div>
+
+      {createPortal(
+        <AnimatePresence>
+          {localImportOpen && (
+            <>
+              <motion.div
+                key="local-import-backdrop"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md"
+                onClick={handleAbortLocal}
+              />
+              <motion.div
+                key="local-import-dialog"
+                initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                className="fixed inset-0 z-51 flex items-center justify-center px-6 pointer-events-none"
+              >
+                <div
+                  className="pointer-events-auto w-full max-w-xs rounded-2xl border border-white/10 overflow-hidden"
+                  style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.6) 100%)', backdropFilter: 'blur(var(--blur-modal))', WebkitBackdropFilter: 'blur(var(--blur-modal))' }}
+                >
+                  <div className="flex flex-col items-center gap-1 px-5 pt-6 pb-4 text-center">
+                    <div className="w-11 h-11 rounded-full bg-amber-500/15 border border-amber-500/25 flex items-center justify-center mb-2">
+                      <AlertCircle size={18} className="text-amber-400" />
+                    </div>
+                    <p className="text-sm font-semibold text-white/90">Kein API-Key hinterlegt</p>
+                    <p className="text-xs text-white/50 mt-1 leading-relaxed">
+                      Die CSV-Daten werden nur lokal im Browser gespeichert und nicht in die Datenbank hochgeladen.
+                      Du kannst sie nach Eingabe des API-Keys jederzeit erneut importieren.
+                    </p>
+                  </div>
+                  <div className="flex border-t border-white/8">
+                    <button
+                      onClick={handleAbortLocal}
+                      className="flex-1 py-3.5 text-sm text-white/50 hover:text-white/80 transition-colors border-r border-white/8"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      onClick={handleConfirmLocal}
+                      className="flex-1 py-3.5 text-sm font-medium text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      Nur lokal speichern
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   )
 }

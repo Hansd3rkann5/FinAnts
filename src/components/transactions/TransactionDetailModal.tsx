@@ -95,18 +95,17 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
   const [customInput, setCustomInput] = useState('')
   const [existingProfileId, setExistingProfileId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const emojiInputRef = useRef<HTMLInputElement>(null)
+  const [emojiInputOpen, setEmojiInputOpen] = useState(false)
 
   function handleEmojiInput(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value
-    e.target.value = ''
     if (!val) return
     try {
       const first = [...new Intl.Segmenter().segment(val)][0]?.segment
-      if (first) setIcon(first)
+      if (first) { setIcon(first); setEmojiInputOpen(false) }
     } catch {
       const first = [...val][0]
-      if (first) setIcon(first)
+      if (first) { setIcon(first); setEmojiInputOpen(false) }
     }
   }
 
@@ -572,11 +571,22 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                             </button>
                           )}
                           <button
-                            onClick={() => emojiInputRef.current?.focus()}
+                            onClick={() => setEmojiInputOpen(true)}
                             className="aspect-square flex items-center justify-center rounded-md bg-white/8 hover:bg-white/14 text-white/50 hover:text-white/80 transition-all active:scale-90"
                           ><Plus size={16} /></button>
                         </div>
-                        <input ref={emojiInputRef} type="text" onChange={handleEmojiInput} className="sr-only" autoComplete="off" autoCorrect="off" aria-label="Emoji eingeben" />
+                        {emojiInputOpen && (
+                          <input
+                            type="text"
+                            autoFocus
+                            onChange={handleEmojiInput}
+                            onBlur={() => setEmojiInputOpen(false)}
+                            className="mt-1 w-full rounded-card_sm bg-white/10 border border-white/20 px-3 py-2 text-sm text-white placeholder-white/40 outline-none focus:border-purple-500/50"
+                            placeholder="Emoji eingeben…"
+                            autoComplete="off"
+                            autoCorrect="off"
+                          />
+                        )}
                       </>
                     )}
 

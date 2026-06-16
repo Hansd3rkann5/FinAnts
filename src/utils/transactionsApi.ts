@@ -130,6 +130,77 @@ export function transactionToMergeRow(t: Transaction): MergeRow {
   }
 }
 
+function norm(s?: string | null): string {
+  return (s ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function normDate(d: string): string {
+  const dt = new Date(d)
+  return isNaN(dt.getTime()) ? d.slice(0, 10) : dt.toISOString().slice(0, 10)
+}
+
+function matchKey(amount: number, counterparty?: string | null): string {
+  return `${Math.round(amount * 100)}|${norm(counterparty)}`
+}
+
+function dayNum(dateStr: string): number {
+  return Math.floor(new Date(dateStr).getTime() / 86_400_000)
+}
+
+const DEDUP_TOL_DAYS = 2
+
+// Client-side merge for local-only import (no API key). Mirrors the worker's
+// dedup logic: same amount + counterparty within DEDUP_TOL_DAYS collapses to
+// the existing row. New rows get a random id and are prepended, sorted newest-first.
+export function mergeLocal(existing: StoredTx[], incoming: MergeRow[]): MergeResult {
+  const filtered = incoming.filter(r => !r.isPending && r.date)
+
+  const index = new Map<string, { id: string; day: number }[]>()
+  for (const e of existing) {
+    const k = matchKey(e.amount, e.counterparty)
+    const arr = index.get(k) ?? []
+    arr.push({ id: e.id, day: dayNum(e.date) })
+    index.set(k, arr)
+  }
+
+  const claimed = new Set<string>()
+  const toAdd: StoredTx[] = []
+
+  for (const r of filtered) {
+    const date = normDate(r.date)
+    const day = dayNum(date)
+    const candidates = (index.get(matchKey(r.amount, r.counterparty)) ?? []).filter(c => !claimed.has(c.id))
+    let best: { id: string; day: number } | null = null
+    let bestDiff = Infinity
+    for (const c of candidates) {
+      const diff = Math.abs(day - c.day)
+      if (diff <= DEDUP_TOL_DAYS && diff < bestDiff) { best = c; bestDiff = diff }
+    }
+    if (best) {
+      claimed.add(best.id)
+    } else {
+      toAdd.push({
+        id: crypto.randomUUID(),
+        date,
+        amount: r.amount,
+        type: r.type ?? (r.amount >= 0 ? 'income' : 'expense'),
+        description: r.description ?? '',
+        counterparty: r.counterparty ?? '',
+        iban: r.iban ?? null,
+        accountIban: r.accountIban ?? null,
+        reference: r.reference ?? null,
+        categoryId: null,
+        customLabel: null,
+        customIcon: null,
+        source: 'csv',
+      })
+    }
+  }
+
+  const merged = [...toAdd, ...existing].sort((a, b) => b.date.localeCompare(a.date))
+  return { transactions: merged, meta: { added: toAdd.length, total: merged.length } }
+}
+
 export async function fetchTransactions(): Promise<StoredTx[]> {
   const res = await fetch(`${workerUrl()}/transactions`, { credentials: 'include', headers: cfHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

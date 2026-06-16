@@ -33,3 +33,4 @@ worker/node_modules
 # Personal PayPal exports + extracted data (never commit)
 PayPal_*.rtf
 paypal*.csv
+mockup.csv

@@ -3,6 +3,8 @@
 // which (1) shows a top toast with a short hint and (2) appends to a capped,
 // persisted error log in localStorage so issues can be reviewed later.
 import { useSyncExternalStore } from 'react'
+import { cfHeaders, getApiKey } from './cfAuth'
+import { resolveWorkerUrl } from '@/hooks/useWorkerSync'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -94,14 +96,44 @@ function toMessage(error: unknown): { message: string; stack?: string } {
   try { return { message: JSON.stringify(error) } } catch { return { message: String(error) } }
 }
 
-// Log a non-fatal failure: console + persisted log + top toast. The same
-// error firing repeatedly within the throttle window is recorded once.
+// Fire-and-forget push to the global (D1-backed) error log so issues are
+// visible across devices, not just in this browser's localStorage. Must
+// never throw or call reportError itself — a failure here (e.g. the network
+// being the actual cause of the original error) would otherwise recurse.
+function pushErrorRemote(entry: LoggedError) {
+  if (!getApiKey()) return
+  fetch(`${resolveWorkerUrl()}/errors`, {
+    method: 'POST', headers: cfHeaders(),
+    body: JSON.stringify({ ...entry, device: navigator.userAgent.slice(0, 200) }),
+  }).catch(() => { /* best-effort only */ })
+}
+
+// Log a non-fatal failure: console + persisted log + top toast + remote push.
+// The same error firing repeatedly within the throttle window is recorded once.
 export function reportError(context: string, error: unknown) {
   const { message, stack } = toMessage(error)
   console.error(`[${context}]`, error)
   if (throttled(`err:${context}|${message}`)) return
-  appendLog({ id: crypto.randomUUID(), time: new Date().toISOString(), context, message, stack })
+  const entry = { id: crypto.randomUUID(), time: new Date().toISOString(), context, message, stack }
+  appendLog(entry)
   pushToast('error', context, message)
+  pushErrorRemote(entry)
+}
+
+// ─── Global (D1-backed) error log ───────────────────────────────────────────
+
+export interface RemoteLoggedError extends LoggedError { device?: string | null }
+
+export async function fetchErrorLogRemote(): Promise<RemoteLoggedError[]> {
+  const res = await fetch(`${resolveWorkerUrl()}/errors`, { headers: cfHeaders() })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = await res.json() as { errors?: RemoteLoggedError[] }
+  return data.errors ?? []
+}
+
+export async function clearErrorLogRemote(): Promise<void> {
+  const res = await fetch(`${resolveWorkerUrl()}/errors/clear`, { method: 'POST', headers: cfHeaders() })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
 // Informational toast (no error log entry).

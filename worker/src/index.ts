@@ -2,6 +2,7 @@ import { syncAll, blzFromIban } from './fints'
 import { ebStartAuth, ebExchangeAndSync, ebGetAspsps } from './enablebanking'
 import {
   mergeTransactions, getTransactions, updateTransaction, deleteTransaction, clearTransactions, toStored,
+  insertError, getErrors, clearErrors,
   type MergeInput, type StoredTx,
 } from './db'
 
@@ -31,7 +32,7 @@ function corsHeaders(requestOrigin: string): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Api-Key',
     'Access-Control-Max-Age': '86400',
   }
@@ -144,6 +145,35 @@ export default {
     if (request.method === 'POST' && path === '/transactions/clear') {
       if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
       await clearTransactions(env.DB)
+      return jsonResponse({ ok: true }, 200, cors)
+    }
+
+    // ── POST /errors — append one entry to the global error log ──────────
+    if (request.method === 'POST' && path === '/errors') {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      let body: { id?: string; time?: string; context?: string; message?: string; stack?: string; device?: string }
+      try { body = await request.json() as typeof body } catch { return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors) }
+      if (!body.id || !body.time || !body.context || !body.message) {
+        return jsonResponse({ error: 'Fehlende Felder' }, 400, cors)
+      }
+      await insertError(env.DB, {
+        id: body.id, time: body.time, context: body.context, message: body.message,
+        stack: body.stack, device: body.device,
+      })
+      return jsonResponse({ ok: true }, 200, cors)
+    }
+
+    // ── GET /errors — list the global error log ───────────────────────────
+    if (request.method === 'GET' && path === '/errors') {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      const errors = await getErrors(env.DB)
+      return jsonResponse({ errors }, 200, cors)
+    }
+
+    // ── POST /errors/clear — wipe the global error log ────────────────────
+    if (request.method === 'POST' && path === '/errors/clear') {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      await clearErrors(env.DB)
       return jsonResponse({ ok: true }, 200, cors)
     }
 

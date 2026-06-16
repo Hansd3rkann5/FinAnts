@@ -4,7 +4,7 @@ import type { SplitMap } from '@/hooks/useTxSplits'
 import { detectRecurring } from '@/utils/recurringDetector'
 import { reportError } from '@/utils/notify'
 import {
-  fetchTransactions, mergeTransactions, updateTransactionRemote, deleteTransactionRemote, clearTransactionsRemote,
+  fetchTransactions, mergeTransactions, mergeLocal, updateTransactionRemote, deleteTransactionRemote, clearTransactionsRemote,
   enrichTransactions, transactionToMergeRow,
   type StoredTx,
 } from '@/utils/transactionsApi'
@@ -116,6 +116,17 @@ export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: S
     return meta
   }, [setFromTransactions])
 
+  // Local-only CSV import: same dedup logic as the worker but runs in-browser.
+  // Used when no API key is set — data stays in localStorage only, not in D1.
+  const importLocalOnly = useCallback((raw: Transaction[]) => {
+    const rows = raw.map(transactionToMergeRow)
+    const { transactions: merged, meta } = mergeLocal(rawRowsRef.current, rows)
+    rawRowsRef.current = merged
+    const pending = raw.filter(t => t.isPending)
+    setFromTransactions([...pending, ...enrichTransactions(merged, profilesRef.current, splitsRef.current)])
+    return meta
+  }, [setFromTransactions])
+
   // ── Per-tx edits: optimistic local update + persist override to D1 ──────────
   // Also patch the raw-row cache so a pattern-triggered re-enrich keeps the edit.
   const patchRaw = (ids: Set<string>, patch: Partial<Pick<StoredTx, 'categoryId' | 'customLabel' | 'customIcon'>>) => {
@@ -187,7 +198,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: S
 
   return {
     transactions, recurringGroups, isLoaded,
-    importTransactions, applyServerTransactions, refresh,
+    importTransactions, importLocalOnly, applyServerTransactions, refresh,
     updateCategory, batchUpdateCategory, updateTransaction,
     deleteTransaction,
     removeRecurringGroup, clearAll,

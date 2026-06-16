@@ -262,3 +262,51 @@ export async function deleteTransaction(db: D1Database, id: string): Promise<voi
 export async function clearTransactions(db: D1Database): Promise<void> {
   await db.prepare('DELETE FROM transactions').run()
 }
+
+// ─── D1 global error log ───────────────────────────────────────────────────
+// Shared across devices so issues are visible regardless of which browser hit
+// them. Capped — oldest rows beyond ERROR_CAP are dropped on insert.
+
+export interface StoredError {
+  id: string
+  time: string
+  context: string
+  message: string
+  stack: string | null
+  device: string | null
+}
+
+interface ErrorRow {
+  id: string
+  time: string
+  context: string
+  message: string
+  stack: string | null
+  device: string | null
+}
+
+const ERROR_CAP = 300
+
+export async function insertError(
+  db: D1Database,
+  entry: { id: string; time: string; context: string; message: string; stack?: string; device?: string },
+): Promise<void> {
+  const now = new Date().toISOString()
+  await db.prepare(
+    `INSERT INTO errors (id, time, context, message, stack, device, created_at) VALUES (?,?,?,?,?,?,?)`,
+  ).bind(entry.id, entry.time, entry.context, entry.message, entry.stack ?? null, entry.device ?? null, now).run()
+  await db.prepare(
+    `DELETE FROM errors WHERE id NOT IN (SELECT id FROM errors ORDER BY time DESC LIMIT ?)`,
+  ).bind(ERROR_CAP).run()
+}
+
+export async function getErrors(db: D1Database): Promise<StoredError[]> {
+  const { results } = await db
+    .prepare('SELECT id, time, context, message, stack, device FROM errors ORDER BY time DESC')
+    .all<ErrorRow>()
+  return results ?? []
+}
+
+export async function clearErrors(db: D1Database): Promise<void> {
+  await db.prepare('DELETE FROM errors').run()
+}
