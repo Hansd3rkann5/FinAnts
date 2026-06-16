@@ -44,7 +44,7 @@ export function CategoryManageModal({ open, onClose }: Props) {
               transition={{ type: 'spring', stiffness: 380, damping: 40 }}
               onClick={e => e.stopPropagation()}
               className="absolute bottom-0 left-0 right-0 z-51 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[88svh]"
-              style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.6) 100%)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+              style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.6) 100%)', backdropFilter: 'blur(var(--blur-modal))', WebkitBackdropFilter: 'blur(var(--blur-modal))' }}
             >
               <div id="modal-catmgr-handle" className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
 
@@ -67,6 +67,7 @@ export function CategoryManageModal({ open, onClose }: Props) {
                       <div
                         id={`catmgr-row-${cat.id}`}
                         key={cat.id}
+                        style={{ backdropFilter: 'blur(calc(var(--blur-modal) + 2px))', WebkitBackdropFilter: 'blur(calc(var(--blur-modal) + 2px))' }}
                         className="flex items-center gap-3 rounded-card_sm px-3 py-2.5 bg-white/7 border border-white/6"
                       >
                         <div
@@ -122,6 +123,7 @@ export function CategoryManageModal({ open, onClose }: Props) {
       </AnimatePresence>
 
       <CategoryCreateModal
+        key={editItem?.id ?? 'new'}
         open={createOpen}
         editItem={editItem}
         onClose={() => { setCreateOpen(false); setEditItem(undefined) }}

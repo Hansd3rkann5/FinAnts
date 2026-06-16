@@ -21,9 +21,10 @@
   --radius-card: 20px;
   --radius-card_sm: 14px;
 
-  --blur-glass: 2px;
-  --blur-glass_sm: 2px;
+  --blur-glass: 8px;
+  --blur-glass_sm: 8px;
   --blur-md: 1px;
+  --blur-modal: 6px;
 
   --animate-fade-in: fadeIn 0.3s ease-out;
   --animate-slide-up: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -159,6 +160,11 @@
   .backdrop-blur-glass {
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
+  }
+
+  .backdrop-blur-modal {
+    backdrop-filter: blur(var(--blur-modal));
+    -webkit-backdrop-filter: blur(var(--blur-modal));
   }
 
   .rounded-pill {

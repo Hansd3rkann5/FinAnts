@@ -144,7 +144,7 @@ export function TransactionCard({ transaction: tx, onCategoryChange, onClick, in
                 key="txdelete-backdrop"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md"
                 onClick={() => setDeleteOpen(false)}
               />
               <motion.div
@@ -157,7 +157,7 @@ export function TransactionCard({ transaction: tx, onCategoryChange, onClick, in
                 <div
                   id={`modal-txdelete-card-${tx.id}`}
                   className="pointer-events-auto w-full max-w-xs rounded-2xl border border-white/10 overflow-hidden"
-                  style={{ background: 'linear-gradient(160deg, rgba(30,24,50,0.98) 0%, rgba(18,15,36,0.98) 100%)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+                  style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.6) 100%)', backdropFilter: 'blur(var(--blur-modal))', WebkitBackdropFilter: 'blur(var(--blur-modal))' }}
                 >
                   <div className="flex flex-col items-center gap-1 px-5 pt-6 pb-4 text-center">
                     <div className="w-11 h-11 rounded-full bg-red-500/15 border border-red-500/25 flex items-center justify-center mb-2">

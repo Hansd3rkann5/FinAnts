@@ -44,7 +44,7 @@ export function PhotoTanModal({ challenge, onSubmit, onDismiss, loading = false 
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         className="fixed inset-0 z-50 flex items-end"
-        style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+        style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(var(--blur-modal))' }}
         onClick={onDismiss}
       >
         <motion.div

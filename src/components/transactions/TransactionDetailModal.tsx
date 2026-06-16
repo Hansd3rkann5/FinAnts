@@ -22,16 +22,10 @@ function formatEur(v: number) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(v)
 }
 
+// 17 presets = 2 rows of 9, last slot is the + button
 const EMOJI_PRESETS = [
   '🛒','🍕','🍔','🍣','🍜','🥐','☕','🍷','🥤',
   '👕','👗','💻','📱','🎮','📺','🎧','👟',
-  '🚗','✈️','🚂','🛵','⛽','🚌',
-  '💊','🏥','🏋️','💆','🦷',
-  '🏠','💡','🔧','🧹','🛋️',
-  '💳','💵','🏦','💰','📈',
-  '🎬','🎵','🎭','⚽','🎾',
-  '📚','🎓','✏️','🖥️',
-  '⭐','❤️','🌟','🎁','🌿',
 ]
 
 function extractChips(tx: Transaction): string[] {
@@ -101,6 +95,20 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
   const [customInput, setCustomInput] = useState('')
   const [existingProfileId, setExistingProfileId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const emojiInputRef = useRef<HTMLInputElement>(null)
+
+  function handleEmojiInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    e.target.value = ''
+    if (!val) return
+    try {
+      const first = [...new Intl.Segmenter().segment(val)][0]?.segment
+      if (first) setIcon(first)
+    } catch {
+      const first = [...val][0]
+      if (first) setIcon(first)
+    }
+  }
 
   // ── Split (chart-only overlay) ──────────────────────────────────────────────
   const [splitting, setSplitting] = useState(false)
@@ -296,7 +304,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
             onClick={e => e.stopPropagation()}
             className="absolute bottom-0 left-0 right-0 z-50 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[92svh]"
-            style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.6) 100%)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+            style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.6) 100%)', backdropFilter: 'blur(var(--blur-modal))', WebkitBackdropFilter: 'blur(var(--blur-modal))' }}
           >
             <div id="modal-tx-handle" className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-0 shrink-0" />
 
@@ -400,13 +408,13 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                         const catB = allMap[splitCatB] ?? CATEGORIES['other']
                         const valid = aMag > 0 && aMag < Math.abs(total) && splitCatA !== splitCatB
                         return (
-                          <div className="mt-2 flex flex-col gap-2.5 rounded-card border border-white/10 bg-white/[0.04] p-3">
-                            <p className="text-[10px] text-white/40 uppercase tracking-wider">
+                          <div className="mt-2 flex flex-col gap-2.5 rounded-card border border-white/20 bg-white/[0.07] p-3">
+                            <p className="text-[10px] text-white/60 uppercase tracking-wider">
                               Betrag aufteilen ({formatEur(total)})
                             </p>
                             <div id="split-row-a" className="flex items-center gap-2">
                               <button id="btn-split-cat-a" onClick={() => setSplitPickerFor('A')}
-                                className="flex-1 min-w-0 flex items-center gap-2 rounded-card_sm bg-white/6 border border-white/10 px-3 py-2 text-left active:scale-[0.98] transition-transform"
+                                className="flex-1 min-w-0 flex items-center gap-2 rounded-card_sm bg-white/10 border border-white/20 px-3 py-2 text-left active:scale-[0.98] transition-transform"
                               >
                                 <span className="text-base leading-none shrink-0">{catA.icon}</span>
                                 <span className="text-sm text-white/80 truncate">{catA.label}</span>
@@ -416,12 +424,12 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                                 type="text" inputMode="decimal" value={splitAmtA}
                                 onChange={e => setSplitAmtA(e.target.value)}
                                 placeholder="0,00"
-                                className="w-24 shrink-0 rounded-card_sm bg-white/6 border border-white/10 px-3 py-2 text-sm text-white text-right placeholder-white/25 outline-none focus:border-purple-500/50 transition-colors"
+                                className="w-24 shrink-0 rounded-card_sm bg-white/10 border border-white/20 px-3 py-2 text-sm text-white text-right placeholder-white/40 outline-none focus:border-purple-500/50 transition-colors"
                               />
                             </div>
                             <div id="split-row-b" className="flex items-center gap-2">
                               <button id="btn-split-cat-b" onClick={() => setSplitPickerFor('B')}
-                                className="flex-1 min-w-0 flex items-center gap-2 rounded-card_sm bg-white/6 border border-white/10 px-3 py-2 text-left active:scale-[0.98] transition-transform"
+                                className="flex-1 min-w-0 flex items-center gap-2 rounded-card_sm bg-white/10 border border-white/20 px-3 py-2 text-left active:scale-[0.98] transition-transform"
                               >
                                 <span className="text-base leading-none shrink-0">{catB.icon}</span>
                                 <span className="text-sm text-white/80 truncate">{catB.label}</span>
@@ -433,10 +441,10 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                             <div id="split-gilt-fuer" className="border-t border-white/8 pt-2.5">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="text-[10px] text-white/40 uppercase tracking-wider">Gilt für</span>
-                                <div className="flex rounded-card_sm overflow-hidden border border-white/10 ml-auto shrink-0">
+                                <div className="flex rounded-card_sm overflow-hidden border border-white/20 ml-auto shrink-0">
                                   {(['exact', 'contains'] as const).map(m => (
                                     <button key={m} onClick={() => setSplitMatchMode(m)}
-                                      className={`text-[10px] px-2.5 py-1 transition-colors ${splitMatchMode === m ? 'bg-purple-500/30 text-purple-300' : 'text-white/30 hover:text-white/50'}`}
+                                      className={`text-[10px] px-2.5 py-1 transition-colors ${splitMatchMode === m ? 'bg-purple-500/30 text-purple-300' : 'text-white/50 hover:text-white/70'}`}
                                     >{m === 'exact' ? 'Exakt' : 'Enthält'}</button>
                                   ))}
                                 </div>
@@ -453,7 +461,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                               <div className="flex flex-wrap gap-1.5">
                                 {chips.filter(c => !splitMatchStrings.includes(c)).map(chip => (
                                   <button key={chip} onClick={() => toggleSplitChip(chip)}
-                                    className="text-[11px] px-2 py-0.5 rounded-full border bg-white/4 border-white/10 text-white/50 hover:text-white/80 hover:border-white/25 transition-all active:scale-95"
+                                    className="text-[11px] px-2 py-0.5 rounded-full border bg-white/8 border-white/20 text-white/70 hover:text-white/90 hover:border-white/35 transition-all active:scale-95"
                                   >{chip}</button>
                                 ))}
                               </div>
@@ -465,11 +473,11 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                             </div>
                             <div id="split-actions" className="flex gap-2 pt-1">
                               <button id="btn-split-cancel" onClick={() => setSplitting(false)}
-                                className="flex-1 py-2 rounded-card border border-white/10 text-xs text-white/50 hover:text-white/70 transition-colors"
+                                className="flex-1 py-2 rounded-card border border-white/20 text-xs text-white/70 hover:text-white/90 transition-colors"
                               >Abbrechen</button>
                               {tx.splits?.length ? (
                                 <button id="btn-split-remove" onClick={removeSplit}
-                                  className="flex-1 py-2 rounded-card border border-white/10 text-xs text-red-400/70 hover:text-red-400 transition-colors"
+                                  className="flex-1 py-2 rounded-card border border-white/20 text-xs text-red-400/80 hover:text-red-400 transition-colors"
                                 >Entfernen</button>
                               ) : null}
                               <button id="btn-split-save" onClick={saveSplit} disabled={!valid}
@@ -502,30 +510,30 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                 >
                 <div id="edit-form-body" className="flex flex-col gap-5">
                   <div id="edit-section-label">
-                    <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-1.5">Bezeichnung</label>
+                    <label className="text-[10px] text-white/60 uppercase tracking-wider block mb-1.5">Bezeichnung</label>
                     <input
                       id="input-edit-label"
                       type="text"
                       value={label}
                       onChange={e => setLabel(e.target.value)}
                       placeholder={tx.counterparty || 'Name…'}
-                      className="w-full rounded-card_sm bg-white/6 border border-white/10 px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-purple-500/50 transition-colors"
+                      className="w-full rounded-card_sm bg-white/10 border border-white/20 px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none focus:border-purple-500/50 transition-colors"
                     />
                   </div>
 
                   <div id="edit-section-category">
-                    <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-1.5">Kategorie</label>
+                    <label className="text-[10px] text-white/60 uppercase tracking-wider block mb-1.5">Kategorie</label>
                     <div id="edit-category-grid" className="grid grid-cols-4 gap-1.5">
                       {allList.map(c => (
                         <button key={c.id} onClick={() => setCategory(c.id)}
                           className="flex flex-col items-center gap-1 p-2 rounded-card_sm border text-center transition-all duration-100 active:scale-95"
                           style={{
-                            backgroundColor: c.id === category ? `${c.color}22` : 'rgba(255,255,255,0.03)',
-                            borderColor: c.id === category ? `${c.color}55` : 'rgba(255,255,255,0.07)',
+                            backgroundColor: c.id === category ? `${c.color}22` : 'rgba(255,255,255,0.06)',
+                            borderColor: c.id === category ? `${c.color}55` : 'rgba(255,255,255,0.12)',
                           }}
                         >
                           <span className="text-lg leading-none">{c.icon}</span>
-                          <span className="text-[9px] text-white/60 leading-tight">{c.label}</span>
+                          <span className="text-[9px] text-white/70 leading-tight">{c.label}</span>
                         </button>
                       ))}
                     </div>
@@ -533,16 +541,16 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
 
                   <div id="edit-section-icon">
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-[10px] text-white/40 uppercase tracking-wider">Icon</label>
+                      <label className="text-[10px] text-white/60 uppercase tracking-wider">Icon</label>
                       <div className="flex gap-1">
                         {(['emoji', 'upload'] as const).map(t => (
                           <button key={t} onClick={() => setIconTab(t)}
-                            className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${iconTab === t ? 'bg-purple-500/30 text-purple-300' : 'text-white/30 hover:text-white/60'}`}
+                            className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${iconTab === t ? 'bg-purple-500/30 text-purple-300' : 'text-white/50 hover:text-white/70'}`}
                           >{t === 'emoji' ? 'Emoji' : 'Foto'}</button>
                         ))}
                         {icon && (
                           <button onClick={() => setIcon(undefined)}
-                            className="text-[10px] px-2 py-0.5 rounded-full text-white/30 hover:text-white/60 flex items-center gap-0.5 transition-colors"
+                            className="text-[10px] px-2 py-0.5 rounded-full text-white/50 hover:text-white/70 flex items-center gap-0.5 transition-colors"
                           >
                             <RotateCcw size={9} /> Standard
                           </button>
@@ -551,13 +559,25 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                     </div>
 
                     {iconTab === 'emoji' && (
-                      <div className="grid grid-cols-9 gap-1">
-                        {EMOJI_PRESETS.map(e => (
-                          <button key={e} onClick={() => setIcon(e)}
-                            className={`aspect-square flex items-center justify-center text-xl rounded-md transition-all active:scale-90 ${icon === e ? 'bg-purple-500/30 ring-1 ring-purple-500/50' : 'bg-white/4 hover:bg-white/8'}`}
-                          >{e}</button>
-                        ))}
-                      </div>
+                      <>
+                        <div className="grid grid-cols-9 gap-1">
+                          {EMOJI_PRESETS.map(e => (
+                            <button key={e} onClick={() => setIcon(e)}
+                              className={`aspect-square flex items-center justify-center text-xl rounded-md transition-all active:scale-90 ${icon === e ? 'bg-purple-500/30 ring-1 ring-purple-500/50' : 'bg-white/8 hover:bg-white/14'}`}
+                            >{e}</button>
+                          ))}
+                          {icon && !EMOJI_PRESETS.includes(icon) && !(icon.startsWith('data:') || icon.startsWith('http')) && (
+                            <button className="aspect-square flex items-center justify-center text-xl rounded-md bg-purple-500/30 ring-1 ring-purple-500/50">
+                              {icon}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => emojiInputRef.current?.focus()}
+                            className="aspect-square flex items-center justify-center rounded-md bg-white/8 hover:bg-white/14 text-white/50 hover:text-white/80 transition-all active:scale-90"
+                          ><Plus size={16} /></button>
+                        </div>
+                        <input ref={emojiInputRef} type="text" onChange={handleEmojiInput} className="sr-only" autoComplete="off" autoCorrect="off" aria-label="Emoji eingeben" />
+                      </>
                     )}
 
                     {iconTab === 'upload' && (
@@ -576,7 +596,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                           </div>
                         ) : (
                           <button onClick={() => fileRef.current?.click()}
-                            className="flex flex-col items-center gap-2 p-6 rounded-card border-2 border-dashed border-white/15 text-white/40 hover:text-white/60 hover:border-white/25 transition-colors w-full"
+                            className="flex flex-col items-center gap-2 p-6 rounded-card border-2 border-dashed border-white/25 text-white/60 hover:text-white/80 hover:border-white/40 transition-colors w-full"
                           >
                             <Upload size={20} />
                             <span className="text-xs">Bild auswählen</span>
@@ -590,12 +610,12 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
 
                   <div id="edit-section-giltfuer">
                     <div className="flex items-center gap-2 mb-2">
-                      <label className="text-[10px] text-white/40 uppercase tracking-wider">Gilt für</label>
+                      <label className="text-[10px] text-white/60 uppercase tracking-wider">Gilt für</label>
                       {/* Mode toggle */}
-                      <div className="flex rounded-card_sm overflow-hidden border border-white/10 ml-auto shrink-0">
+                      <div className="flex rounded-card_sm overflow-hidden border border-white/20 ml-auto shrink-0">
                         {(['exact', 'contains'] as const).map(m => (
                           <button key={m} onClick={() => setMatchMode(m)}
-                            className={`text-[10px] px-2.5 py-1 transition-colors ${matchMode === m ? 'bg-purple-500/30 text-purple-300' : 'text-white/30 hover:text-white/50'}`}
+                            className={`text-[10px] px-2.5 py-1 transition-colors ${matchMode === m ? 'bg-purple-500/30 text-purple-300' : 'text-white/50 hover:text-white/70'}`}
                           >{m === 'exact' ? 'Exakt' : 'Enthält'}</button>
                         ))}
                       </div>
@@ -621,7 +641,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                     <div className="flex flex-wrap gap-1.5 mb-2.5">
                       {chips.filter(c => !matchStrings.includes(c)).map(chip => (
                         <button key={chip} onClick={() => toggleChip(chip)}
-                          className="text-[11px] px-2 py-0.5 rounded-full border bg-white/4 border-white/10 text-white/50 hover:text-white/80 hover:border-white/25 transition-all active:scale-95"
+                          className="text-[11px] px-2 py-0.5 rounded-full border bg-white/8 border-white/20 text-white/70 hover:text-white/90 hover:border-white/35 transition-all active:scale-95"
                         >{chip}</button>
                       ))}
                     </div>
@@ -634,12 +654,12 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                         onChange={e => setCustomInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && addCustom()}
                         placeholder="Eigener Begriff…"
-                        className="flex-1 min-w-0 rounded-card_sm bg-white/6 border border-white/10 px-3 py-1.5 text-sm text-white placeholder-white/25 outline-none focus:border-purple-500/50 transition-colors"
+                        className="flex-1 min-w-0 rounded-card_sm bg-white/10 border border-white/20 px-3 py-1.5 text-sm text-white placeholder-white/40 outline-none focus:border-purple-500/50 transition-colors"
                       />
                       <button
                         onClick={addCustom}
                         disabled={!customInput.trim()}
-                        className="w-8 h-8 shrink-0 rounded-card_sm bg-white/6 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/80 disabled:opacity-30 transition-colors"
+                        className="w-8 h-8 shrink-0 rounded-card_sm bg-white/10 border border-white/20 flex items-center justify-center text-white/60 hover:text-white/90 disabled:opacity-30 transition-colors"
                       >
                         <Plus size={14} />
                       </button>
@@ -654,7 +674,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
 
                   <div id="edit-actions" className="flex gap-2 pt-1">
                     <button id="btn-edit-cancel" onClick={cancelEdit}
-                      className="flex-1 py-2.5 rounded-card border border-white/10 text-sm text-white/50 hover:text-white/70 transition-colors"
+                      className="flex-1 py-2.5 rounded-card border border-white/20 text-sm text-white/70 hover:text-white/90 transition-colors"
                     >Abbrechen</button>
                     <button id="btn-edit-save" onClick={save}
                       className="flex-1 py-2.5 rounded-card bg-purple-600/80 hover:bg-purple-600 text-sm text-white font-medium flex items-center justify-center gap-1.5 transition-colors"

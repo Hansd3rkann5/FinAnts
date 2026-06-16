@@ -68,7 +68,7 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect, fil
               transition={{ type: 'spring', stiffness: 380, damping: 40 }}
               onClick={e => e.stopPropagation()}
               className="absolute bottom-0 left-0 right-0 z-51 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[92svh]"
-              style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.7) 100%)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+              style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.7) 100%)', backdropFilter: 'blur(var(--blur-modal))', WebkitBackdropFilter: 'blur(var(--blur-modal))' }}
             >
               <div id="modal-catbreak-handle" className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
 
@@ -92,7 +92,7 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect, fil
                         key={cat.id}
                         id={`catbreak-cat-${cat.id}`}
                         className="rounded-card_sm border overflow-hidden"
-                        style={{ borderColor: `${cat.color}25`, backgroundColor: `${cat.color}15` }}
+                        style={{ borderColor: `${cat.color}25`, backgroundColor: `${cat.color}15`, backdropFilter: 'blur(calc(var(--blur-modal) + 2px))', WebkitBackdropFilter: 'blur(calc(var(--blur-modal) + 2px))' }}
                       >
                         <button
                           id={`btn-catbreak-expand-${cat.id}`}

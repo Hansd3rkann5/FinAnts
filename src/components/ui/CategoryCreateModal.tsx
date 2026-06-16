@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalRegistration } from '@/hooks/useModalRegistration'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Check, RotateCcw, Upload, Loader, Pipette } from 'lucide-react'
+import { X, Check, RotateCcw, Upload, Loader, Pipette, Plus } from 'lucide-react'
 import type { Category } from '@/types'
 
 const COLOR_PRESETS = [
@@ -10,16 +10,10 @@ const COLOR_PRESETS = [
   '#f472b6', '#94a3b8', '#e879f9', '#2dd4bf', '#818cf8', '#fcd34d', '#f43f5e',
 ]
 
+// 17 presets shown in 2 rows of 9 (last slot is the + button)
 const EMOJI_PRESETS = [
-  '🏷️','⭐','🔖','🎯','💎','🌟','🔥','💡','🎁','🌈',
+  '🏷️','⭐','🔖','🎯','💎','🌟','🔥','💡','🎁',
   '🛒','🍕','🍔','🍣','🥐','☕','🍷','🍜',
-  '👕','💻','📱','🎮','👟','🎧',
-  '🚗','✈️','⛽','🚌',
-  '💊','🏥','🏋️','💆',
-  '🏠','💡','🔧','🛋️',
-  '💳','💵','🏦','💰','📈',
-  '🎬','🎵','⚽','🎾','📚','✏️',
-  '🚴','🏃','🧗','🌲','🌳','🏕️','🌊',
 ]
 
 async function resizeToWebP(file: File, maxPx = 192): Promise<Blob> {
@@ -51,23 +45,16 @@ interface Props {
 
 export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate }: Props) {
   useModalRegistration(open)
-  const [label, setLabel] = useState('')
-  const [color, setColor] = useState(COLOR_PRESETS[6])
-  const [icon, setIcon] = useState<string>('🏷️')
-  const [iconTab, setIconTab] = useState<'emoji' | 'upload'>('emoji')
-
-  useEffect(() => {
-    if (open && editItem) {
-      setLabel(editItem.label)
-      setColor(editItem.color)
-      setIcon(editItem.icon)
-      setIconTab(editItem.icon.startsWith('data:') || editItem.icon.startsWith('http') ? 'upload' : 'emoji')
-      setUploadError('')
-    }
-  }, [open, editItem])
+  const [label, setLabel] = useState(editItem?.label ?? '')
+  const [color, setColor] = useState(editItem?.color ?? COLOR_PRESETS[6])
+  const [icon, setIcon] = useState<string>(editItem?.icon ?? '🏷️')
+  const [iconTab, setIconTab] = useState<'emoji' | 'upload'>(
+    editItem?.icon.startsWith('data:') || editItem?.icon.startsWith('http') ? 'upload' : 'emoji'
+  )
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const emojiInputRef = useRef<HTMLInputElement>(null)
 
   const isCustomColor = !COLOR_PRESETS.includes(color)
 
@@ -79,10 +66,7 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
     setUploadError('')
   }
 
-  function handleClose() {
-    reset()
-    onClose()
-  }
+  function handleClose() { reset(); onClose() }
 
   function handleSave() {
     const name = label.trim()
@@ -114,7 +98,21 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
     }
   }
 
+  function handleEmojiInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    e.target.value = ''
+    if (!val) return
+    try {
+      const first = [...new Intl.Segmenter().segment(val)][0]?.segment
+      if (first) setIcon(first)
+    } catch {
+      const first = [...val][0]
+      if (first) setIcon(first)
+    }
+  }
+
   const isPhoto = icon.startsWith('data:') || icon.startsWith('http')
+  const isCustomEmoji = !EMOJI_PRESETS.includes(icon) && !isPhoto
 
   return createPortal(
     <AnimatePresence>
@@ -134,15 +132,15 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
             onClick={e => e.stopPropagation()}
-            className="absolute bottom-0 left-0 right-0 z-51 rounded-t-4xl border-t border-white/10 pb-safe flex flex-col max-h-[88svh]"
-            style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+            className="absolute bottom-0 left-0 right-0 z-51 rounded-t-4xl border-t border-white/20 pb-safe flex flex-col max-h-[88svh]"
+            style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.6) 100%)', backdropFilter: 'blur(var(--blur-modal))', WebkitBackdropFilter: 'blur(var(--blur-modal))' }}
           >
-            <div id="modal-catcreate-handle" className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
+            <div id="modal-catcreate-handle" className="w-10 h-1 rounded-full bg-white/30 mx-auto mt-3 mb-1 shrink-0" />
 
             <div id="modal-catcreate-scroll" className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
               <div id="modal-catcreate-header" className="flex items-center justify-between mb-5">
-                <h3 id="modal-catcreate-title" className="text-sm font-semibold text-white/80">{editItem ? 'Kategorie bearbeiten' : 'Neue Kategorie'}</h3>
-                <button id="btn-catcreate-close" onClick={handleClose} className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
+                <h3 id="modal-catcreate-title" className="text-sm font-semibold text-white/90">{editItem ? 'Kategorie bearbeiten' : 'Neue Kategorie'}</h3>
+                <button id="btn-catcreate-close" onClick={handleClose} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white/90 transition-colors">
                   <X size={15} />
                 </button>
               </div>
@@ -151,18 +149,18 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
                 <div
                   id="modal-catcreate-preview-icon"
                   className="w-16 h-16 rounded-card flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${color}22`, border: `1.5px solid ${color}50`, fontSize: isPhoto ? undefined : 30 }}
+                  style={{ backgroundColor: `${color}33`, border: `1.5px solid ${color}70`, fontSize: isPhoto ? undefined : 30 }}
                 >
                   {isPhoto
                     ? <img src={icon} alt="" className="w-full h-full object-cover rounded-card" />
                     : icon}
                 </div>
-                <p id="modal-catcreate-preview-label" className="text-sm font-medium text-white/80">{label || 'Neue Kategorie'}</p>
+                <p id="modal-catcreate-preview-label" className="text-sm font-medium text-white/90">{label || 'Neue Kategorie'}</p>
               </div>
 
               <div id="modal-catcreate-form" className="flex flex-col gap-5">
                 <div id="modal-catcreate-section-name">
-                  <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-1.5">Name</label>
+                  <label className="text-[10px] text-white/60 uppercase tracking-wider block mb-1.5">Name</label>
                   <input
                     id="input-catcreate-name"
                     type="text"
@@ -170,12 +168,12 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
                     onChange={e => setLabel(e.target.value)}
                     placeholder="z.B. Haustier, Hobbys…"
                     autoFocus
-                    className="w-full rounded-card_sm bg-white/6 border border-white/10 px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-purple-500/50 transition-colors"
+                    className="w-full rounded-card_sm bg-white/10 border border-white/20 px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none focus:border-purple-500/60 transition-colors"
                   />
                 </div>
 
                 <div id="modal-catcreate-section-color">
-                  <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-2">Farbe</label>
+                  <label className="text-[10px] text-white/60 uppercase tracking-wider block mb-2">Farbe</label>
                   <div className="grid grid-cols-8 gap-2">
                     {COLOR_PRESETS.map(c => (
                       <button
@@ -216,16 +214,16 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
 
                 <div id="modal-catcreate-section-icon">
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] text-white/40 uppercase tracking-wider">Icon</label>
+                    <label className="text-[10px] text-white/60 uppercase tracking-wider">Icon</label>
                     <div className="flex gap-1">
                       {(['emoji', 'upload'] as const).map(t => (
                         <button key={t} onClick={() => setIconTab(t)}
-                          className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${iconTab === t ? 'bg-purple-500/30 text-purple-300' : 'text-white/30 hover:text-white/60'}`}
+                          className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${iconTab === t ? 'bg-purple-500/30 text-purple-300' : 'text-white/50 hover:text-white/70'}`}
                         >{t === 'emoji' ? 'Emoji' : 'Foto'}</button>
                       ))}
                       {isPhoto && (
                         <button onClick={() => setIcon('🏷️')}
-                          className="text-[10px] px-2 py-0.5 rounded-full text-white/30 hover:text-white/60 flex items-center gap-0.5 transition-colors"
+                          className="text-[10px] px-2 py-0.5 rounded-full text-white/50 hover:text-white/70 flex items-center gap-0.5 transition-colors"
                         >
                           <RotateCcw size={9} /> Standard
                         </button>
@@ -234,19 +232,42 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
                   </div>
 
                   {iconTab === 'emoji' && (
-                    <div className="grid grid-cols-9 gap-1">
-                      {EMOJI_PRESETS.map(e => (
-                        <button key={e} onClick={() => setIcon(e)}
-                          className={`aspect-square flex items-center justify-center text-xl rounded-md transition-all active:scale-90 ${icon === e ? 'bg-purple-500/30 ring-1 ring-purple-500/50' : 'bg-white/4 hover:bg-white/8'}`}
-                        >{e}</button>
-                      ))}
-                    </div>
+                    <>
+                      <div className="grid grid-cols-9 gap-1">
+                        {EMOJI_PRESETS.map(e => (
+                          <button key={e} onClick={() => setIcon(e)}
+                            className={`aspect-square flex items-center justify-center text-xl rounded-md transition-all active:scale-90 ${icon === e ? 'bg-purple-500/30 ring-1 ring-purple-500/50' : 'bg-white/8 hover:bg-white/14'}`}
+                          >{e}</button>
+                        ))}
+                        {isCustomEmoji && (
+                          <button
+                            className="aspect-square flex items-center justify-center text-xl rounded-md bg-purple-500/30 ring-1 ring-purple-500/50"
+                          >{icon}</button>
+                        )}
+                        <button
+                          onClick={() => emojiInputRef.current?.focus()}
+                          className="aspect-square flex items-center justify-center rounded-md bg-white/8 hover:bg-white/14 text-white/50 hover:text-white/80 transition-all active:scale-90"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      {/* Hidden input — focuses system keyboard so user can pick an emoji */}
+                      <input
+                        ref={emojiInputRef}
+                        type="text"
+                        onChange={handleEmojiInput}
+                        className="sr-only"
+                        aria-label="Emoji eingeben"
+                        autoComplete="off"
+                        autoCorrect="off"
+                      />
+                    </>
                   )}
 
                   {iconTab === 'upload' && (
                     <div className="flex flex-col items-center gap-3">
                       {uploading ? (
-                        <div className="flex flex-col items-center gap-2 p-6 text-white/40">
+                        <div className="flex flex-col items-center gap-2 p-6 text-white/60">
                           <Loader size={20} className="animate-spin" />
                           <span className="text-xs">Wird geladen…</span>
                         </div>
@@ -254,12 +275,12 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
                         <div className="relative">
                           <img src={icon} alt="" className="w-20 h-20 rounded-card object-cover" />
                           <button onClick={() => setIcon('🏷️')}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/80 border border-white/20 flex items-center justify-center text-white/70"
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/80 border border-white/30 flex items-center justify-center text-white/80"
                           ><X size={10} /></button>
                         </div>
                       ) : (
                         <button onClick={() => fileRef.current?.click()}
-                          className="flex flex-col items-center gap-2 p-6 rounded-card border-2 border-dashed border-white/15 text-white/40 hover:text-white/60 hover:border-white/25 transition-colors w-full"
+                          className="flex flex-col items-center gap-2 p-6 rounded-card border-2 border-dashed border-white/25 text-white/60 hover:text-white/80 hover:border-white/40 transition-colors w-full"
                         >
                           <Upload size={20} />
                           <span className="text-xs">Bild auswählen</span>
@@ -273,7 +294,7 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
 
                 <div id="modal-catcreate-actions" className="flex gap-2 pt-1">
                   <button id="btn-catcreate-cancel" onClick={handleClose}
-                    className="flex-1 py-2.5 rounded-card border border-white/10 text-sm text-white/50 hover:text-white/70 transition-colors"
+                    className="flex-1 py-2.5 rounded-card border border-white/20 text-sm text-white/70 hover:text-white/90 transition-colors"
                   >Abbrechen</button>
                   <button
                     id="btn-catcreate-save"
