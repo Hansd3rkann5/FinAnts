@@ -20,7 +20,7 @@ export function Transactions() {
   const { allList } = useAllCategories()
   const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Transaction | null>(null)
-  const { transactions, updateCategory, updateTransaction, refreshAll } = useTransactionsCtx()
+  const { transactions, updateTransaction, refreshAll } = useTransactionsCtx()
   const [refreshing, setRefreshing] = useState(false)
 
   // Pull-to-refresh: download everything from the cloud — categories + merchant
@@ -145,7 +145,6 @@ export function Transactions() {
       <div className="mx-4">
         <TransactionList
           transactions={displayed}
-          onCategoryChange={updateCategory}
           onTransactionClick={setSelected}
         />
       </div>

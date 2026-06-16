@@ -7,7 +7,6 @@ import { TransactionCard } from './TransactionCard'
 
 interface Props {
   transactions: Transaction[]
-  onCategoryChange?: (id: string, cat: Transaction['categoryId']) => void
   onTransactionClick?: (tx: Transaction) => void
 }
 
@@ -36,7 +35,7 @@ function groupByDay(transactions: Transaction[]): { label: string; items: Transa
     })
 }
 
-export function TransactionList({ transactions, onCategoryChange, onTransactionClick }: Props) {
+export function TransactionList({ transactions, onTransactionClick }: Props) {
   const groups = useMemo(() => groupByDay(transactions), [transactions])
 
   if (transactions.length === 0) {
@@ -67,7 +66,6 @@ export function TransactionList({ transactions, onCategoryChange, onTransactionC
               <TransactionCard
                 key={tx.id}
                 transaction={tx}
-                onCategoryChange={onCategoryChange}
                 onClick={onTransactionClick}
                 index={globalIndex++}
               />

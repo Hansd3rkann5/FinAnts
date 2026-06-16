@@ -9,7 +9,6 @@ import { MerchantLogo } from './MerchantLogo'
 import { findMerchant } from '@/utils/merchantLogos'
 import { AmountDisplay } from '@/components/ui/AmountDisplay'
 import { CategoryBadge } from '@/components/ui/CategoryBadge'
-import { CategoryPicker } from '@/components/ui/CategoryPicker'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { resolveProfile } from '@/hooks/useMerchantProfiles'
 import { isExcluded } from '@/data/categories'
@@ -18,13 +17,11 @@ const LONG_PRESS_MS = 500
 
 interface Props {
   transaction: Transaction
-  onCategoryChange?: (id: string, cat: Transaction['categoryId']) => void
   onClick?: (tx: Transaction) => void
   index?: number
 }
 
-export function TransactionCard({ transaction: tx, onCategoryChange, onClick, index = 0 }: Props) {
-  const [pickerOpen, setPickerOpen] = useState(false)
+export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const { merchantProfiles, deleteTransaction } = useTransactionsCtx()
   const profile = resolveProfile(tx, merchantProfiles)
@@ -112,11 +109,7 @@ export function TransactionCard({ transaction: tx, onCategoryChange, onClick, in
                 ))}
               </div>
             ) : (
-              <CategoryBadge
-                categoryId={tx.categoryId}
-                size="sm"
-                onClick={onCategoryChange ? () => setPickerOpen(true) : undefined}
-              />
+              <CategoryBadge categoryId={tx.categoryId} size="sm" />
             )}
             {tx.isRecurring && !tx.isPending && (
               <span className="inline-flex items-center gap-1 text-[10px] text-purple-400/70 rounded-pill border border-purple-500/20 bg-purple-500/10 px-1.5 py-0.5">
@@ -127,13 +120,6 @@ export function TransactionCard({ transaction: tx, onCategoryChange, onClick, in
           </div>
         </div>
       </motion.div>
-
-      <CategoryPicker
-        open={pickerOpen}
-        current={tx.categoryId}
-        onSelect={cat => onCategoryChange?.(tx.id, cat)}
-        onClose={() => setPickerOpen(false)}
-      />
 
       {createPortal(
         <AnimatePresence>
