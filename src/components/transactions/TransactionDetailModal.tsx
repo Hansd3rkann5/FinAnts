@@ -296,35 +296,32 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
             onClick={e => e.stopPropagation()}
             className="absolute bottom-0 left-0 right-0 z-50 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[92svh]"
-            style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+            style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.6) 100%)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
           >
-            <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-0 shrink-0" />
+            <div id="modal-tx-handle" className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-0 shrink-0" />
 
-            <div className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <span className="text-xs text-white/30 uppercase tracking-wider">
+            <div id="modal-tx-scroll" className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
+              <div id="modal-tx-header" className="flex items-center justify-between mb-5">
+                <span id="modal-tx-date" className="text-xs text-white/30 uppercase tracking-wider">
                   {tx.isPending ? 'Ausstehend' : format(tx.date, 'EEEE, dd. MMMM yyyy', { locale: de })}
                 </span>
-                <button onClick={handleClose} className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
+                <button id="btn-tx-close" onClick={handleClose} className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
                   <X size={15} />
                 </button>
               </div>
 
-              {/* Icon + amount */}
-              <div className="flex flex-col items-center gap-3 mb-6">
+              <div id="modal-tx-hero" className="flex flex-col items-center gap-3 mb-6">
                 <MerchantLogo merchantKey={merchantKey} categoryId={tx.categoryId} customIcon={displayIcon} size={64} />
                 <AmountDisplay amount={tx.amount} size="lg" />
-                <p className="text-base font-semibold text-white/90 text-center leading-snug">
+                <p id="modal-tx-label" className="text-base font-semibold text-white/90 text-center leading-snug">
                   {displayLabel || tx.counterparty || tx.description || '–'}
                 </p>
                 {displayLabel && tx.counterparty && displayLabel !== tx.counterparty && (
-                  <p className="text-xs text-white/30 text-center">{tx.counterparty}</p>
+                  <p id="modal-tx-counterparty" className="text-xs text-white/30 text-center">{tx.counterparty}</p>
                 )}
               </div>
 
-              {/* Detail rows */}
-              <div className="flex flex-col gap-px rounded-card overflow-hidden mb-5">
+              <div id="modal-tx-details" className="flex flex-col gap-px rounded-card overflow-hidden mb-5">
                 {[
                   tx.splits && tx.splits.length
                     ? {
@@ -355,6 +352,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                 {!editing && (
                   <motion.button
                     key="edit-btn"
+                    id="btn-tx-edit"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -374,6 +372,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                   {!splitting ? (
                     <motion.button
                       key="split-trigger"
+                      id="btn-tx-split-trigger"
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                       transition={{ duration: 0.15 }}
                       onClick={openSplit}
@@ -385,6 +384,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                   ) : (
                     <motion.div
                       key="split-editor"
+                      id="modal-tx-split-editor"
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
@@ -404,35 +404,33 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                             <p className="text-[10px] text-white/40 uppercase tracking-wider">
                               Betrag aufteilen ({formatEur(total)})
                             </p>
-                            {/* Category A + amount */}
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => setSplitPickerFor('A')}
+                            <div id="split-row-a" className="flex items-center gap-2">
+                              <button id="btn-split-cat-a" onClick={() => setSplitPickerFor('A')}
                                 className="flex-1 min-w-0 flex items-center gap-2 rounded-card_sm bg-white/6 border border-white/10 px-3 py-2 text-left active:scale-[0.98] transition-transform"
                               >
                                 <span className="text-base leading-none shrink-0">{catA.icon}</span>
                                 <span className="text-sm text-white/80 truncate">{catA.label}</span>
                               </button>
                               <input
+                                id="input-split-amt-a"
                                 type="text" inputMode="decimal" value={splitAmtA}
                                 onChange={e => setSplitAmtA(e.target.value)}
                                 placeholder="0,00"
                                 className="w-24 shrink-0 rounded-card_sm bg-white/6 border border-white/10 px-3 py-2 text-sm text-white text-right placeholder-white/25 outline-none focus:border-purple-500/50 transition-colors"
                               />
                             </div>
-                            {/* Category B + remainder */}
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => setSplitPickerFor('B')}
+                            <div id="split-row-b" className="flex items-center gap-2">
+                              <button id="btn-split-cat-b" onClick={() => setSplitPickerFor('B')}
                                 className="flex-1 min-w-0 flex items-center gap-2 rounded-card_sm bg-white/6 border border-white/10 px-3 py-2 text-left active:scale-[0.98] transition-transform"
                               >
                                 <span className="text-base leading-none shrink-0">{catB.icon}</span>
                                 <span className="text-sm text-white/80 truncate">{catB.label}</span>
                               </button>
-                              <span className="w-24 shrink-0 text-right text-sm text-white/50 px-3 py-2">
+                              <span id="split-amt-b-display" className="w-24 shrink-0 text-right text-sm text-white/50 px-3 py-2">
                                 {formatEur(sign * bMag)}
                               </span>
                             </div>
-                            {/* Gilt für */}
-                            <div className="border-t border-white/8 pt-2.5">
+                            <div id="split-gilt-fuer" className="border-t border-white/8 pt-2.5">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="text-[10px] text-white/40 uppercase tracking-wider">Gilt für</span>
                                 <div className="flex rounded-card_sm overflow-hidden border border-white/10 ml-auto shrink-0">
@@ -465,17 +463,16 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                                 </p>
                               )}
                             </div>
-                            {/* Actions */}
-                            <div className="flex gap-2 pt-1">
-                              <button onClick={() => setSplitting(false)}
+                            <div id="split-actions" className="flex gap-2 pt-1">
+                              <button id="btn-split-cancel" onClick={() => setSplitting(false)}
                                 className="flex-1 py-2 rounded-card border border-white/10 text-xs text-white/50 hover:text-white/70 transition-colors"
                               >Abbrechen</button>
                               {tx.splits?.length ? (
-                                <button onClick={removeSplit}
+                                <button id="btn-split-remove" onClick={removeSplit}
                                   className="flex-1 py-2 rounded-card border border-white/10 text-xs text-red-400/70 hover:text-red-400 transition-colors"
                                 >Entfernen</button>
                               ) : null}
-                              <button onClick={saveSplit} disabled={!valid}
+                              <button id="btn-split-save" onClick={saveSplit} disabled={!valid}
                                 className="flex-1 py-2 rounded-card bg-purple-600/80 hover:bg-purple-600 disabled:opacity-30 disabled:hover:bg-purple-600/80 text-xs text-white font-medium transition-colors"
                               >Speichern</button>
                             </div>
@@ -503,11 +500,11 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.45, delay: 0.15 }}
                 >
-                <div className="flex flex-col gap-5">
-                  {/* Label */}
-                  <div>
+                <div id="edit-form-body" className="flex flex-col gap-5">
+                  <div id="edit-section-label">
                     <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-1.5">Bezeichnung</label>
                     <input
+                      id="input-edit-label"
                       type="text"
                       value={label}
                       onChange={e => setLabel(e.target.value)}
@@ -516,10 +513,9 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                     />
                   </div>
 
-                  {/* Category */}
-                  <div>
+                  <div id="edit-section-category">
                     <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-1.5">Kategorie</label>
-                    <div className="grid grid-cols-4 gap-1.5">
+                    <div id="edit-category-grid" className="grid grid-cols-4 gap-1.5">
                       {allList.map(c => (
                         <button key={c.id} onClick={() => setCategory(c.id)}
                           className="flex flex-col items-center gap-1 p-2 rounded-card_sm border text-center transition-all duration-100 active:scale-95"
@@ -535,8 +531,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                     </div>
                   </div>
 
-                  {/* Icon */}
-                  <div>
+                  <div id="edit-section-icon">
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-[10px] text-white/40 uppercase tracking-wider">Icon</label>
                       <div className="flex gap-1">
@@ -593,8 +588,7 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                     )}
                   </div>
 
-                  {/* ── Gilt für ─────────────────────────────────────────── */}
-                  <div>
+                  <div id="edit-section-giltfuer">
                     <div className="flex items-center gap-2 mb-2">
                       <label className="text-[10px] text-white/40 uppercase tracking-wider">Gilt für</label>
                       {/* Mode toggle */}
@@ -632,9 +626,9 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                       ))}
                     </div>
 
-                    {/* Custom string input */}
-                    <div className="flex gap-2">
+                    <div id="edit-custom-input-row" className="flex gap-2">
                       <input
+                        id="input-edit-custom-match"
                         type="text"
                         value={customInput}
                         onChange={e => setCustomInput(e.target.value)}
@@ -658,12 +652,11 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                     )}
                   </div>
 
-                  {/* Action buttons */}
-                  <div className="flex gap-2 pt-1">
-                    <button onClick={cancelEdit}
+                  <div id="edit-actions" className="flex gap-2 pt-1">
+                    <button id="btn-edit-cancel" onClick={cancelEdit}
                       className="flex-1 py-2.5 rounded-card border border-white/10 text-sm text-white/50 hover:text-white/70 transition-colors"
                     >Abbrechen</button>
-                    <button onClick={save}
+                    <button id="btn-edit-save" onClick={save}
                       className="flex-1 py-2.5 rounded-card bg-purple-600/80 hover:bg-purple-600 text-sm text-white font-medium flex items-center justify-center gap-1.5 transition-colors"
                     ><Check size={14} />Speichern</button>
                   </div>

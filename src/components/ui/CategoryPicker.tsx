@@ -18,6 +18,7 @@ export function CategoryPicker({ open, current, onSelect, onClose }: Props) {
       {open && (
         <>
           <motion.div
+            id="modal-catpicker-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -38,17 +39,17 @@ export function CategoryPicker({ open, current, onSelect, onClose }: Props) {
               WebkitBackdropFilter: 'blur(6px)',
             }}
           >
-            <div id="cat-picker-header" className="p-4 border-b border-white/[0.06] flex items-center justify-between"
-            >
-              <h3 className="text-white font-semibold">Kategorie wählen</h3>
-              <button onClick={onClose} className="text-white/40 hover:text-white/80 p-1 rounded-full">
+            <div id="cat-picker-header" className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+              <h3 id="cat-picker-title" className="text-white font-semibold">Kategorie wählen</h3>
+              <button id="btn-catpicker-close" onClick={onClose} className="text-white/40 hover:text-white/80 p-1 rounded-full">
                 <X size={18} />
               </button>
             </div>
-            <div className="p-4 grid grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto">
+            <div id="cat-picker-grid" className="p-4 grid grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto">
               {allList.map(cat => (
                 <button
                   key={cat.id}
+                  id={`btn-catpicker-cat-${cat.id}`}
                   onClick={() => { onSelect(cat.id); onClose() }}
                   className="flex flex-col items-center gap-1.5 p-3 rounded-card_sm border transition-all duration-150 active:scale-95"
                   style={{

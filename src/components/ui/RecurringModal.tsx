@@ -41,6 +41,7 @@ export function RecurringModal({ open, onClose }: Props) {
           <>
             <motion.div
               key="recurring-backdrop"
+              id="modal-recurring-backdrop"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="absolute inset-0 z-50 bg-black/60 backdrop-blur-md"
@@ -48,22 +49,24 @@ export function RecurringModal({ open, onClose }: Props) {
             />
             <motion.div
               key="recurring-sheet"
+              id="modal-recurring-sheet"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 40 }}
               onClick={e => e.stopPropagation()}
               className="absolute bottom-0 left-0 right-0 z-51 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[92svh]"
               style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
             >
-              <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
+              <div id="modal-recurring-handle" className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
 
-              <div className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-2">
+              <div id="modal-recurring-scroll" className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
+                <div id="modal-recurring-header" className="flex items-center justify-between mb-5">
+                  <div id="modal-recurring-title-group" className="flex items-center gap-2">
                     <RefreshCw size={14} className="text-purple-400" />
-                    <h3 className="text-sm font-semibold text-white/80">Daueraufträge</h3>
-                    <span className="text-xs text-white/30">{recurringGroups.length}</span>
+                    <h3 id="modal-recurring-title" className="text-sm font-semibold text-white/80">Daueraufträge</h3>
+                    <span id="modal-recurring-count" className="text-xs text-white/30">{recurringGroups.length}</span>
                   </div>
                   <button
+                    id="btn-recurring-close"
                     onClick={onClose}
                     className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
                   >
@@ -71,7 +74,7 @@ export function RecurringModal({ open, onClose }: Props) {
                   </button>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div id="recurring-list" className="flex flex-col gap-2">
                   {recurringGroups.map(g => {
                     const groupTxs = g.transactions
                       .map(id => txById.get(id))
@@ -83,11 +86,12 @@ export function RecurringModal({ open, onClose }: Props) {
                     return (
                       <div
                         key={g.id}
+                        id={`recurring-group-${g.id}`}
                         className="rounded-card_sm border border-white/8 overflow-hidden"
                         style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
                       >
-                        {/* Group header row */}
                         <button
+                          id={`btn-recurring-expand-${g.id}`}
                           className="w-full flex items-center gap-3 px-3 py-3 text-left active:bg-white/5 transition-colors"
                           onClick={() => setExpandedId(isExpanded ? null : g.id)}
                         >
@@ -105,6 +109,7 @@ export function RecurringModal({ open, onClose }: Props) {
                             {g.approximateAmount >= 0 ? '+' : ''}{formatEur(g.approximateAmount)}
                           </p>
                           <button
+                            id={`btn-recurring-delete-${g.id}`}
                             onClick={e => { e.stopPropagation(); removeRecurringGroup(g.id) }}
                             className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 transition-colors ml-1 shrink-0"
                           >
@@ -112,10 +117,10 @@ export function RecurringModal({ open, onClose }: Props) {
                           </button>
                         </button>
 
-                        {/* Expanded transaction list */}
                         <AnimatePresence initial={false}>
                           {isExpanded && (
                             <motion.div
+                              id={`recurring-group-txlist-${g.id}`}
                               initial={{ height: 0 }}
                               animate={{ height: 'auto' }}
                               exit={{ height: 0 }}
@@ -123,10 +128,11 @@ export function RecurringModal({ open, onClose }: Props) {
                               className="overflow-hidden"
                             >
                               <div className="border-t border-white/6 mx-3 mb-1" />
-                              <div className="pb-2">
+                              <div id={`recurring-group-txs-${g.id}`} className="pb-2">
                                 {groupTxs.slice(0, 8).map(tx => (
                                   <button
                                     key={tx.id}
+                                    id={`btn-recurring-tx-${tx.id}`}
                                     onClick={() => setSelected(tx)}
                                     className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-white/4 active:bg-white/6 transition-colors rounded-card_sm"
                                   >

@@ -1,7 +1,7 @@
 import { syncAll, blzFromIban } from './fints'
 import { ebStartAuth, ebExchangeAndSync, ebGetAspsps } from './enablebanking'
 import {
-  mergeTransactions, getTransactions, updateTransaction, clearTransactions, toStored,
+  mergeTransactions, getTransactions, updateTransaction, deleteTransaction, clearTransactions, toStored,
   type MergeInput, type StoredTx,
 } from './db'
 
@@ -128,6 +128,15 @@ export default {
       if ('customLabel' in body) patch.customLabel = body.customLabel
       if ('customIcon' in body)  patch.customIcon  = body.customIcon
       await updateTransaction(env.DB, body.id, patch)
+      return jsonResponse({ ok: true }, 200, cors)
+    }
+
+    // ── DELETE /transactions/:id — remove a single transaction ───────────
+    if (request.method === 'DELETE' && path.startsWith('/transactions/')) {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      const id = path.slice('/transactions/'.length)
+      if (!id) return jsonResponse({ error: 'id fehlt' }, 400, cors)
+      await deleteTransaction(env.DB, id)
       return jsonResponse({ ok: true }, 200, cors)
     }
 

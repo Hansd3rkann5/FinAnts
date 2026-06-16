@@ -44,7 +44,7 @@ export function CategoryManageModal({ open, onClose }: Props) {
               transition={{ type: 'spring', stiffness: 380, damping: 40 }}
               onClick={e => e.stopPropagation()}
               className="absolute bottom-0 left-0 right-0 z-51 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[88svh]"
-              style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+              style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.6) 100%)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
             >
               <div id="modal-catmgr-handle" className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
 
@@ -67,7 +67,7 @@ export function CategoryManageModal({ open, onClose }: Props) {
                       <div
                         id={`catmgr-row-${cat.id}`}
                         key={cat.id}
-                        className="flex items-center gap-3 rounded-card_sm px-3 py-2.5 bg-white/4 border border-white/6"
+                        className="flex items-center gap-3 rounded-card_sm px-3 py-2.5 bg-white/7 border border-white/6"
                       >
                         <div
                           id={`catmgr-icon-${cat.id}`}
@@ -107,8 +107,8 @@ export function CategoryManageModal({ open, onClose }: Props) {
                 onClick={openCreate}
                 className="absolute bottom-4 left-4 right-4 flex items-center justify-center gap-2 py-4 rounded-card_sm border border-white/10 text-sm text-white/50 hover:text-white/70 transition-colors active:opacity-60"
                 style={{
-                  backdropFilter: 'blur(5px)',
-                  WebkitBackdropFilter: 'blur(5px)',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
                   background: 'rgba(30, 30, 30, 0.7)',
                   boxShadow: '0 40px 20px 20px rgba(10,10,10,0.7), 0 10px 20px 10px rgba(10,10,10,0.7)',
                 }}

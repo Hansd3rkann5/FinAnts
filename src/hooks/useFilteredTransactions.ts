@@ -17,26 +17,30 @@ export function useBalanceSummary(transactions: Transaction[]): BalanceSummary {
     const totalExpenses = Math.abs(booked.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0))
     const balance = totalIncome - totalExpenses
 
-    // Expand each transaction into its category portions (split overlay) so a
-    // split counts toward both categories. Income/expense totals above are
-    // unaffected (the parts sum to the amount).
-    const categoryMap = new Map<string, number>()
+    // Net signed sum per category across all portions (splits included). Both
+    // income and expense transactions within a category are counted so the pie
+    // shows the true net spend per category, matching the modal breakdown.
+    const categoryNet = new Map<string, number>()
     const countMap = new Map<string, number>()
     for (const t of booked) {
       for (const p of categoryPortions(t)) {
-        if (p.amount < 0 && p.categoryId !== EXCLUDE_CATEGORY_ID) {
-          categoryMap.set(p.categoryId, (categoryMap.get(p.categoryId) ?? 0) + Math.abs(p.amount))
-          countMap.set(p.categoryId, (countMap.get(p.categoryId) ?? 0) + 1)
-        }
+        if (p.categoryId === EXCLUDE_CATEGORY_ID) continue
+        categoryNet.set(p.categoryId, (categoryNet.get(p.categoryId) ?? 0) + p.amount)
+        countMap.set(p.categoryId, (countMap.get(p.categoryId) ?? 0) + 1)
       }
     }
 
-    const categories: CategorySummary[] = Array.from(categoryMap.entries())
-      .map(([categoryId, total]) => ({
+    // Only show categories with a net negative result in the pie (net spenders).
+    // total = |net| so Recharts can use it as a positive slice size.
+    const negativeEntries = Array.from(categoryNet.entries()).filter(([, net]) => net < 0)
+    const totalNetExpenses = negativeEntries.reduce((s, [, net]) => s + Math.abs(net), 0)
+
+    const categories: CategorySummary[] = negativeEntries
+      .map(([categoryId, net]) => ({
         categoryId: categoryId as Transaction['categoryId'],
-        total,
+        total: Math.abs(net),
         count: countMap.get(categoryId) ?? 0,
-        percentage: totalExpenses > 0 ? (total / totalExpenses) * 100 : 0,
+        percentage: totalNetExpenses > 0 ? (Math.abs(net) / totalNetExpenses) * 100 : 0,
       }))
       .sort((a, b) => b.total - a.total)
 

@@ -83,7 +83,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
                 {borderRadius: '999px',}
               }
               className={`h-16 flex items-center justify-center text-2xl font-light transition-colors ${
-                k ? 'bg-white/6 border border-white/8 active:bg-white/15' : 'opacity-0 pointer-events-none'
+                k ? ' active:bg-white/15' : 'opacity-0 pointer-events-none'
               }`}
             >
               {k === 'del' ? <Delete size={22} className="text-white/60" /> : k}

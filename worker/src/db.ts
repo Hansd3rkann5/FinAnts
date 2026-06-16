@@ -255,6 +255,10 @@ export async function updateTransaction(
   await db.prepare(`UPDATE transactions SET ${fields.join(', ')} WHERE id=?`).bind(...vals, id).run()
 }
 
+export async function deleteTransaction(db: D1Database, id: string): Promise<void> {
+  await db.prepare('DELETE FROM transactions WHERE id = ?').bind(id).run()
+}
+
 export async function clearTransactions(db: D1Database): Promise<void> {
   await db.prepare('DELETE FROM transactions').run()
 }

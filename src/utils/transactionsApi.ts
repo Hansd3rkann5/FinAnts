@@ -160,6 +160,13 @@ export async function updateTransactionRemote(
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
+export async function deleteTransactionRemote(id: string): Promise<void> {
+  const res = await fetch(`${workerUrl()}/transactions/${encodeURIComponent(id)}`, {
+    method: 'DELETE', credentials: 'include', headers: cfHeaders(),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
 export async function clearTransactionsRemote(): Promise<void> {
   const res = await fetch(`${workerUrl()}/transactions/clear`, {
     method: 'POST', credentials: 'include', headers: cfHeaders(),

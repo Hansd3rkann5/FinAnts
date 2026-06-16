@@ -137,20 +137,19 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
             className="absolute bottom-0 left-0 right-0 z-51 rounded-t-4xl border-t border-white/10 pb-safe flex flex-col max-h-[88svh]"
             style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.99) 0%, rgba(18,15,36,0.99) 100%)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
           >
-            <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
+            <div id="modal-catcreate-handle" className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
 
-            <div className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-sm font-semibold text-white/80">{editItem ? 'Kategorie bearbeiten' : 'Neue Kategorie'}</h3>
-                <button onClick={handleClose} className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
+            <div id="modal-catcreate-scroll" className="overflow-y-auto flex-1 min-h-0 px-5 pt-3 pb-6">
+              <div id="modal-catcreate-header" className="flex items-center justify-between mb-5">
+                <h3 id="modal-catcreate-title" className="text-sm font-semibold text-white/80">{editItem ? 'Kategorie bearbeiten' : 'Neue Kategorie'}</h3>
+                <button id="btn-catcreate-close" onClick={handleClose} className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
                   <X size={15} />
                 </button>
               </div>
 
-              {/* Preview */}
-              <div className="flex flex-col items-center gap-2 mb-6">
+              <div id="modal-catcreate-preview" className="flex flex-col items-center gap-2 mb-6">
                 <div
+                  id="modal-catcreate-preview-icon"
                   className="w-16 h-16 rounded-card flex items-center justify-center shrink-0"
                   style={{ backgroundColor: `${color}22`, border: `1.5px solid ${color}50`, fontSize: isPhoto ? undefined : 30 }}
                 >
@@ -158,14 +157,14 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
                     ? <img src={icon} alt="" className="w-full h-full object-cover rounded-card" />
                     : icon}
                 </div>
-                <p className="text-sm font-medium text-white/80">{label || 'Neue Kategorie'}</p>
+                <p id="modal-catcreate-preview-label" className="text-sm font-medium text-white/80">{label || 'Neue Kategorie'}</p>
               </div>
 
-              <div className="flex flex-col gap-5">
-                {/* Name */}
-                <div>
+              <div id="modal-catcreate-form" className="flex flex-col gap-5">
+                <div id="modal-catcreate-section-name">
                   <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-1.5">Name</label>
                   <input
+                    id="input-catcreate-name"
                     type="text"
                     value={label}
                     onChange={e => setLabel(e.target.value)}
@@ -175,8 +174,7 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
                   />
                 </div>
 
-                {/* Color */}
-                <div>
+                <div id="modal-catcreate-section-color">
                   <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-2">Farbe</label>
                   <div className="grid grid-cols-8 gap-2">
                     {COLOR_PRESETS.map(c => (
@@ -216,8 +214,7 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
                   </div>
                 </div>
 
-                {/* Icon */}
-                <div>
+                <div id="modal-catcreate-section-icon">
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-[10px] text-white/40 uppercase tracking-wider">Icon</label>
                     <div className="flex gap-1">
@@ -274,12 +271,12 @@ export function CategoryCreateModal({ open, onClose, onSave, editItem, onUpdate 
                   )}
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 pt-1">
-                  <button onClick={handleClose}
+                <div id="modal-catcreate-actions" className="flex gap-2 pt-1">
+                  <button id="btn-catcreate-cancel" onClick={handleClose}
                     className="flex-1 py-2.5 rounded-card border border-white/10 text-sm text-white/50 hover:text-white/70 transition-colors"
                   >Abbrechen</button>
                   <button
+                    id="btn-catcreate-save"
                     onClick={handleSave}
                     disabled={!label.trim()}
                     className="flex-1 py-2.5 rounded-card bg-purple-600/80 hover:bg-purple-600 disabled:opacity-40 disabled:pointer-events-none text-sm text-white font-medium flex items-center justify-center gap-1.5 transition-colors"

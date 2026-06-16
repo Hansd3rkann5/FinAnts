@@ -4,7 +4,7 @@ import type { SplitMap } from '@/hooks/useTxSplits'
 import { detectRecurring } from '@/utils/recurringDetector'
 import { reportError } from '@/utils/notify'
 import {
-  fetchTransactions, mergeTransactions, updateTransactionRemote, clearTransactionsRemote,
+  fetchTransactions, mergeTransactions, updateTransactionRemote, deleteTransactionRemote, clearTransactionsRemote,
   enrichTransactions, transactionToMergeRow,
   type StoredTx,
 } from '@/utils/transactionsApi'
@@ -166,6 +166,16 @@ export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: S
     })
   }, [transactions])
 
+  const deleteTransaction = useCallback((id: string) => {
+    rawRowsRef.current = rawRowsRef.current.filter(r => r.id !== id)
+    setTransactions(prev => {
+      const next = prev.filter(t => t.id !== id)
+      saveCache(next, recurringGroups)
+      return next
+    })
+    deleteTransactionRemote(id).catch(e => reportError('Löschen fehlgeschlagen', e))
+  }, [recurringGroups])
+
   const clearAll = useCallback(async () => {
     rawRowsRef.current = []
     setTransactions([])
@@ -179,6 +189,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: S
     transactions, recurringGroups, isLoaded,
     importTransactions, applyServerTransactions, refresh,
     updateCategory, batchUpdateCategory, updateTransaction,
+    deleteTransaction,
     removeRecurringGroup, clearAll,
   }
 }
