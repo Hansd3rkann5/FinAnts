@@ -1,3 +1,11 @@
+// Bank exports spell the same merchant inconsistently across umlaut/ASCII
+// transliterations ("Bäckerei" vs "Baeckerei") and casing — fold both the
+// input text and keywords through this before comparing, so a keyword only
+// needs to be written once regardless of which spelling shows up.
+export function fold(s: string): string {
+  return s.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+}
+
 interface MerchantInfo {
   name: string
   domain: string
@@ -27,13 +35,15 @@ const MERCHANTS: MerchantInfo[] = [
   { name: 'Starbucks',    domain: 'starbucks.com',     keywords: ['starbucks'],                      categoryOverride: 'dining' },
   { name: 'Subway',       domain: 'subway.com',        keywords: ['subway'],                         categoryOverride: 'dining' },
   // Transport
-  { name: 'Deutsche Bahn', domain: 'bahn.de',          keywords: ['deutsche bahn', 'db vertrieb', 'db bahn', 'bahn.de'], categoryOverride: 'transport' },
+  { name: 'Deutsche Bahn', domain: 'bahn.de',          keywords: ['deutsche bahn', 'db vertrieb', 'db bahn', 'db fernverkehr', 'bahn.de'], categoryOverride: 'transport' },
   { name: 'Uber',          domain: 'uber.com',          keywords: ['uber bv', 'uber trip'],          categoryOverride: 'transport' },
   { name: 'ADAC',          domain: 'adac.de',           keywords: ['adac'],                          categoryOverride: 'transport' },
   { name: 'Shell',         domain: 'shell.de',          keywords: ['shell tankst', 'shell station'], categoryOverride: 'transport' },
   { name: 'BP',            domain: 'bp.com',            keywords: ['bp tankst', ' bp '],             categoryOverride: 'transport' },
   { name: 'Aral',          domain: 'aral.de',           keywords: ['aral'],                          categoryOverride: 'transport' },
+  { name: 'Esso',          domain: 'esso.de',           keywords: ['esso'],                          categoryOverride: 'transport' },
   { name: 'Flixbus',       domain: 'flixbus.de',        keywords: ['flixbus', 'flix se'],            categoryOverride: 'transport' },
+  { name: 'Lime',          domain: 'li.me',             keywords: ['lime*'],                         categoryOverride: 'transport' },
   { name: 'Ryanair',       domain: 'ryanair.com',       keywords: ['ryanair'],                       categoryOverride: 'travel' },
   { name: 'Lufthansa',     domain: 'lufthansa.com',     keywords: ['lufthansa', 'dlh'],              categoryOverride: 'travel' },
   { name: 'Booking.com',   domain: 'booking.com',       keywords: ['booking.com', 'booking b.v'],   categoryOverride: 'travel' },
@@ -58,8 +68,15 @@ const MERCHANTS: MerchantInfo[] = [
   { name: 'Zara',          domain: 'zara.com',          keywords: ['zara'],                          categoryOverride: 'shopping' },
   { name: 'IKEA',          domain: 'ikea.com',          keywords: ['ikea'],                          categoryOverride: 'shopping' },
   { name: 'eBay',          domain: 'ebay.de',           keywords: ['ebay'],                          categoryOverride: 'shopping' },
+  { name: 'Vinted',        domain: 'vinted.de',         keywords: ['vinted'],                        categoryOverride: 'shopping' },
+  { name: 'Klarna',        domain: 'klarna.com',        keywords: ['klarna'],                        categoryOverride: 'shopping' },
+  { name: 'Riverty',       domain: 'riverty.com',       keywords: ['riverty'],                       categoryOverride: 'shopping' },
   // Pharma/health
   { name: 'DocMorris',     domain: 'docmorris.de',      keywords: ['docmorris', 'versandapo'],       categoryOverride: 'health' },
+  // Groceries (regional chains)
+  { name: 'Tegut',         domain: 'tegut.de',          keywords: ['tegut'],                         categoryOverride: 'groceries' },
+  // Food delivery & dining
+  { name: 'Yormas',        domain: 'yormas.de',         keywords: ['yormas'],                        categoryOverride: 'dining' },
   // Utilities & housing
   { name: 'Telekom',       domain: 'telekom.de',        keywords: ['telekom', 'dt ag'],              categoryOverride: 'housing' },
   { name: 'Vodafone',      domain: 'vodafone.de',       keywords: ['vodafone'],                      categoryOverride: 'housing' },
@@ -71,6 +88,8 @@ const MERCHANTS: MerchantInfo[] = [
   { name: 'AOK',           domain: 'aok.de',            keywords: ['aok'],                           categoryOverride: 'insurance' },
   { name: 'TK',            domain: 'tk.de',             keywords: ['techniker krank', 'tk krank'],   categoryOverride: 'insurance' },
   { name: 'Barmer',        domain: 'barmer.de',         keywords: ['barmer'],                        categoryOverride: 'insurance' },
+  { name: 'BKK Firmus',    domain: 'bkkfirmus.de',      keywords: ['bkk firmus'],                    categoryOverride: 'insurance' },
+  { name: 'SKD BKK',       domain: 'skdbkk.de',         keywords: ['skd bkk'],                       categoryOverride: 'insurance' },
   // Gaming & entertainment
   { name: 'Steam',         domain: 'steampowered.com',  keywords: ['steam', 'valve'],                categoryOverride: 'entertainment' },
   { name: 'PlayStation',   domain: 'playstation.com',   keywords: ['playstation', 'psn'],            categoryOverride: 'entertainment' },
@@ -90,9 +109,9 @@ const LOGOS_TOKEN = import.meta.env.VITE_LOGOS_TOKEN ?? ''
 console.log('[logos.dev] token present:', !!LOGOS_TOKEN, LOGOS_TOKEN ? `(${LOGOS_TOKEN.slice(0, 6)}…)` : '(missing)')
 
 export function findMerchant(text: string): MerchantMatch | null {
-  const lower = text.toLowerCase()
+  const lower = fold(text)
   for (const m of MERCHANTS) {
-    if (m.keywords.some(k => lower.includes(k))) {
+    if (m.keywords.some(k => lower.includes(fold(k)))) {
       return {
         merchantKey: m.domain,
         name: m.name,

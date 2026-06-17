@@ -13,6 +13,7 @@ export type CategoryId =
   | 'travel'
   | 'education'
   | 'savings'
+  | 'fees'
   | 'income'
   | 'transfer'
   | 'other'

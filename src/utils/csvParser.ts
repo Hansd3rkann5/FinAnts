@@ -94,7 +94,9 @@ export function parseCommerzbankCSV(text: string): Transaction[] {
     // Description fields (needed for date fallback too)
     const buchungstext     = colDescription >= 0 ? cleanField(cols[colDescription] ?? '') : ''
     const verwendungszweck = colReference   >= 0 ? cleanField(cols[colReference]   ?? '') : ''
-    const description = [buchungstext, verwendungszweck].filter(Boolean).join(' · ')
+    // Buchungstext stays the long detail-view string; Verwendungszweck becomes
+    // the prominent customLabel instead of being folded into the description.
+    const description = buchungstext
 
     const buchungstag  = colBuchungstag  >= 0 ? cleanField(cols[colBuchungstag]  ?? '') : ''
     const wertstellung = colWertstellung >= 0 ? cleanField(cols[colWertstellung] ?? '') : ''
@@ -118,8 +120,11 @@ export function parseCommerzbankCSV(text: string): Transaction[] {
     const iban = colIban >= 0 ? cleanField(cols[colIban] ?? '') || undefined : undefined
 
     const type = amount >= 0 ? 'income' : 'expense'
-    const merchant = findMerchant(`${description} ${counterparty}`)
-    const categoryId = autoCategory(description, counterparty)
+    // Verwendungszweck no longer lives in `description`, but still carries the
+    // best merchant/category signal for many transactions — keep using it here.
+    const detectionText = [buchungstext, verwendungszweck].filter(Boolean).join(' · ')
+    const merchant = findMerchant(`${detectionText} ${counterparty}`)
+    const categoryId = autoCategory(detectionText, counterparty)
 
     transactions.push({
       id: `${date.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -132,6 +137,7 @@ export function parseCommerzbankCSV(text: string): Transaction[] {
       categoryId,
       merchantKey: merchant?.merchantKey,
       isPending: isPending || undefined,
+      customLabel: verwendungszweck || undefined,
     })
   }
 

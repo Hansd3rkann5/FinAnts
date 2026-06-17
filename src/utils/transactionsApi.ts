@@ -34,7 +34,9 @@ export interface StoredTx {
 
 // Raw fields sent to the merge endpoint; the server derives the dedup key.
 // Auto-derived categories are intentionally omitted — only explicit user edits
-// (via updateTransactionRemote) are persisted as overrides.
+// (via updateTransactionRemote) are persisted as overrides. customLabel is the
+// exception: the CSV parser sets it from Verwendungszweck at import time, since
+// that's a per-transaction field (not a derived/pattern value).
 export interface MergeRow {
   date: string
   amount: number
@@ -44,6 +46,7 @@ export interface MergeRow {
   iban?: string
   accountIban?: string
   reference?: string
+  customLabel?: string
   isPending?: boolean
 }
 
@@ -126,6 +129,7 @@ export function transactionToMergeRow(t: Transaction): MergeRow {
     counterparty: t.counterparty,
     accountIban: t.iban,   // Commerzbank CSV exports put the account-holder IBAN here
     reference: t.reference,
+    customLabel: t.customLabel,
     isPending: t.isPending,
   }
 }
@@ -190,7 +194,7 @@ export function mergeLocal(existing: StoredTx[], incoming: MergeRow[]): MergeRes
         accountIban: r.accountIban ?? null,
         reference: r.reference ?? null,
         categoryId: null,
-        customLabel: null,
+        customLabel: r.customLabel ?? null,
         customIcon: null,
         source: 'csv',
       })

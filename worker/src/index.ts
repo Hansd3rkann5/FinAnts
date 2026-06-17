@@ -23,12 +23,19 @@ export interface Env {
 
 const ALLOWED_ORIGINS = [
   'https://hansd3rkann5.github.io',
-  'http://localhost:5173',
-  'https://localhost:5173',
 ]
 
+// Vite picks the next free port when 5173 is taken (5174, 5175, ...), so a
+// fixed allowlist entry per port silently breaks every API call — with no
+// useful error beyond a generic "NetworkError" — whenever a second dev
+// server happens to be running. Any localhost/127.0.0.1 origin is only
+// reachable from the developer's own machine anyway, so allow any port there.
+const LOCALHOST_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/
+
 function corsHeaders(requestOrigin: string): Record<string, string> {
-  const origin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : ALLOWED_ORIGINS[0]
+  const origin = ALLOWED_ORIGINS.includes(requestOrigin) || LOCALHOST_ORIGIN.test(requestOrigin)
+    ? requestOrigin
+    : ALLOWED_ORIGINS[0]
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Credentials': 'true',

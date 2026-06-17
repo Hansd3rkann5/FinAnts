@@ -1,5 +1,5 @@
 import type { CategoryId } from '@/types'
-import { findMerchant } from './merchantLogos'
+import { findMerchant, fold } from './merchantLogos'
 
 interface Rule {
   keywords: string[]
@@ -21,10 +21,15 @@ const RULES: Rule[] = [
   { keywords: ['schule', 'universität', 'volkshochschule', 'kurs', 'studiengebühr', 'nachhilfe', 'duolingo'], category: 'education' },
   { keywords: ['spar', 'sparkasse einlage', 'tagesgeld', 'festgeld', 'etf', 'depot'], category: 'savings' },
   { keywords: ['überweisung eigene', 'eigenkonto', 'eigene konten', 'umbuchung'], category: 'transfer' },
+  { keywords: ['kontoführung', 'benachrichtigungsentgelt', 'depotentgelt'], category: 'fees' },
+  // Generic German business-type words rather than individual brand names —
+  // catches any bakery/transit operator regardless of which one it is.
+  { keywords: ['bäckerei'], category: 'dining' },
+  { keywords: ['verkehrs'], category: 'transport' },
 ]
 
 export function autoCategory(description: string, counterparty: string): CategoryId {
-  const combined = `${description} ${counterparty}`.toLowerCase()
+  const combined = fold(`${description} ${counterparty}`.toLowerCase())
 
   const merchant = findMerchant(combined)
   if (merchant?.categoryOverride) {
@@ -32,7 +37,7 @@ export function autoCategory(description: string, counterparty: string): Categor
   }
 
   for (const rule of RULES) {
-    if (rule.keywords.some(k => combined.includes(k))) {
+    if (rule.keywords.some(k => combined.includes(fold(k)))) {
       return rule.category
     }
   }

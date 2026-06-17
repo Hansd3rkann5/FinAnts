@@ -13,6 +13,7 @@ export const CATEGORIES: Record<string, Category> = {
   travel:        { id: 'travel',        label: 'Reisen',         color: '#06b6d4', icon: '✈️' },
   education:     { id: 'education',     label: 'Bildung',        color: '#84cc16', icon: '📚' },
   savings:       { id: 'savings',       label: 'Sparen',         color: '#14b8a6', icon: '💰' },
+  fees:          { id: 'fees',          label: 'Bankgebühren',   color: '#71717a', icon: '🏦' },
   income:        { id: 'income',        label: 'Einnahmen',      color: '#4ade80', icon: '💵' },
   transfer:      { id: 'transfer',      label: 'Überweisungen',  color: '#94a3b8', icon: '↔️' },
   other:         { id: 'other',         label: 'Sonstiges',      color: '#6b7280', icon: '📋' },

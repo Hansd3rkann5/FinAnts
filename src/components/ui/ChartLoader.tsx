@@ -1,108 +1,60 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, type Transition, type TargetAndTransition } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
-// Brand palette from the app logo — consecutive lines cycle through these so
-// each new chart line is a different colour from the one it replaces.
+// Brand palette from the app logo — the line fades from its current colour
+// into the next one in this list every time it morphs.
 const COLORS = ['#7c5cff', '#a78bfa', '#6366f1', '#3b82f6', '#2563eb', '#8b5cf6']
 
-// Normalised drawing surface. preserveAspectRatio="none" stretches it to fill
-// the (padded) window; non-scaling strokes keep the lines crisp regardless.
+// Drawing surface (user units), scaled uniformly to fit the window.
 const VB_W = 100
 const VB_H = 60
 const PAD_X = 3   // keep end points off the very edge
 const PAD_Y = 9   // vertical breathing room for the random y-values
 const POINTS = 5
+const STROKE_W = 1.4
 
-// Lifecycle of a single line (seconds):
-//   draw  → revealed left→right (ease-in-out)
-//   hold  → fully drawn, held while its successor draws its first segment
-//   erase → wiped left→right (ease-in-out)
-// A new line spawns every LIFE/2 seconds, so the steady state always holds
-// exactly two lines: the old one erasing left→right while the new one draws
-// left→right. The draw:hold:erase = 2:1:2 ratio keeps the old line's erase
-// front exactly one segment behind the new line's draw front — i.e. the two
-// lines overlap by a single x-segment during the handoff.
-const DRAW = 1.4
-const HOLD = 0.7
-const ERASE = 1.4
-const LIFE = DRAW + HOLD + ERASE
-const SPAWN = LIFE / 2
+// x-positions never change — only y. Computed once at module scope since
+// they're the same for every tick.
+const XS = Array.from({ length: POINTS }, (_, i) => PAD_X + (i / (POINTS - 1)) * (VB_W - PAD_X * 2))
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min)
 
-function makePath(): string {
-  const span = VB_W - PAD_X * 2
-  const pts = Array.from({ length: POINTS }, (_, i) => {
-    const x = PAD_X + (i / (POINTS - 1)) * span
-    const y = rand(PAD_Y, VB_H - PAD_Y)
-    return `${x.toFixed(1)} ${y.toFixed(1)}`
-  })
-  return `M ${pts.join(' L ')}`
+function pathFromYs(ys: number[]): string {
+  return `M ${XS.map((x, i) => `${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(' L ')}`
 }
 
-function ChartLine({ d, color, onDone }: { d: string; color: string; onDone: () => void }) {
-  return (
-    <motion.path
-      d={d}
-      fill="none"
-      stroke={color}
-      strokeWidth={3}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      vectorEffect="non-scaling-stroke"
-      // pathLength / pathOffset are Framer Motion's normalised (0–1) equivalents
-      // of stroke-dasharray / stroke-dashoffset. Motion measures the real path
-      // length and manages the dash attributes itself, so we must NOT also set
-      // strokeDasharray / strokeDashoffset manually — that was the bug.
-      //
-      // pathLength = visible fraction of the path
-      // pathOffset = where the visible segment starts
-      //   draw  (left→right): pathLength 0→1, pathOffset 0   → visible [0, len] grows from left
-      //   hold:               pathLength 1,   pathOffset 0
-      //   erase (left→right): pathLength 1→0, pathOffset 0→1 → visible [off, 1], left edge sweeps right
-      initial={{ pathLength: 0, pathOffset: 0 }}
-      animate={{
-        pathLength: [0, 1, 1, 0],
-        pathOffset: [0, 0, 0, 1],
-      }}
-      transition={{
-        duration: LIFE,
-        times: [0, DRAW / LIFE, (DRAW + HOLD) / LIFE, 1],
-        ease: ['easeInOut', 'linear', 'easeInOut'],
-      }}
-      onAnimationComplete={onDone}
-    />
-  )
-}
+// The 5 points morph to fresh random y-values once per second (1Hz); the
+// stroke colour fades to the next palette entry over the same beat, so shape
+// and colour transitions land together.
+const TICK_MS = 1000
+const MORPH: Transition = { duration: TICK_MS / 1000, ease: 'easeInOut' }
 
-interface Line { id: number; d: string; color: string }
+type Target = Pick<TargetAndTransition, 'd' | 'stroke'>
 
 function ChartAnimation() {
-  // Seed the first line with literal values so the lazy initialiser never reads
-  // a ref during render (which React forbids). makePath() is a pure call and is
-  // fine to run here — the initialiser runs exactly once.
-  const [lines, setLines] = useState<Line[]>(() => [
-    { id: 0, d: makePath(), color: COLORS[0] },
-  ])
-
-  // Counters continue from 1 and are only ever touched inside the interval
-  // callback — i.e. outside of render, which is where ref access is allowed.
-  const idRef = useRef(1)
-  const colorRef = useRef(1)
+  // One persistent line — never replaced/remounted, just continuously
+  // retargeted. Starts perfectly flat (all 5 points at the same y), then
+  // morphs every tick. `target` IS the exact object passed to `animate`
+  // (not wrapped in a fresh literal in JSX): Framer Motion treats a new
+  // object reference as a new animation target and restarts the in-progress
+  // transition, so this needs to stay the same object until the next tick
+  // genuinely changes it via setTarget.
+  const [target, setTarget] = useState<Target>(() => ({
+    d: pathFromYs(Array(POINTS).fill(VB_H / 2)),
+    stroke: COLORS[0],
+  }))
+  const colorRef = useRef(0)
 
   useEffect(() => {
     const iv = setInterval(() => {
-      setLines(prev => [
-        ...prev,
-        {
-          id: idRef.current++,
-          d: makePath(),
-          color: COLORS[colorRef.current++ % COLORS.length],
-        },
-      ])
-    }, SPAWN * 1000)
+      colorRef.current = (colorRef.current + 1) % COLORS.length
+      setTarget({
+        d: pathFromYs(XS.map(() => rand(PAD_Y, VB_H - PAD_Y))),
+        stroke: COLORS[colorRef.current],
+      })
+    }, TICK_MS)
     return () => clearInterval(iv)
   }, [])
 
@@ -111,15 +63,16 @@ function ChartAnimation() {
       className="w-full h-full"
       style={{ filter: 'drop-shadow(0 0 8px rgba(124,92,255,0.35))' }}
     >
-      <svg viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="none" width="100%" height="100%">
-        {lines.map(l => (
-          <ChartLine
-            key={l.id}
-            d={l.d}
-            color={l.color}
-            onDone={() => setLines(prev => prev.filter(x => x.id !== l.id))}
-          />
-        ))}
+      <svg viewBox={`0 0 ${VB_W} ${VB_H}`} width="100%" height="100%">
+        <motion.path
+          fill="none"
+          strokeWidth={STROKE_W}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={target}
+          animate={target}
+          transition={MORPH}
+        />
       </svg>
     </div>
   )

@@ -30,7 +30,9 @@ dist-ssr
 worker/.dev.vars
 worker/node_modules
 
-# Personal PayPal exports + extracted data (never commit)
+# Personal bank/PayPal exports + extracted data (never commit)
 PayPal_*.rtf
+PayPal_*.html
 paypal*.csv
 mockup.csv
+/transactions/

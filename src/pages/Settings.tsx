@@ -21,7 +21,7 @@ import { useAccounts } from '@/hooks/useAccounts'
 import { detectAndParse } from '@/utils/csvParser'
 import { useWorkerSync, type SyncStatus } from '@/hooks/useWorkerSync'
 import { ChartLoader } from '@/components/ui/ChartLoader'
-import { useErrorLog, notify, fetchErrorLogRemote, clearErrorLogRemote, type RemoteLoggedError } from '@/utils/notify'
+import { useErrorLog, notify, reportError, fetchErrorLogRemote, clearErrorLogRemote, type RemoteLoggedError } from '@/utils/notify'
 import { isLockEnabled, hasBiometric, webauthnSupported, enableLock, disableLock } from '@/utils/appLock'
 
 const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
@@ -109,7 +109,7 @@ function CollapsibleCard({
 }
 
 export function Settings() {
-  const { transactions, importTransactions, importLocalOnly, applyServerTransactions, clearAll } = useTransactionsCtx()
+  const { transactions, importTransactions, importLocalOnly, applyServerTransactions, clearAll, refreshAll } = useTransactionsCtx()
   const { accounts, setAccounts, toggleIncluded } = useAccounts()
   const { baseBalance: manualBalance, updatedAt: balanceUpdatedAt, save: saveBalance } = useManualBalance()
   const { entries: errorLog, clear: clearErrorLog } = useErrorLog()
@@ -158,6 +158,7 @@ export function Settings() {
   }
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle')
   const [importMessage, setImportMessage] = useState('')
+  const [importPhase, setImportPhase] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
   const [balanceInput, setBalanceInput] = useState(
     manualBalance !== null ? String(manualBalance).replace('.', ',') : ''
@@ -166,6 +167,23 @@ export function Settings() {
   // API key auth state
   const [apiKey, setApiKeyState] = useState<string>(() => getApiKey() ?? '')
   const [apiKeyInput, setApiKeyInput] = useState<string>(() => getApiKey() ?? '')
+  const [keySaving, setKeySaving] = useState(false)
+
+  async function handleSaveApiKey() {
+    const trimmed = apiKeyInput.trim()
+    if (!trimmed) return
+    setApiKey(trimmed)
+    setApiKeyState(trimmed)
+    setKeySaving(true)
+    try {
+      await refreshAll()
+      notify('Daten geladen', 'Buchungen, Kategorien und Muster synchronisiert')
+    } catch (e) {
+      reportError('Laden fehlgeschlagen', e)
+    } finally {
+      setKeySaving(false)
+    }
+  }
 
   const [pendingParsed, setPendingParsed] = useState<Transaction[] | null>(null)
   const [localImportOpen, setLocalImportOpen] = useState(false)
@@ -186,8 +204,10 @@ export function Settings() {
   async function handleFile(file: File) {
     setImportStatus('parsing')
     setImportMessage('')
+    setImportPhase('Datei wird gelesen…')
     try {
       const text = await file.text()
+      setImportPhase('Buchungen werden erkannt…')
       const parsed = detectAndParse(text)
       if (parsed.length === 0) throw new Error('Keine Buchungen gefunden. Bitte prüfe das Dateiformat.')
       if (!getApiKey()) {
@@ -196,12 +216,15 @@ export function Settings() {
         setImportStatus('idle')
         return
       }
+      setImportPhase('Buchungen werden importiert…')
       const meta = await importTransactions(parsed)
       setImportStatus('success')
       setImportMessage(`${meta.added} neu von ${parsed.length} · ${meta.total} gesamt`)
     } catch (e) {
       setImportStatus('error')
       setImportMessage(e instanceof Error ? e.message : 'Unbekannter Fehler')
+    } finally {
+      setImportPhase('')
     }
   }
 
@@ -241,12 +264,16 @@ export function Settings() {
   const isAuth = !!apiKey
 
   const [previewLoader, setPreviewLoader] = useState(false)
-  const showLoader = ebStatus === 'starting' || ebStatus === 'syncing' || syncStatus === 'syncing'
+  const showLoader =
+    ebStatus === 'starting' || ebStatus === 'syncing' || syncStatus === 'syncing' || keySaving ||
+    importStatus === 'parsing'
   const loaderMessage =
     previewLoader              ? 'Vorschau · Ladeanimation'
+    : keySaving                 ? 'Daten werden geladen…'
     : ebStatus === 'syncing'    ? 'Buchungen werden abgerufen…'
     : ebStatus === 'starting' ? 'Verbindung wird aufgebaut…'
     : syncStatus === 'syncing' ? 'FinTS Synchronisation…'
+    : importStatus === 'parsing' ? (importPhase || 'Buchungen werden importiert…')
     : undefined
 
   return (
@@ -303,12 +330,8 @@ export function Settings() {
               variant="primary"
               size="sm"
               icon={<LogIn size={13} />}
-              onClick={() => {
-                const trimmed = apiKeyInput.trim()
-                if (!trimmed) return
-                setApiKey(trimmed)
-                setApiKeyState(trimmed)
-              }}
+              onClick={handleSaveApiKey}
+              disabled={keySaving || !apiKeyInput.trim()}
             >
               Speichern
             </PillButton>

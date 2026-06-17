@@ -101,11 +101,13 @@ function toMessage(error: unknown): { message: string; stack?: string } {
 // never throw or call reportError itself — a failure here (e.g. the network
 // being the actual cause of the original error) would otherwise recurse.
 function pushErrorRemote(entry: LoggedError) {
-  if (!getApiKey()) return
+  if (!getApiKey()) { console.warn('[reportError] no API key set — not pushed to global log:', entry.context); return }
   fetch(`${resolveWorkerUrl()}/errors`, {
-    method: 'POST', headers: cfHeaders(),
+    method: 'POST', credentials: 'include', headers: cfHeaders(),
     body: JSON.stringify({ ...entry, device: navigator.userAgent.slice(0, 200) }),
-  }).catch(() => { /* best-effort only */ })
+  }).then(res => {
+    if (!res.ok) console.warn(`[reportError] global log push failed (HTTP ${res.status}):`, entry.context)
+  }).catch(e => console.warn('[reportError] global log push failed:', entry.context, e))
 }
 
 // Log a non-fatal failure: console + persisted log + top toast + remote push.
@@ -125,14 +127,14 @@ export function reportError(context: string, error: unknown) {
 export interface RemoteLoggedError extends LoggedError { device?: string | null }
 
 export async function fetchErrorLogRemote(): Promise<RemoteLoggedError[]> {
-  const res = await fetch(`${resolveWorkerUrl()}/errors`, { headers: cfHeaders() })
+  const res = await fetch(`${resolveWorkerUrl()}/errors`, { credentials: 'include', headers: cfHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const data = await res.json() as { errors?: RemoteLoggedError[] }
   return data.errors ?? []
 }
 
 export async function clearErrorLogRemote(): Promise<void> {
-  const res = await fetch(`${resolveWorkerUrl()}/errors/clear`, { method: 'POST', headers: cfHeaders() })
+  const res = await fetch(`${resolveWorkerUrl()}/errors/clear`, { method: 'POST', credentials: 'include', headers: cfHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
