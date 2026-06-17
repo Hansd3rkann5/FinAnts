@@ -43,7 +43,8 @@ export function Transactions() {
       const q = search.toLowerCase()
       result = result.filter(t =>
         t.counterparty.toLowerCase().includes(q) ||
-        t.description.toLowerCase().includes(q)
+        t.description.toLowerCase().includes(q) ||
+        (t.customLabel ?? '').toLowerCase().includes(q)
       )
     }
     return result
