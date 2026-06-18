@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { Account } from '@/types'
 import type { StoredTx } from '@/utils/transactionsApi'
+import { cfHeaders } from '@/utils/cfAuth'
 
 export interface WorkerConfig {
   workerUrl: string
@@ -93,7 +94,7 @@ export function useWorkerSync(
         res = await fetch(new URL('/tan', cfg.workerUrl).toString(), {
           method: 'POST',
           credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
+          headers: cfHeaders(),
           body: JSON.stringify({
             tan: options.tan,
             dialogId: options.dialogId,
@@ -105,7 +106,7 @@ export function useWorkerSync(
       } else {
         const url = new URL(cfg.workerUrl)
         url.searchParams.set('days', String(days))
-        res = await fetch(url.toString(), { credentials: 'include' })
+        res = await fetch(url.toString(), { credentials: 'include', headers: cfHeaders() })
       }
 
       if (res.status === 202) {
