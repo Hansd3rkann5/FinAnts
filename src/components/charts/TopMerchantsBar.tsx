@@ -38,7 +38,7 @@ export function TopMerchantsBar({ merchants, allMap }: Props) {
             </div>
             <div className="text-right shrink-0 w-14">
               <p className="text-xs font-medium text-white/80">{formatEur(m.total)}</p>
-              {m.count > 1 && <p className="text-[9px] text-white/25">{m.count}×</p>}
+              {/* {m.count > 1 && <p className="text-[9px] text-white/25">{m.count}×</p>} */}
             </div>
           </div>
         )

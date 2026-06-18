@@ -243,7 +243,7 @@ export function computeCategoryTrends(
 
 // ── TopMerchantsBar data ──────────────────────────────────────────────────────
 
-export function computeTopMerchants(txs: Transaction[], filter: TimeFilter): TopMerchant[] {
+export function computeTopMerchants(txs: Transaction[], filter: TimeFilter, excluded?: Set<string>): TopMerchant[] {
   const b = booked(txs)
   const { start, end } = getFilterDateRange(filter)
   const rangeBooked = filter === 'all' ? b : b.filter(t => t.date >= start && t.date <= end)
@@ -251,6 +251,7 @@ export function computeTopMerchants(txs: Transaction[], filter: TimeFilter): Top
   const map = new Map<string, { total: number; count: number; categoryId: string }>()
   for (const t of rangeBooked.filter(t => t.amount < 0)) {
     const key = (t.counterparty || t.description).trim()
+    if (excluded?.has(key)) continue
     const prev = map.get(key) ?? { total: 0, count: 0, categoryId: t.categoryId }
     map.set(key, { total: prev.total + Math.abs(t.amount), count: prev.count + 1, categoryId: t.categoryId })
   }
@@ -258,4 +259,27 @@ export function computeTopMerchants(txs: Transaction[], filter: TimeFilter): Top
     .map(([name, v]) => ({ name, ...v }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 8)
+}
+
+export interface MerchantBreakdownEntry {
+  name: string
+  total: number
+  categoryId: string
+  items: Transaction[]
+}
+
+// Every merchant with spending in range (not just the chart's top 8), for the
+// "Alle anzeigen" sheet — lets the user drill into a merchant's transactions
+// or exclude it from ever being considered a top merchant again.
+export function computeMerchantBreakdown(txs: Transaction[], filter: TimeFilter): MerchantBreakdownEntry[] {
+  const scoped = filterByTimeFilter(booked(txs), filter)
+  const map = new Map<string, MerchantBreakdownEntry>()
+  for (const t of scoped.filter(t => t.amount < 0)) {
+    const key = (t.counterparty || t.description).trim()
+    const entry = map.get(key) ?? { name: key, total: 0, categoryId: t.categoryId, items: [] }
+    entry.total += Math.abs(t.amount)
+    entry.items.push(t)
+    map.set(key, entry)
+  }
+  return [...map.values()].sort((a, b) => b.total - a.total)
 }

@@ -16,7 +16,7 @@ import { useAnalytics } from '@/hooks/useAnalytics'
 import { useChartFilter } from '@/hooks/useChartFilter'
 import {
   computeMonthlyData, computeSpendingData,
-  computeCategoryTrends, computeTopMerchants, filterByTimeFilter,
+  computeCategoryTrends, computeTopMerchants, computeMerchantBreakdown, filterByTimeFilter,
   computeAvailablePeriods,
 } from '@/utils/chartCompute'
 import { GlassCard } from '@/components/ui/GlassCard'
@@ -29,6 +29,7 @@ import { CategoryTrendChart } from '@/components/charts/CategoryTrendChart'
 import { TopMerchantsBar } from '@/components/charts/TopMerchantsBar'
 import { CategoryManageModal } from '@/components/ui/CategoryManageModal'
 import { CategoryBreakdownModal } from '@/components/ui/CategoryBreakdownModal'
+import { MerchantBreakdownModal } from '@/components/ui/MerchantBreakdownModal'
 import { RecurringModal } from '@/components/ui/RecurringModal'
 import { AccountCard } from '@/components/ui/AccountCard'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
@@ -62,11 +63,12 @@ export function Dashboard() {
   const [showAccounts,    setShowAccounts]    = useState(false)
   const [catManageOpen,   setCatManageOpen]   = useState(false)
   const [catBreakdownOpen, setCatBreakdownOpen] = useState(false)
+  const [merchBreakdownOpen, setMerchBreakdownOpen] = useState(false)
   const [recurringOpen,   setRecurringOpen]   = useState(false)
   const [selectedTx,      setSelectedTx]      = useState<Transaction | null>(null)
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const { transactions, recurringGroups, updateTransaction } = useTransactionsCtx()
+  const { transactions, recurringGroups, updateTransaction, excludedMerchants } = useTransactionsCtx()
   const { accounts, toggleIncluded, totalWealth } = useAccounts()
   const { baseBalance, savedAt: balanceSavedAt, updatedAt: balanceUpdatedAt } = useManualBalance()
   const { allMap } = useAllCategories()
@@ -114,9 +116,14 @@ export function Dashboard() {
     [transactions, catChart.effectiveFilter],
   )
 
+  const excludedMerchantSet = useMemo(() => new Set(excludedMerchants), [excludedMerchants])
   const topMerchants = useMemo(
-    () => computeTopMerchants(transactions, topChart.effectiveFilter),
-    [transactions, topChart.effectiveFilter],
+    () => computeTopMerchants(transactions, topChart.effectiveFilter, excludedMerchantSet),
+    [transactions, topChart.effectiveFilter, excludedMerchantSet],
+  )
+  const merchantCount = useMemo(
+    () => computeMerchantBreakdown(transactions, topChart.effectiveFilter).filter(e => !excludedMerchantSet.has(e.name)).length,
+    [transactions, topChart.effectiveFilter, excludedMerchantSet],
   )
 
   // Available periods for time pickers (derived from all transactions)
@@ -419,6 +426,13 @@ export function Dashboard() {
                 periods={periods}
               />
               <TopMerchantsBar merchants={topMerchants} allMap={allMap} />
+              <button
+                id="btn-merchant-breakdown"
+                onClick={() => setMerchBreakdownOpen(true)}
+                className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-1 border-t border-white/6"
+              >
+                {`Alle anzeigen (${merchantCount})`}
+              </button>
             </GlassCard>
           )}
         </>
@@ -464,6 +478,12 @@ export function Dashboard() {
         onClose={() => setCatBreakdownOpen(false)}
         onTransactionSelect={setSelectedTx}
         filter={pieChart.effectiveFilter}
+      />
+      <MerchantBreakdownModal
+        open={merchBreakdownOpen}
+        onClose={() => setMerchBreakdownOpen(false)}
+        onTransactionSelect={setSelectedTx}
+        filter={topChart.effectiveFilter}
       />
       <TransactionDetailModal
         transaction={selectedTx}

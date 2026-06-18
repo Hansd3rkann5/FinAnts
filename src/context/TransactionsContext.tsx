@@ -3,6 +3,7 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { useMerchantProfiles } from '@/hooks/useMerchantProfiles'
 import { useCustomCategories } from '@/hooks/useCustomCategories'
 import { useTxSplits, type Split } from '@/hooks/useTxSplits'
+import { useExcludedMerchants } from '@/hooks/useExcludedMerchants'
 import { pushCloudState, pullCloudState } from '@/utils/cloudSync'
 import { computeCreditCardBucket } from '@/utils/creditCardBilling'
 import { reportError } from '@/utils/notify'
@@ -13,6 +14,7 @@ type TransactionsCtx =
   ReturnType<typeof useMerchantProfiles> &
   ReturnType<typeof useCustomCategories> &
   ReturnType<typeof useTxSplits> &
+  ReturnType<typeof useExcludedMerchants> &
   { refreshAll: () => Promise<void> }
 
 const Ctx = createContext<TransactionsCtx | null>(null)
@@ -25,9 +27,11 @@ function useAutoSyncPatterns(
   customCategories: ReturnType<typeof useCustomCategories>['customCategories'],
   merchantProfiles: ReturnType<typeof useMerchantProfiles>['merchantProfiles'],
   txSplits: ReturnType<typeof useTxSplits>['txSplits'],
+  excludedMerchants: ReturnType<typeof useExcludedMerchants>['excludedMerchants'],
   applyCloudCategories: ReturnType<typeof useCustomCategories>['applyCloudCategories'],
   applyCloudProfiles: ReturnType<typeof useMerchantProfiles>['applyCloudProfiles'],
   applyCloudSplits: ReturnType<typeof useTxSplits>['applyCloudSplits'],
+  applyCloudExcludedMerchants: ReturnType<typeof useExcludedMerchants>['applyCloudExcludedMerchants'],
 ) {
   const hydrated = useRef(false)
   const lastSyncedJson = useRef<string | null>(null)
@@ -38,12 +42,14 @@ function useAutoSyncPatterns(
     applyCloudCategories(state.customCategories ?? [])
     applyCloudProfiles(state.merchantProfiles ?? [])
     applyCloudSplits(state.txSplits ?? {})
+    applyCloudExcludedMerchants(state.excludedMerchants ?? [])
     lastSyncedJson.current = JSON.stringify({
       customCategories: state.customCategories ?? [],
       merchantProfiles: state.merchantProfiles ?? [],
       txSplits: state.txSplits ?? {},
+      excludedMerchants: state.excludedMerchants ?? [],
     })
-  }, [applyCloudCategories, applyCloudProfiles, applyCloudSplits])
+  }, [applyCloudCategories, applyCloudProfiles, applyCloudSplits, applyCloudExcludedMerchants])
 
   // Pull once on mount (best-effort — may 401 before the API key is set).
   useEffect(() => {
@@ -57,15 +63,15 @@ function useAutoSyncPatterns(
   // Debounced push on change (only after the initial pull, and only if changed).
   useEffect(() => {
     if (!hydrated.current) return
-    const snapshot = JSON.stringify({ customCategories, merchantProfiles, txSplits })
+    const snapshot = JSON.stringify({ customCategories, merchantProfiles, txSplits, excludedMerchants })
     if (snapshot === lastSyncedJson.current) return
     const t = setTimeout(() => {
-      pushCloudState({ version: 1, updatedAt: new Date().toISOString(), customCategories, merchantProfiles, txSplits })
+      pushCloudState({ version: 1, updatedAt: new Date().toISOString(), customCategories, merchantProfiles, txSplits, excludedMerchants })
         .then(() => { lastSyncedJson.current = snapshot })
         .catch(err => reportError('Sync fehlgeschlagen', err))
     }, 1200)
     return () => clearTimeout(t)
-  }, [customCategories, merchantProfiles, txSplits])
+  }, [customCategories, merchantProfiles, txSplits, excludedMerchants])
 
   return { pull }
 }
@@ -101,6 +107,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   const profiles = useMerchantProfiles()
   const categories = useCustomCategories()
   const splits = useTxSplits()
+  const excludedMerchants = useExcludedMerchants()
   // Transactions enrich against the current patterns + splits, so build those first.
   const transactions = useTransactions(profiles.merchantProfiles, splits.txSplits)
 
@@ -115,9 +122,11 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     categories.customCategories,
     profiles.merchantProfiles,
     splits.txSplits,
+    excludedMerchants.excludedMerchants,
     categories.applyCloudCategories,
     profiles.applyCloudProfiles,
     splits.applyCloudSplits,
+    excludedMerchants.applyCloudExcludedMerchants,
   )
 
   // Full cloud download: categories + patterns + splits (R2) then transactions (D1).
@@ -127,7 +136,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   }, [pullPatterns, transactions])
 
   return (
-    <Ctx.Provider value={{ ...transactions, ...profiles, ...categories, ...splits, refreshAll }}>
+    <Ctx.Provider value={{ ...transactions, ...profiles, ...categories, ...splits, ...excludedMerchants, refreshAll }}>
       {children}
     </Ctx.Provider>
   )

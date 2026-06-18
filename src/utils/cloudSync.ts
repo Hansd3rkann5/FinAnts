@@ -19,6 +19,8 @@ export interface CloudState {
   merchantProfiles: MerchantProfile[]
   // Chart-only category splits, keyed by transaction id (D1 rows untouched).
   txSplits?: Record<string, { categoryId: string; amount: number }[]>
+  // Merchant names excluded from the Top-Händler chart/breakdown.
+  excludedMerchants?: string[]
   // Retired: per-tx edits live in D1. Optional only so older backups still parse.
   txOverrides?: Record<string, { categoryId: string; customLabel?: string; customIcon?: string }>
 }
