@@ -28,10 +28,9 @@ export function AppShell() {
   return (
     <div id="app-shell" className="flex-1 min-h-0 bg-bg-base text-white flex flex-col">
       <main id="app-main" className="flex-1 overflow-hidden relative" style={{ height: '100vh' }}>
-        {/* Filmstrip: pages sit side-by-side in navbar order; the track follows
-            the finger during a horizontal swipe (transform managed by
-            usePagerSwipe) and snaps to a page on release. All pages stay
-            mounted (scroll position + state kept). */}
+        {/* Filmstrip: pages sit side-by-side in navbar order; usePagerSwipe
+            slides the track to the active page on navbar taps. All pages
+            stay mounted (scroll position + state kept). */}
         <div
           ref={trackRef}
           className="flex h-full"
@@ -41,7 +40,7 @@ export function AppShell() {
             <div
               key={path}
               id={scrollId}
-              className="h-full overflow-y-auto overscroll-contain px-0 pb-28"
+              className="h-full overflow-y-auto overflow-x-hidden overscroll-contain px-0 pb-28"
               style={{ width: `${100 / n}%`, paddingBottom: path === '/settings' ? '0px' : undefined }}
             >
               <Component />

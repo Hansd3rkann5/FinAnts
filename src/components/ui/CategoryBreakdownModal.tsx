@@ -58,7 +58,7 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect, fil
               id="modal-catbreak-backdrop"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="absolute inset-0 z-50 bg-black/60 backdrop-blur-md"
+              className="absolute inset-0 z-20 bg-black/60 backdrop-blur-md"
               onClick={onClose}
             />
             <motion.div
@@ -67,7 +67,7 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect, fil
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 40 }}
               onClick={e => e.stopPropagation()}
-              className="absolute bottom-0 left-0 right-0 z-51 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[92svh]"
+              className="absolute bottom-0 left-0 right-0 z-30 rounded-t-4xl border-t border-white/10 flex flex-col max-h-[92svh]"
               style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.7) 100%)', backdropFilter: 'blur(var(--blur-modal))', WebkitBackdropFilter: 'blur(var(--blur-modal))' }}
             >
               <div id="modal-catbreak-handle" className="w-10 h-1 rounded-full bg-white/15 mx-auto mt-3 mb-1 shrink-0" />
@@ -92,17 +92,17 @@ export function CategoryBreakdownModal({ open, onClose, onTransactionSelect, fil
                         key={cat.id}
                         id={`catbreak-cat-${cat.id}`}
                         className="rounded-card_sm border overflow-hidden"
-                        style={{ borderColor: `${cat.color}25`, backgroundColor: `${cat.color}15`, backdropFilter: 'blur(calc(var(--blur-modal) + 2px))', WebkitBackdropFilter: 'blur(calc(var(--blur-modal) + 2px))' }}
+                        style={{ borderColor: `${cat.color}25`, backgroundColor: `${cat.color}30`, backdropFilter: 'blur(calc(var(--blur-modal) + 2px))', WebkitBackdropFilter: 'blur(calc(var(--blur-modal) + 2px))' }}
                       >
                         <button
                           id={`btn-catbreak-expand-${cat.id}`}
-                          className="w-full flex items-center gap-3 px-3 py-3 text-left active:opacity-70 transition-opacity"
+                          className="w-full flex items-center gap-3 px-3 py-3 text-left active:opacity-90 transition-opacity"
                           onClick={() => setExpandedId(isExpanded ? null : cat.id)}
                         >
                           <div
                             id={`catbreak-cat-icon-${cat.id}`}
                             className="w-8 h-8 rounded-card_sm flex items-center justify-center shrink-0 text-base"
-                            style={{ backgroundColor: `${cat.color}22`, border: `1.5px solid ${cat.color}40` }}
+                            style={{ backgroundColor: `${cat.color}32`, border: `1.5px solid ${cat.color}40` }}
                           >
                             {cat.icon.startsWith('data:') || cat.icon.startsWith('http')
                               ? <img src={cat.icon} alt="" className="w-full h-full object-cover rounded-card_sm" />

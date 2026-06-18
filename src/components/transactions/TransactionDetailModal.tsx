@@ -527,8 +527,8 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                         <button key={c.id} onClick={() => setCategory(c.id)}
                           className="flex flex-col items-center gap-1 p-2 rounded-card_sm border text-center transition-all duration-100 active:scale-95"
                           style={{
-                            backgroundColor: c.id === category ? `${c.color}22` : 'rgba(255,255,255,0.06)',
-                            borderColor: c.id === category ? `${c.color}55` : 'rgba(255,255,255,0.12)',
+                            backgroundColor: c.id === category ? `${c.color}52` : 'rgba(20,20,20,0.12)',
+                            borderColor: c.id === category ? `${c.color}95` : 'rgba(255,255,255,0.12)',
                           }}
                         >
                           <span className="text-lg leading-none">{c.icon}</span>

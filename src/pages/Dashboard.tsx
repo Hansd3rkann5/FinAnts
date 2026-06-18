@@ -462,7 +462,7 @@ export function Dashboard() {
       <CategoryBreakdownModal
         open={catBreakdownOpen}
         onClose={() => setCatBreakdownOpen(false)}
-        onTransactionSelect={tx => { setCatBreakdownOpen(false); setSelectedTx(tx) }}
+        onTransactionSelect={setSelectedTx}
         filter={pieChart.effectiveFilter}
       />
       <TransactionDetailModal

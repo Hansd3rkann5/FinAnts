@@ -954,28 +954,31 @@ export function Settings() {
           blurred background itself extends all the way down behind the nav
           rather than leaving a plain transparent gap below the footer. */}
       <div
-        className="sticky bottom-0 left-0 right-0 px-4 pt-3 pb-28 flex flex-col gap-3"
+        className="sticky bottom-0 left-0 right-0 flex flex-col"
         style={{
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
           background: 'linear-gradient(to top, rgba(10,10,15,0.85) 60%, transparent)',
         }}
       >
-        <div className="flex justify-center">
+        {/* <div className="flex justify-center">
           <PillButton variant="ghost" size="sm" icon={<Eye size={13} />} onClick={() => setPreviewLoader(true)}>
             Ladeanimation ansehen
           </PillButton>
-        </div>
+        </div> */}
 
-        <GlassCard padding="sm">
+        <GlassCard padding="sm"
+        style={{
+          background: 'rgb(10,10,15,0.05)',
+          border: 'none',
+          paddingBottom: '98px',
+          paddingTop: '5px',
+        }}
+        >
           <button
             onClick={() => window.location.reload()}
-            className="w-full text-xs text-white/20 text-center active:opacity-50 transition-opacity"
-          >
-            FinAnts · Deine Finanzen, lokal & privat
-            <span className="ml-2 text-white/10">
-              {import.meta.env.DEV ? `V${DEV_VERSION}` : __APP_VERSION__}
-            </span>
+            className="w-full text-xs text-white/20 text-center active:opacity-50 transition-opacity">
+            <span className="ml-2 text-white/80 tracking-widest uppercase">FinAnts  •</span><span className="ml-2 text-white/80">{import.meta.env.DEV ? `local V${DEV_VERSION}` : `git ${__APP_VERSION__}`}</span>
           </button>
         </GlassCard>
       </div>

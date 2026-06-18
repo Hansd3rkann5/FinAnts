@@ -24,7 +24,7 @@
   --blur-glass: 8px;
   --blur-glass_sm: 8px;
   --blur-md: 1px;
-  --blur-modal: 6px;
+  --blur-modal: 8px;
 
   --animate-fade-in: fadeIn 0.3s ease-out;
   --animate-slide-up: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);

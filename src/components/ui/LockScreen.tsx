@@ -44,15 +44,15 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
 
   return (
     <div className="fixed inset-0 z-250 flex flex-col items-center justify-center text-white px-8"
-         style={{
-          backgroundColor: 'rgba(26,26,40,0.6)',
-          paddingTop: 'env(safe-area-inset-top)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          }}>
+      style={{
+        backgroundColor: 'rgba(26,26,40,0.6)',
+        paddingTop: 'env(safe-area-inset-top)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}>
       <div className="flex flex-col items-center gap-6 w-full max-w-xs">
-        <div className="text-3xl">🐜</div>
-        <p className="text-sm text-white/50">FinAnts ist gesperrt</p>
+        <p className="text-center text-[30px] text-white/45 tracking-[0.2em] pl-2 uppercase">FinAnts</p>
+        <p className="text-sm text-white/50">Gesperrt</p>
 
         {/* PIN dots */}
         <motion.div
@@ -80,11 +80,10 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
               onClick={() => press(k)}
               disabled={!k}
               style={
-                {borderRadius: '999px',}
+                { borderRadius: '999px', }
               }
-              className={`h-16 flex items-center justify-center text-2xl font-light transition-colors ${
-                k ? ' active:bg-white/15' : 'opacity-0 pointer-events-none'
-              }`}
+              className={`h-16 flex items-center justify-center text-2xl font-light transition-colors ${k ? ' active:bg-white/15' : 'opacity-0 pointer-events-none'
+                }`}
             >
               {k === 'del' ? <Delete size={22} className="text-white/60" /> : k}
             </button>
