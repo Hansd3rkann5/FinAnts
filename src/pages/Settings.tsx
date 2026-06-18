@@ -5,7 +5,7 @@ import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
   CreditCard, CloudUpload, CloudDownload, Cloud, Download,
-  ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn, Eye, Copy, Bug, Lock, ScanFace,
+  ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn, Copy, Bug, Lock, ScanFace,
 } from 'lucide-react'
 import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
 import { getApiKey, setApiKey } from '@/utils/cfAuth'
