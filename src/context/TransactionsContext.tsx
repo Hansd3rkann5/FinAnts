@@ -2,9 +2,11 @@ import { createContext, useContext, useEffect, useRef, useCallback } from 'react
 import { useTransactions } from '@/hooks/useTransactions'
 import { useMerchantProfiles } from '@/hooks/useMerchantProfiles'
 import { useCustomCategories } from '@/hooks/useCustomCategories'
-import { useTxSplits } from '@/hooks/useTxSplits'
+import { useTxSplits, type Split } from '@/hooks/useTxSplits'
 import { pushCloudState, pullCloudState } from '@/utils/cloudSync'
+import { computeCreditCardBucket } from '@/utils/creditCardBilling'
 import { reportError } from '@/utils/notify'
+import type { Transaction, Category } from '@/types'
 
 type TransactionsCtx =
   ReturnType<typeof useTransactions> &
@@ -68,12 +70,46 @@ function useAutoSyncPatterns(
   return { pull }
 }
 
+// Whenever a new "Kreditkarte" Giro booking appears — via CSV import,
+// EnableBanking, or PSD2, i.e. any path that pulls fresh bank data — link
+// any already-imported standalone credit-card purchases that fall in its
+// billing window (extracted from its own "Abrechnung vom ..." label) to it,
+// the same way uploading a Mastercard CSV does. Idempotent: once every
+// eligible purchase is already linked, computeCreditCardBucket reports no
+// new ids and this is a no-op, so it's safe to re-run on every change.
+function useAutoBucketCreditCard(
+  allTransactions: Transaction[],
+  customCategories: Category[],
+  batchUpdateParent: (ids: string[], parentId: string) => void,
+  setSplit: (id: string, parts: Split[]) => void,
+) {
+  useEffect(() => {
+    const kreditkarte = customCategories.find(c => c.label.trim().toLowerCase() === 'kreditkarte')
+    if (!kreditkarte) return
+    const giroBookings = allTransactions.filter(t => t.categoryId === kreditkarte.id)
+    for (const giro of giroBookings) {
+      const bucket = computeCreditCardBucket(giro, allTransactions, kreditkarte.id)
+      if (bucket && bucket.newlyLinkedIds.length > 0) {
+        batchUpdateParent(bucket.newlyLinkedIds, bucket.giroId)
+        setSplit(bucket.giroId, bucket.splits)
+      }
+    }
+  }, [allTransactions, customCategories, batchUpdateParent, setSplit])
+}
+
 export function TransactionsProvider({ children }: { children: React.ReactNode }) {
   const profiles = useMerchantProfiles()
   const categories = useCustomCategories()
   const splits = useTxSplits()
   // Transactions enrich against the current patterns + splits, so build those first.
   const transactions = useTransactions(profiles.merchantProfiles, splits.txSplits)
+
+  useAutoBucketCreditCard(
+    transactions.transactions,
+    categories.customCategories,
+    transactions.batchUpdateParent,
+    splits.setSplit,
+  )
 
   const { pull: pullPatterns } = useAutoSyncPatterns(
     categories.customCategories,

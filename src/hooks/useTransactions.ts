@@ -129,7 +129,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: S
 
   // ── Per-tx edits: optimistic local update + persist override to D1 ──────────
   // Also patch the raw-row cache so a pattern-triggered re-enrich keeps the edit.
-  const patchRaw = (ids: Set<string>, patch: Partial<Pick<StoredTx, 'categoryId' | 'customLabel' | 'customIcon'>>) => {
+  const patchRaw = (ids: Set<string>, patch: Partial<Pick<StoredTx, 'categoryId' | 'customLabel' | 'customIcon' | 'parentId'>>) => {
     rawRowsRef.current = rawRowsRef.current.map(r => ids.has(r.id) ? { ...r, ...patch } : r)
   }
 
@@ -152,6 +152,23 @@ export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: S
     })
     patchRaw(idSet, { categoryId })
     Promise.all(ids.map(id => updateTransactionRemote(id, { categoryId })))
+      .catch(e => reportError('Speichern fehlgeschlagen', e))
+  }, [recurringGroups])
+
+  // Retroactively link existing standalone transactions (e.g. credit-card
+  // purchases imported before their billing period's Giro booking existed)
+  // to a parent transaction — see the auto-bucketing effect in
+  // TransactionsContext, which calls this once a new "Kreditkarte" booking's
+  // billing window is known.
+  const batchUpdateParent = useCallback((ids: string[], parentId: string) => {
+    const idSet = new Set(ids)
+    setTransactions(prev => {
+      const updated = prev.map(t => idSet.has(t.id) ? { ...t, parentId } : t)
+      saveCache(updated, recurringGroups)
+      return updated
+    })
+    patchRaw(idSet, { parentId })
+    Promise.all(ids.map(id => updateTransactionRemote(id, { parentId })))
       .catch(e => reportError('Speichern fehlgeschlagen', e))
   }, [recurringGroups])
 
@@ -199,7 +216,7 @@ export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: S
   return {
     transactions, recurringGroups, isLoaded,
     importTransactions, importLocalOnly, applyServerTransactions, refresh,
-    updateCategory, batchUpdateCategory, updateTransaction,
+    updateCategory, batchUpdateCategory, batchUpdateParent, updateTransaction,
     deleteTransaction,
     removeRecurringGroup, clearAll,
   }

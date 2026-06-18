@@ -27,6 +27,10 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
   const mode = getFilterMode(value)
   const activeIndex = Math.max(0, MODES.findIndex(m => m.value === mode))
   const hasPicker = mode !== 'all'
+  // A specific period (e.g. 'year/2026') is currently selected for the active
+  // mode, rather than the bare generic mode — this is what makes the pill
+  // show "2026" instead of "Jahr".
+  const hasOverride = hasPicker && value !== mode
 
   const barRef = useRef<HTMLDivElement>(null)
   const btnRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -40,25 +44,43 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ left: 0, top: 0, width: 0, height: 0 })   // pill over active button (within bar)
   const [anchor, setAnchor] = useState({ left: 0, top: 0, width: 0 })        // portal panel (viewport coords)
+  // Direction for the pill label's vertical swap: 'up' when picking a period
+  // (old label exits the top, new one enters from below — see selectPeriod),
+  // 'down' when resetting to a generic mode (the mirror image — see clickMode).
+  const [direction, setDirection] = useState<'up' | 'down'>('up')
 
-  const options = useMemo((): { value: TimeFilter; label: string }[] => {
+  // Newest first. Every period for the current mode, regardless of whether
+  // it's the one currently selected — `options` below removes that one for
+  // the dropdown list, since it's already shown as the pill label.
+  const allOptions = useMemo((): { value: TimeFilter; label: string }[] => {
     if (!hasPicker || !periods) return []
-    const head = { value: mode as TimeFilter, label: 'Aktuell' }
     if (mode === 'year') {
-      return [head, ...periods.years.map(yr => ({ value: `year/${yr}` as TimeFilter, label: `${yr}` }))]
+      return periods.years.map(yr => ({ value: `year/${yr}` as TimeFilter, label: `${yr}` })).reverse()
     }
     if (mode === 'month') {
-      return [head, ...periods.months.map(({ year, month }) => ({
+      return periods.months.map(({ year, month }) => ({
         value: `month/${year}/${month}` as TimeFilter,
         label: format(new Date(year, month - 1, 1), "MMM ''yy", { locale: de }),
-      }))]
+      })).reverse()
     }
     const multiYear = new Set(periods.weeks.map(w => w.year)).size > 1
-    return [head, ...periods.weeks.map(({ year, week }) => ({
+    return periods.weeks.map(({ year, week }) => ({
       value: `week/${year}/${week}` as TimeFilter,
       label: multiYear ? `KW ${week} '${String(year).slice(2)}` : `KW ${week}`,
-    }))]
+    })).reverse()
   }, [mode, hasPicker, periods])
+
+  // The dropdown only ever offers periods other than the one already active —
+  // picking one replaces the pill's current override, so showing it again in
+  // the list would be redundant. Switching away (clickMode) or picking a
+  // different period both implicitly return the old value to this list.
+  const options = useMemo(
+    () => allOptions.filter(o => o.value !== value),
+    [allOptions, value],
+  )
+
+  const activeOverrideLabel = hasOverride ? allOptions.find(o => o.value === value)?.label : undefined
+  const pillLabel = activeOverrideLabel ?? MODES[activeIndex].label
 
   // Pill geometry within the bar.
   useLayoutEffect(() => {
@@ -96,20 +118,19 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
     return () => document.removeEventListener('pointerdown', onDown)
   }, [open])
 
-  // Scroll the open list to the selected period (else to the newest, at bottom).
+  // The active period is never in the list (see `options` above), so there's
+  // no "selected" row to scroll to — just open at the newest, now at top.
   useEffect(() => {
     if (!open) return
     const el = listRef.current
-    if (!el) return
-    const active = el.querySelector('[data-active="true"]') as HTMLElement | null
-    if (active) active.scrollIntoView({ block: 'nearest' })
-    else el.scrollTop = el.scrollHeight
-  }, [open, options.length])
+    if (el) el.scrollTop = 0
+  }, [open])
 
   function clickMode(m: Mode) {
     clearOpenTimer()
     if (m === mode) { if (hasPicker) setOpen(o => !o); return }   // re-tap active → toggle instantly
     setOpen(false)                    // close any open dropdown before the pill slides
+    setDirection('down')              // switching mode always resets any override → label slides down
     onChange(m)                       // switch mode — the indicator pill slides over ~0.22s
     if (m !== 'all') {
       // open the picker only after the pill has finished moving to the new mode
@@ -119,6 +140,7 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
 
   function selectPeriod(v: TimeFilter) {
     clearOpenTimer()
+    setDirection('up')                // picking a period always sets an override → label slides up
     onChange(v)
     setOpen(false)
   }
@@ -138,8 +160,14 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
             className="relative flex-1 py-1.5 text-xs font-medium rounded-pill z-10"
             style={{ color: 'rgba(255,255,255,0.5)' }}
           >
-            {/* active label is rendered by the pill on top, so hide it here */}
-            <span style={{ opacity: mode === opt.value ? 0 : 1 }}>{opt.label}</span>
+            {/* The pill on top renders the active label, so this copy is just
+                hidden (not removed — it still reserves the button's layout
+                space). Keep its text in sync with the pill (generic label, or
+                the picked period once there's an override) so the two never
+                disagree, e.g. mid-slide-transition. */}
+            <span style={{ opacity: mode === opt.value ? 0 : 1 }}>
+              {mode === opt.value ? pillLabel : opt.label}
+            </span>
           </button>
         ))}
 
@@ -155,10 +183,24 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
           <button
             id={`tf-pill-label-${id}`}
             onClick={() => hasPicker && setOpen(o => !o)}
-            className="flex w-full items-center justify-center text-xs font-medium text-white"
+            className="relative flex w-full items-center justify-center overflow-hidden"
             style={{ height: pos.height }}
           >
-            {MODES[activeIndex].label}
+            {/* Vertical swap between the generic mode label ("Jahr") and a
+                picked period ("2026") — up when selecting, down when a mode
+                switch resets back to generic (see clickMode/selectPeriod). */}
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={pillLabel}
+                initial={{ y: direction === 'up' ? 16 : -16, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: direction === 'up' ? -16 : 16, opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white"
+              >
+                {pillLabel}
+              </motion.span>
+            </AnimatePresence>
           </button>
         </motion.div>
       </div>
@@ -184,22 +226,19 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
               }}
             >
               <div ref={listRef} className="max-h-44 overflow-y-auto py-1">
-                {options.map(opt => {
-                  const active = value === opt.value
-                  return (
-                    <button
-                      key={String(opt.value)}
-                      id={`tf-opt-${String(opt.value).replace(/\//g, '-')}-${id}`}
-                      data-active={active}
-                      onClick={() => selectPeriod(opt.value)}
-                      className={`block w-full text-center px-2 py-1.5 text-xs font-medium transition-colors ${
-                        active ? 'bg-white/30 text-white' : 'text-white/85 hover:bg-white/15'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
+                {/* The currently active period is never in this list (see
+                    `options`) — it's already shown as the pill label — so
+                    there's no "active" row to highlight here anymore. */}
+                {options.map(opt => (
+                  <button
+                    key={String(opt.value)}
+                    id={`tf-opt-${String(opt.value).replace(/\//g, '-')}-${id}`}
+                    onClick={() => selectPeriod(opt.value)}
+                    className="block w-full text-center px-2 py-1.5 text-xs font-medium text-white/85 hover:bg-white/15 transition-colors"
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </motion.div>
           )}

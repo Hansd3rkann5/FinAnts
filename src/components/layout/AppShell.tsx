@@ -42,7 +42,7 @@ export function AppShell() {
               key={path}
               id={scrollId}
               className="h-full overflow-y-auto overscroll-contain px-0 pb-28"
-              style={{ width: `${100 / n}%` }}
+              style={{ width: `${100 / n}%`, paddingBottom: path === '/settings' ? '0px' : undefined }}
             >
               <Component />
             </div>

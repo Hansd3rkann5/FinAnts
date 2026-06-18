@@ -280,13 +280,14 @@ export async function mergeTransactions(
 export async function updateTransaction(
   db: D1Database,
   id: string,
-  patch: { categoryId?: string; customLabel?: string; customIcon?: string },
+  patch: { categoryId?: string; customLabel?: string; customIcon?: string; parentId?: string },
 ): Promise<void> {
   const fields: string[] = []
   const vals: (string | null)[] = []
   if ('categoryId' in patch)  { fields.push('category_id=?');  vals.push(patch.categoryId  ?? null) }
   if ('customLabel' in patch) { fields.push('custom_label=?'); vals.push(patch.customLabel ?? null) }
   if ('customIcon' in patch)  { fields.push('custom_icon=?');  vals.push(patch.customIcon  ?? null) }
+  if ('parentId' in patch)    { fields.push('parent_id=?');    vals.push(patch.parentId    ?? null) }
   if (!fields.length) return
   await db.prepare(`UPDATE transactions SET ${fields.join(', ')} WHERE id=?`).bind(...vals, id).run()
 }

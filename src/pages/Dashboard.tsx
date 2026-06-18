@@ -51,7 +51,7 @@ function StatPill({ label, value, sub, color = 'text-white/80' }: {
 
 export function Dashboard() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>(
-    () => (localStorage.getItem('dash-time-filter') as TimeFilter) ?? 'month'
+    () => (localStorage.getItem('dash-time-filter') as TimeFilter) ?? 'all'
   )
 
   function handleTimeFilter(v: TimeFilter) {

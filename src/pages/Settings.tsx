@@ -4,7 +4,7 @@ import type { Transaction } from '@/types'
 import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
-  CreditCard, CloudUpload, CloudDownload, Cloud,
+  CreditCard, CloudUpload, CloudDownload, Cloud, Download,
   ChevronDown, Wallet, Database, Link2, ShieldCheck, LogIn, Eye, Copy, Bug, Lock, ScanFace,
 } from 'lucide-react'
 import { useCloudSync, type CloudSyncStatus } from '@/hooks/useCloudState'
@@ -88,9 +88,19 @@ function CollapsibleCard({
           <ChevronDown size={14} />
         </motion.span>
       </button>
-      {!open && statusText && (
-        <p className="text-[10px] text-white/30 mt-1.5 ml-5.5">{statusText}</p>
-      )}
+      <AnimatePresence initial={false}>
+        {!open && statusText && (
+          <motion.p
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="text-[10px] text-white/30 ml-5.5 overflow-hidden"
+          >
+            <span className="block mt-1.5">{statusText}</span>
+          </motion.p>
+        )}
+      </AnimatePresence>
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -101,6 +111,70 @@ function CollapsibleCard({
             className="overflow-hidden"
           >
             <div className="pt-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </GlassCard>
+  )
+}
+
+// A top-level group of related CollapsibleCards (e.g. every way to import
+// data). The subtitle is a sibling *below* the icon/title row, never nested
+// inside it — nesting it there (alongside the title, both centered via
+// items-center) made the icon/chevron visibly jump on toggle, since that
+// column's height — and therefore the whole row's centered height — changed
+// the instant the subtitle was removed. Animating height/opacity here instead
+// of an abrupt conditional render smooths out the remaining size change.
+function SettingsGroup({
+  icon, title, subtitle, defaultOpen = false, children,
+}: {
+  icon: React.ReactNode
+  title: string
+  subtitle?: string
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <GlassCard padding="sm">
+      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-2.5 text-left">
+        <div className="w-8 h-8 rounded-card_sm bg-white/5 flex items-center justify-center shrink-0">
+          {icon}
+        </div>
+        <span className="text-sm font-semibold text-white/80 flex-1">{title}</span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="text-white/30 shrink-0"
+        >
+          <ChevronDown size={14} />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {!open && subtitle && (
+          <motion.p
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="text-[10px] text-white/30 ml-[42px] overflow-hidden"
+          >
+            <span className="block mt-0.5">{subtitle}</span>
+          </motion.p>
+        )}
+      </AnimatePresence>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="flex flex-col gap-3 pt-4 pl-3.5 ml-4 border-l border-white/8">
+              {children}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -366,6 +440,12 @@ export function Settings() {
     e.target.value = ''
   }
 
+  function onCcDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file) handleCcFile(file)
+  }
+
   function handleSaveBalance() {
     const parsed = parseFloat(balanceInput.replace(',', '.'))
     if (!isNaN(parsed)) saveBalance(parsed)
@@ -395,7 +475,8 @@ export function Settings() {
         onClose={() => setPreviewLoader(false)}
       />
 
-      <div className="flex flex-col gap-3 px-4">
+      <div className="flex flex-col min-h-full">
+      <div className="flex-1 flex flex-col gap-3 px-4">
         <div
         id="dash-sticky-filter"
         className="sticky top-0 z-30 pt-2 mb-5"
@@ -407,419 +488,381 @@ export function Settings() {
           boxShadow: '0 -4px 24px 10px rgba(10,10,10,0.8), 0 -1px 80px 10px rgba(10,10,10,0.8)',
         }}
       ></div>
-        {/* ── Zugang ──────────────────────────────────────────────────────── */}
-        <CollapsibleCard
-          icon={<ShieldCheck size={15} className={isAuth ? 'text-emerald-400' : 'text-white/30'} />}
-          title="Zugang"
-          badge={isAuth
-            ? <span className="text-[10px] text-emerald-400/70 border border-emerald-500/20 bg-emerald-500/10 rounded-pill px-2 py-0.5">Verbunden</span>
-            : <span className="text-[10px] text-red-400/70 border border-red-500/20 bg-red-500/10 rounded-pill px-2 py-0.5">Kein Schlüssel</span>}
-          statusText={isAuth ? 'API Key gesetzt · Worker authentifiziert' : 'API Key eingeben um Bankabfragen zu starten'}
+
+        <p className="text-center text-[30px] text-white/45 tracking-[0.2em] uppercase pb-6">
+          FinAnts
+        </p>
+        {/* ── Gruppe: Konten & Zugang ─────────────────────────────────────── */}
+        <SettingsGroup
+          icon={<Wallet size={15} className="text-white/50" />}
+          title="Konten & Zugang"
+          subtitle="Zugang, Kontostand, Konten, Cloud-Backup"
           defaultOpen={!isAuth}
         >
-          <div className="flex flex-col gap-3">
-            <p className="text-xs text-white/40">
-              Der API Key ist dein Worker Secret. Einmalig eingeben, wird sicher im Browser gespeichert.
-            </p>
-            <input
-              type="password"
-              value={apiKeyInput}
-              onChange={e => setApiKeyInput(e.target.value)}
-              placeholder="API Key eingeben…"
-              className="w-full bg-white/5 border border-white/10 rounded-card_sm px-3 py-2 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20"
-            />
-            <PillButton
-              variant="primary"
-              size="sm"
-              icon={<LogIn size={13} />}
-              onClick={handleSaveApiKey}
-              disabled={keySaving || !apiKeyInput.trim()}
-            >
-              Speichern
-            </PillButton>
-          </div>
-        </CollapsibleCard>
-
-        {/* ── Kontostand ──────────────────────────────────────────────────── */}
-        <CollapsibleCard
-          icon={<Wallet size={15} className="text-emerald-400 shrink-0" />}
-          title="Kontostand"
-          statusText={manualBalance !== null
-            ? `${formatEur(manualBalance)} · Aktualisiert ${balanceUpdatedAt}`
-            : 'Nicht gesetzt · Manuell eingetragen'}
-          defaultOpen={manualBalance === null && accounts.length === 0}
-        >
-          <p className="text-xs text-white/40 mb-3">
-            Aktueller Kontostand aus deiner Banking-App. Wird angezeigt bis der automatische Sync aktiv ist.
-          </p>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40">€</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={balanceInput}
-                onChange={e => setBalanceInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSaveBalance()}
-                className="w-full rounded-card_sm bg-white/4 border border-white/8 pl-7 pr-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-emerald-500/40 transition-colors duration-200"
-              />
-            </div>
-            <PillButton variant="secondary" size="sm" disabled={!balanceInput} onClick={handleSaveBalance}>
-              Speichern
-            </PillButton>
-          </div>
-          {balanceUpdatedAt && (
-            <p className="text-[10px] text-white/25 mt-2">Zuletzt aktualisiert: {balanceUpdatedAt}</p>
-          )}
-        </CollapsibleCard>
-
-        {/* ── PSD2 Bankabfrage ─────────────────────────────────────────────── */}
-        <CollapsibleCard
-          icon={<Link2 size={15} className="text-blue-400 shrink-0" />}
-          title="Bankabfrage (PSD2)"
-          glow="blue"
-          badge={ebLastSync
-            ? <span className="text-[10px] text-blue-400/70 border border-blue-500/20 bg-blue-500/10 rounded-pill px-2 py-0.5">Verbunden</span>
-            : undefined}
-          statusText={ebLastSync ? `Zuletzt: ${ebLastSync}` : 'Offizielle PSD2-Schnittstelle · Commerzbank'}
-          defaultOpen={!ebLastSync}
-        >
-          <p className="text-xs text-white/40 mb-4">
-            Verbindet dich direkt über die offizielle Bank-API. Du wirst zur Commerzbank weitergeleitet um die Verbindung zu autorisieren.
-          </p>
-          <div className="flex flex-col gap-3">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">Bank</label>
-                <input
-                  type="text"
-                  value={ebBank}
-                  onChange={e => setEbBank(e.target.value)}
-                  placeholder="Commerzbank"
-                  className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-blue-500/40 transition-colors"
-                />
-              </div>
-              <div className="w-16">
-                <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">Land</label>
-                <input
-                  type="text"
-                  value={ebCountry}
-                  onChange={e => setEbCountry(e.target.value.toUpperCase().slice(0, 2))}
-                  placeholder="DE"
-                  className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-blue-500/40 transition-colors text-center"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">
-                Zeitraum: letzte {ebDays === 365 ? '365 Tage (1 Jahr)' : `${ebDays} Tage`}
-              </label>
-              <div className="flex gap-2">
-                {[30, 60, 90, 180, 365].map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setEbDays(d)}
-                    className="flex-1 py-1.5 rounded-pill text-xs border transition-all duration-150"
-                    style={{
-                      backgroundColor: ebDays === d ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)',
-                      borderColor:     ebDays === d ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)',
-                      color:           ebDays === d ? '#93c5fd' : 'rgba(255,255,255,0.4)',
-                    }}
-                  >
-                    {d === 365 ? '1J' : `${d}T`}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <PillButton
-              variant="primary"
-              size="sm"
-              disabled={!isAuth || ebStatus === 'starting' || ebStatus === 'syncing'}
-              icon={<Link2 size={13} className={ebStatus === 'starting' || ebStatus === 'syncing' ? 'animate-pulse' : ''} />}
-              onClick={() => ebStart(workerCfg, ebBank, ebCountry, ebDays)}
-            >
-              {!isAuth                         ? 'Zuerst einloggen'
-               : ebStatus === 'starting'       ? 'Starte Verbindung…'
-               : ebStatus === 'awaiting_auth'  ? 'Warte auf Bank…'
-               : ebStatus === 'syncing'        ? 'Importiere…'
-               : ebLastSync                    ? 'Erneut synchronisieren'
-               : 'Mit Bank verbinden'}
-            </PillButton>
-            <AnimatePresence>
-              {(ebStatus === 'success' || ebStatus === 'error') && (
-                <StatusBanner status={ebStatus === 'success' ? 'success' : 'error'} message={ebMessage} />
-              )}
-            </AnimatePresence>
-            {ebLastSync && (
-              <p className="text-[10px] text-white/25 text-center">Zuletzt synchronisiert: {ebLastSync}</p>
-            )}
-          </div>
-        </CollapsibleCard>
-
-        {/* ── Kreditkarte importieren ─────────────────────────────────────── */}
-        <CollapsibleCard
-          icon={<CreditCard size={15} className="text-purple-400 shrink-0" />}
-          title="Kreditkarte importieren"
-          glow="purple"
-          statusText={ccLastImport ? `Zuletzt: ${ccLastImport}` : 'Mastercard-Abrechnung CSV'}
-        >
-          <p className="text-xs text-white/40 mb-4">
-            Importiert die einzelnen Kreditkarten-Buchungen und blendet die
-            zusammenfassende "Kreditkarte"-Buchung auf dem Girokonto aus, sobald
-            ihre Summe mit den importierten Einzelbuchungen übereinstimmt.
-          </p>
-          <div className="flex flex-col gap-3">
-            <PillButton
-              variant="primary"
-              size="sm"
-              disabled={ccStatus === 'parsing'}
-              icon={<Upload size={13} />}
-              onClick={() => ccFileInputRef.current?.click()}
-            >
-              {ccStatus === 'parsing' ? 'Verarbeite…' : 'CSV auswählen'}
-            </PillButton>
-            <input
-              ref={ccFileInputRef}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={onCcFileChange}
-            />
-            <AnimatePresence>
-              {ccStatus !== 'idle' && (
-                <StatusBanner status={ccStatus} message={ccMessage} />
-              )}
-            </AnimatePresence>
-          </div>
-        </CollapsibleCard>
-
-        {/* ── Cloud-Backup ─────────────────────────────────────────────────── */}
-        <CollapsibleCard
-          icon={<Cloud size={15} className="text-blue-400 shrink-0" />}
-          title="Cloud-Backup"
-          statusText={cloudLastSync ? `Zuletzt: ${cloudLastSync}` : 'Kategorien & Profile geräteübergreifend sichern'}
-        >
-          <p className="text-xs text-white/40 mb-4">
-            Kategorien, Händler-Profile und Icons geräteübergreifend sichern.
-          </p>
-          <div className="flex gap-2">
-            <PillButton
-              variant="secondary"
-              size="sm"
-              disabled={!isAuth || cloudStatus === 'pushing' || cloudStatus === 'pulling'}
-              icon={<CloudUpload size={13} className={cloudStatus === 'pushing' ? 'animate-pulse' : ''} />}
-              onClick={() => cloudPush(workerCfg)}
-            >
-              {cloudStatus === 'pushing' ? 'Lädt…' : 'Hochladen'}
-            </PillButton>
-            <PillButton
-              variant="secondary"
-              size="sm"
-              disabled={!isAuth || cloudStatus === 'pushing' || cloudStatus === 'pulling'}
-              icon={<CloudDownload size={13} className={cloudStatus === 'pulling' ? 'animate-pulse' : ''} />}
-              onClick={() => cloudPull(workerCfg)}
-            >
-              {cloudStatus === 'pulling' ? 'Lädt…' : 'Herunterladen'}
-            </PillButton>
-          </div>
-          <AnimatePresence>
-            {(cloudStatus === 'success' || cloudStatus === 'error') && (
-              <div className="mt-3">
-                <StatusBanner status={cloudStatus} message={cloudMessage} />
-              </div>
-            )}
-          </AnimatePresence>
-          {cloudLastSync && (
-            <p className="text-[10px] text-white/25 text-center mt-2">Zuletzt: {cloudLastSync}</p>
-          )}
-        </CollapsibleCard>
-
-        {/* ── Konten ───────────────────────────────────────────────────────── */}
-        {accounts.length > 0 && (
           <CollapsibleCard
-            icon={<Wallet size={15} className="text-white/40 shrink-0" />}
-            title="Konten"
-            statusText={`${accounts.length} Konto${accounts.length !== 1 ? 'en' : ''} · Wähle welche ins Gesamtvermögen einfließen`}
+            icon={<ShieldCheck size={15} className={isAuth ? 'text-emerald-400' : 'text-white/30'} />}
+            title="Zugang"
+            badge={isAuth
+              ? <span className="text-[10px] text-emerald-400/70 border border-emerald-500/20 bg-emerald-500/10 rounded-pill px-2 py-0.5">Verbunden</span>
+              : <span className="text-[10px] text-red-400/70 border border-red-500/20 bg-red-500/10 rounded-pill px-2 py-0.5">Kein Schlüssel</span>}
+            statusText={isAuth ? 'API Key gesetzt · Worker authentifiziert' : 'API Key eingeben um Bankabfragen zu starten'}
+            defaultOpen={!isAuth}
           >
-            <div className="flex flex-col gap-2">
-              {accounts.map(a => (
-                <AccountCard key={a.iban} account={a} onToggle={toggleIncluded} showToggle />
-              ))}
-            </div>
-          </CollapsibleCard>
-        )}
-
-        {/* ── CSV-Import ───────────────────────────────────────────────────── */}
-        <CollapsibleCard
-          icon={<Upload size={15} className="text-white/40 shrink-0" />}
-          title="CSV-Import"
-          statusText="Manueller Import via Commerzbank-Export"
-        >
-          <p className="text-xs text-white/40 mb-4">CSV-Export aus dem Commerzbank OnlineBanking hochladen.</p>
-          <div
-            onDragOver={e => e.preventDefault()}
-            onDrop={onDrop}
-            onClick={() => fileRef.current?.click()}
-            className="border-2 border-dashed border-white/10 rounded-card hover:border-purple-500/40 hover:bg-purple-500/5 transition-all duration-200 cursor-pointer p-6 flex flex-col items-center gap-3 text-center active:scale-[0.99]"
-          >
-            <div className="w-10 h-10 rounded-card_sm bg-white/5 flex items-center justify-center text-white/40">
-              <Upload size={18} />
-            </div>
-            <div>
-              <p className="text-sm text-white/60 font-medium">CSV oder MT940 hochladen</p>
-              <p className="text-xs text-white/25 mt-0.5">Tippe hier oder ziehe die Datei hinein</p>
-            </div>
-            <input ref={fileRef} type="file" accept=".csv,.txt,.mt940,.sta" className="hidden" onChange={onFileChange} />
-          </div>
-          <AnimatePresence>
-            {importStatus !== 'idle' && (
-              <div className="mt-3">
-                <StatusBanner status={importStatus} message={importMessage} />
-              </div>
-            )}
-          </AnimatePresence>
-        </CollapsibleCard>
-
-        {/* ── Daten ────────────────────────────────────────────────────────── */}
-        <CollapsibleCard
-          icon={<Database size={15} className="text-white/40 shrink-0" />}
-          title="Daten"
-          statusText={`${transactions.length} Buchungen · Lokal gespeichert`}
-        >
-          <p className="text-xs text-white/40 mb-3">Alle Daten verbleiben lokal auf deinem Gerät.</p>
-          {!showConfirm ? (
-            <PillButton variant="danger" size="sm" icon={<Trash2 size={13} />} onClick={() => setShowConfirm(true)}>
-              Alle Daten löschen
-            </PillButton>
-          ) : (
-            <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
-              <p className="text-xs text-red-400/80">Wirklich alle Buchungen löschen? Dies kann nicht rückgängig gemacht werden.</p>
-              <div className="flex gap-2">
-                <PillButton variant="danger" size="sm" onClick={() => { clearAll(); setShowConfirm(false); setImportStatus('idle') }}>
-                  Ja, löschen
-                </PillButton>
-                <PillButton variant="ghost" size="sm" onClick={() => setShowConfirm(false)}>
-                  Abbrechen
-                </PillButton>
-              </div>
-            </motion.div>
-          )}
-        </CollapsibleCard>
-
-        {/* ── App-Sperre (Face ID / PIN) ───────────────────────────────────── */}
-        <CollapsibleCard
-          icon={<Lock size={15} className="text-white/40 shrink-0" />}
-          title="App-Sperre"
-          statusText={lockEnabled ? (hasBiometric() ? 'Face ID + PIN aktiv' : 'PIN aktiv') : 'Aus'}
-        >
-          {!lockEnabled ? (
             <div className="flex flex-col gap-3">
               <p className="text-xs text-white/40">
-                Beim Öffnen der App nach Face&nbsp;ID / Touch&nbsp;ID oder einer PIN fragen. Die PIN ist
-                auch der Ersatz, falls die Biometrie nicht klappt.
+                Der API Key ist dein Worker Secret. Einmalig eingeben, wird sicher im Browser gespeichert.
               </p>
               <input
                 type="password"
-                inputMode="numeric"
-                placeholder="PIN (4–8 Ziffern)"
-                value={pinInput}
-                onChange={e => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-purple-500/40 transition-colors text-center tracking-[0.3em]"
+                value={apiKeyInput}
+                onChange={e => setApiKeyInput(e.target.value)}
+                placeholder="API Key eingeben…"
+                className="w-full bg-white/5 border border-white/10 rounded-card_sm px-3 py-2 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20"
               />
-              {webauthnSupported() && (
-                <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
-                  <input type="checkbox" checked={useFaceId} onChange={e => setUseFaceId(e.target.checked)} />
-                  <ScanFace size={14} className="text-purple-300/80" />
-                  Face&nbsp;ID / Touch&nbsp;ID verwenden
-                </label>
-              )}
-              <PillButton size="sm" icon={<Lock size={13} />} onClick={activateLock} disabled={pinInput.length < 4}>
-                Aktivieren
+              <PillButton
+                variant="primary"
+                size="sm"
+                icon={<LogIn size={13} />}
+                onClick={handleSaveApiKey}
+                disabled={keySaving || !apiKeyInput.trim()}
+              >
+                Speichern
               </PillButton>
             </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <p className="text-xs text-white/40">
-                {hasBiometric() ? 'Face ID / Touch ID + PIN aktiv.' : 'PIN aktiv.'} Wird beim nächsten Öffnen abgefragt.
-              </p>
-              <PillButton variant="danger" size="sm" icon={<Trash2 size={13} />} onClick={deactivateLock}>
-                Sperre deaktivieren
-              </PillButton>
-            </div>
-          )}
-        </CollapsibleCard>
+          </CollapsibleCard>
 
-        {/* ── Fehlerprotokoll ──────────────────────────────────────────────── */}
-        <CollapsibleCard
-          icon={<Bug size={15} className="text-white/40 shrink-0" />}
-          title="Fehlerprotokoll"
-          statusText={errorLog.length ? `${errorLog.length} Fehler protokolliert` : 'Keine Fehler'}
-        >
-          {errorLog.length === 0 ? (
-            <p className="text-xs text-white/40">Keine Fehler aufgezeichnet.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
-                {[...errorLog].reverse().map(e => (
-                  <div key={e.id} className="rounded-card_sm border border-white/8 bg-white/[0.03] p-2">
-                    <p className="text-[11px] font-medium text-white/70">
-                      {e.context}
-                      <span className="text-white/30"> · {new Date(e.time).toLocaleString('de-DE')}</span>
-                    </p>
-                    <p className="text-[11px] text-white/45 break-words">{e.message}</p>
-                  </div>
+          <CollapsibleCard
+            icon={<Wallet size={15} className="text-emerald-400 shrink-0" />}
+            title="Kontostand"
+            statusText={manualBalance !== null
+              ? `${formatEur(manualBalance)} · Aktualisiert ${balanceUpdatedAt}`
+              : 'Nicht gesetzt · Manuell eingetragen'}
+            defaultOpen={manualBalance === null && accounts.length === 0}
+          >
+            <p className="text-xs text-white/40 mb-3">
+              Aktueller Kontostand aus deiner Banking-App. Wird angezeigt bis der automatische Sync aktiv ist.
+            </p>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40">€</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={balanceInput}
+                  onChange={e => setBalanceInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSaveBalance()}
+                  className="w-full rounded-card_sm bg-white/4 border border-white/8 pl-7 pr-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-emerald-500/40 transition-colors duration-200"
+                />
+              </div>
+              <PillButton variant="secondary" size="sm" disabled={!balanceInput} onClick={handleSaveBalance}>
+                Speichern
+              </PillButton>
+            </div>
+            {balanceUpdatedAt && (
+              <p className="text-[10px] text-white/25 mt-2">Zuletzt aktualisiert: {balanceUpdatedAt}</p>
+            )}
+          </CollapsibleCard>
+
+          {accounts.length > 0 && (
+            <CollapsibleCard
+              icon={<Wallet size={15} className="text-white/40 shrink-0" />}
+              title="Konten"
+              statusText={`${accounts.length} Konto${accounts.length !== 1 ? 'en' : ''} · Wähle welche ins Gesamtvermögen einfließen`}
+            >
+              <div className="flex flex-col gap-2">
+                {accounts.map(a => (
+                  <AccountCard key={a.iban} account={a} onToggle={toggleIncluded} showToggle />
                 ))}
               </div>
-              <div className="flex gap-2">
-                <PillButton
-                  variant="secondary"
-                  size="sm"
-                  icon={<Copy size={13} />}
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(JSON.stringify(errorLog, null, 2))
-                      notify('Fehlerprotokoll kopiert')
-                    } catch { /* clipboard unavailable */ }
-                  }}
-                >
-                  Kopieren
-                </PillButton>
-                <PillButton variant="ghost" size="sm" icon={<Trash2 size={13} />} onClick={clearErrorLog}>
-                  Leeren
-                </PillButton>
-              </div>
-            </div>
+            </CollapsibleCard>
           )}
 
-          <div className="mt-4 pt-4 border-t border-white/8">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] text-white/60 uppercase tracking-wider">Geräteübergreifend (Server)</p>
+          <CollapsibleCard
+            icon={<Cloud size={15} className="text-blue-400 shrink-0" />}
+            title="Cloud-Backup"
+            statusText={cloudLastSync ? `Zuletzt: ${cloudLastSync}` : 'Kategorien & Profile geräteübergreifend sichern'}
+          >
+            <p className="text-xs text-white/40 mb-4">
+              Kategorien, Händler-Profile und Icons geräteübergreifend sichern.
+            </p>
+            <div className="flex gap-2">
               <PillButton
                 variant="secondary"
                 size="sm"
-                icon={<RefreshCw size={12} className={remoteErrorsLoading ? 'animate-spin' : ''} />}
-                onClick={loadRemoteErrors}
-                disabled={remoteErrorsLoading || !getApiKey()}
+                disabled={!isAuth || cloudStatus === 'pushing' || cloudStatus === 'pulling'}
+                icon={<CloudUpload size={13} className={cloudStatus === 'pushing' ? 'animate-pulse' : ''} />}
+                onClick={() => cloudPush(workerCfg)}
               >
-                {remoteErrors === null ? 'Laden' : 'Aktualisieren'}
+                {cloudStatus === 'pushing' ? 'Lädt…' : 'Hochladen'}
+              </PillButton>
+              <PillButton
+                variant="secondary"
+                size="sm"
+                disabled={!isAuth || cloudStatus === 'pushing' || cloudStatus === 'pulling'}
+                icon={<CloudDownload size={13} className={cloudStatus === 'pulling' ? 'animate-pulse' : ''} />}
+                onClick={() => cloudPull(workerCfg)}
+              >
+                {cloudStatus === 'pulling' ? 'Lädt…' : 'Herunterladen'}
               </PillButton>
             </div>
-            {!getApiKey() ? (
-              <p className="text-xs text-white/40">Kein API-Key hinterlegt — globales Protokoll nicht verfügbar.</p>
-            ) : remoteErrors === null ? (
-              <p className="text-xs text-white/40">Noch nicht geladen.</p>
-            ) : remoteErrors.length === 0 ? (
+            <AnimatePresence>
+              {(cloudStatus === 'success' || cloudStatus === 'error') && (
+                <div className="mt-3">
+                  <StatusBanner status={cloudStatus} message={cloudMessage} />
+                </div>
+              )}
+            </AnimatePresence>
+            {cloudLastSync && (
+              <p className="text-[10px] text-white/25 text-center mt-2">Zuletzt: {cloudLastSync}</p>
+            )}
+          </CollapsibleCard>
+        </SettingsGroup>
+
+        {/* ── Gruppe: Daten importieren ─────────────────────────────────────── */}
+        <SettingsGroup
+          icon={<Download size={15} className="text-white/50" />}
+          title="Daten importieren"
+          subtitle="Bankabfrage, Kreditkarte, CSV-Import"
+        >
+          <CollapsibleCard
+            icon={<Link2 size={15} className="text-blue-400 shrink-0" />}
+            title="Bankabfrage (PSD2)"
+            glow="blue"
+            badge={ebLastSync
+              ? <span className="text-[10px] text-blue-400/70 border border-blue-500/20 bg-blue-500/10 rounded-pill px-2 py-0.5">Verbunden</span>
+              : undefined}
+            statusText={ebLastSync ? `Zuletzt: ${ebLastSync}` : 'Offizielle PSD2-Schnittstelle · Commerzbank'}
+            defaultOpen={!ebLastSync}
+          >
+            <p className="text-xs text-white/40 mb-4">
+              Verbindet dich direkt über die offizielle Bank-API. Du wirst zur Commerzbank weitergeleitet um die Verbindung zu autorisieren.
+            </p>
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">Bank</label>
+                  <input
+                    type="text"
+                    value={ebBank}
+                    onChange={e => setEbBank(e.target.value)}
+                    placeholder="Commerzbank"
+                    className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-blue-500/40 transition-colors"
+                  />
+                </div>
+                <div className="w-16">
+                  <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">Land</label>
+                  <input
+                    type="text"
+                    value={ebCountry}
+                    onChange={e => setEbCountry(e.target.value.toUpperCase().slice(0, 2))}
+                    placeholder="DE"
+                    className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-blue-500/40 transition-colors text-center"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">
+                  Zeitraum: letzte {ebDays === 365 ? '365 Tage (1 Jahr)' : `${ebDays} Tage`}
+                </label>
+                <div className="flex gap-2">
+                  {[30, 60, 90, 180, 365].map(d => (
+                    <button
+                      key={d}
+                      onClick={() => setEbDays(d)}
+                      className="flex-1 py-1.5 rounded-pill text-xs border transition-all duration-150"
+                      style={{
+                        backgroundColor: ebDays === d ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)',
+                        borderColor:     ebDays === d ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)',
+                        color:           ebDays === d ? '#93c5fd' : 'rgba(255,255,255,0.4)',
+                      }}
+                    >
+                      {d === 365 ? '1J' : `${d}T`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <PillButton
+                variant="primary"
+                size="sm"
+                disabled={!isAuth || ebStatus === 'starting' || ebStatus === 'syncing'}
+                icon={<Link2 size={13} className={ebStatus === 'starting' || ebStatus === 'syncing' ? 'animate-pulse' : ''} />}
+                onClick={() => ebStart(workerCfg, ebBank, ebCountry, ebDays)}
+              >
+                {!isAuth                         ? 'Zuerst einloggen'
+                 : ebStatus === 'starting'       ? 'Starte Verbindung…'
+                 : ebStatus === 'awaiting_auth'  ? 'Warte auf Bank…'
+                 : ebStatus === 'syncing'        ? 'Importiere…'
+                 : ebLastSync                    ? 'Erneut synchronisieren'
+                 : 'Mit Bank verbinden'}
+              </PillButton>
+              <AnimatePresence>
+                {(ebStatus === 'success' || ebStatus === 'error') && (
+                  <StatusBanner status={ebStatus === 'success' ? 'success' : 'error'} message={ebMessage} />
+                )}
+              </AnimatePresence>
+              {ebLastSync && (
+                <p className="text-[10px] text-white/25 text-center">Zuletzt synchronisiert: {ebLastSync}</p>
+              )}
+            </div>
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            icon={<CreditCard size={15} className="text-purple-400 shrink-0" />}
+            title="Kreditkarte importieren"
+            glow="purple"
+            statusText={ccLastImport ? `Zuletzt: ${ccLastImport}` : 'Mastercard-Abrechnung CSV'}
+          >
+            <p className="text-xs text-white/40 mb-4">
+              Importiert die einzelnen Kreditkarten-Buchungen und blendet die
+              zusammenfassende "Kreditkarte"-Buchung auf dem Girokonto aus, sobald
+              ihre Summe mit den importierten Einzelbuchungen übereinstimmt.
+            </p>
+            <div
+              onDragOver={e => e.preventDefault()}
+              onDrop={onCcDrop}
+              onClick={() => ccFileInputRef.current?.click()}
+              className="border-2 border-dashed border-white/10 rounded-card hover:border-purple-500/40 hover:bg-purple-500/5 transition-all duration-200 cursor-pointer p-6 flex flex-col items-center gap-3 text-center active:scale-[0.99]"
+            >
+              <div className="w-10 h-10 rounded-card_sm bg-white/5 flex items-center justify-center text-white/40">
+                <Upload size={18} />
+              </div>
+              <div>
+                <p className="text-sm text-white/60 font-medium">
+                  {ccStatus === 'parsing' ? 'Verarbeite…' : 'Kreditkarten-CSV hochladen'}
+                </p>
+                <p className="text-xs text-white/25 mt-0.5">Tippe hier oder ziehe die Datei hinein</p>
+              </div>
+              <input ref={ccFileInputRef} type="file" accept=".csv" className="hidden" onChange={onCcFileChange} />
+            </div>
+            <AnimatePresence>
+              {ccStatus !== 'idle' && (
+                <div className="mt-3">
+                  <StatusBanner status={ccStatus} message={ccMessage} />
+                </div>
+              )}
+            </AnimatePresence>
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            icon={<Upload size={15} className="text-white/40 shrink-0" />}
+            title="CSV-Import"
+            statusText="Manueller Import via Commerzbank-Export"
+          >
+            <p className="text-xs text-white/40 mb-4">CSV-Export aus dem Commerzbank OnlineBanking hochladen.</p>
+            <div
+              onDragOver={e => e.preventDefault()}
+              onDrop={onDrop}
+              onClick={() => fileRef.current?.click()}
+              className="border-2 border-dashed border-white/10 rounded-card hover:border-purple-500/40 hover:bg-purple-500/5 transition-all duration-200 cursor-pointer p-6 flex flex-col items-center gap-3 text-center active:scale-[0.99]"
+            >
+              <div className="w-10 h-10 rounded-card_sm bg-white/5 flex items-center justify-center text-white/40">
+                <Upload size={18} />
+              </div>
+              <div>
+                <p className="text-sm text-white/60 font-medium">CSV oder MT940 hochladen</p>
+                <p className="text-xs text-white/25 mt-0.5">Tippe hier oder ziehe die Datei hinein</p>
+              </div>
+              <input ref={fileRef} type="file" accept=".csv,.txt,.mt940,.sta" className="hidden" onChange={onFileChange} />
+            </div>
+            <AnimatePresence>
+              {importStatus !== 'idle' && (
+                <div className="mt-3">
+                  <StatusBanner status={importStatus} message={importMessage} />
+                </div>
+              )}
+            </AnimatePresence>
+          </CollapsibleCard>
+        </SettingsGroup>
+
+        {/* ── Gruppe: Sicherheit & Daten ───────────────────────────────────── */}
+        <SettingsGroup
+          icon={<Lock size={15} className="text-white/50" />}
+          title="Sicherheit & Daten"
+          subtitle="App-Sperre, Datenlöschung, Fehlerprotokoll"
+        >
+          <CollapsibleCard
+            icon={<Lock size={15} className="text-white/40 shrink-0" />}
+            title="App-Sperre"
+            statusText={lockEnabled ? (hasBiometric() ? 'Face ID + PIN aktiv' : 'PIN aktiv') : 'Aus'}
+          >
+            {!lockEnabled ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-xs text-white/40">
+                  Beim Öffnen der App nach Face&nbsp;ID / Touch&nbsp;ID oder einer PIN fragen. Die PIN ist
+                  auch der Ersatz, falls die Biometrie nicht klappt.
+                </p>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  placeholder="PIN (4–8 Ziffern)"
+                  value={pinInput}
+                  onChange={e => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  className="w-full rounded-card_sm bg-white/4 border border-white/8 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-purple-500/40 transition-colors text-center tracking-[0.3em]"
+                />
+                {webauthnSupported() && (
+                  <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
+                    <input type="checkbox" checked={useFaceId} onChange={e => setUseFaceId(e.target.checked)} />
+                    <ScanFace size={14} className="text-purple-300/80" />
+                    Face&nbsp;ID / Touch&nbsp;ID verwenden
+                  </label>
+                )}
+                <PillButton size="sm" icon={<Lock size={13} />} onClick={activateLock} disabled={pinInput.length < 4}>
+                  Aktivieren
+                </PillButton>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-white/40">
+                  {hasBiometric() ? 'Face ID / Touch ID + PIN aktiv.' : 'PIN aktiv.'} Wird beim nächsten Öffnen abgefragt.
+                </p>
+                <PillButton variant="danger" size="sm" icon={<Trash2 size={13} />} onClick={deactivateLock}>
+                  Sperre deaktivieren
+                </PillButton>
+              </div>
+            )}
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            icon={<Database size={15} className="text-white/40 shrink-0" />}
+            title="Daten"
+            statusText={`${transactions.length} Buchungen · Lokal gespeichert`}
+          >
+            <p className="text-xs text-white/40 mb-3">Alle Daten verbleiben lokal auf deinem Gerät.</p>
+            {!showConfirm ? (
+              <PillButton variant="danger" size="sm" icon={<Trash2 size={13} />} onClick={() => setShowConfirm(true)}>
+                Alle Daten löschen
+              </PillButton>
+            ) : (
+              <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
+                <p className="text-xs text-red-400/80">Wirklich alle Buchungen löschen? Dies kann nicht rückgängig gemacht werden.</p>
+                <div className="flex gap-2">
+                  <PillButton variant="danger" size="sm" onClick={() => { clearAll(); setShowConfirm(false); setImportStatus('idle') }}>
+                    Ja, löschen
+                  </PillButton>
+                  <PillButton variant="ghost" size="sm" onClick={() => setShowConfirm(false)}>
+                    Abbrechen
+                  </PillButton>
+                </div>
+              </motion.div>
+            )}
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            icon={<Bug size={15} className="text-white/40 shrink-0" />}
+            title="Fehlerprotokoll"
+            statusText={errorLog.length ? `${errorLog.length} Fehler protokolliert` : 'Keine Fehler'}
+          >
+            {errorLog.length === 0 ? (
               <p className="text-xs text-white/40">Keine Fehler aufgezeichnet.</p>
             ) : (
               <div className="flex flex-col gap-2">
                 <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
-                  {remoteErrors.map(e => (
+                  {[...errorLog].reverse().map(e => (
                     <div key={e.id} className="rounded-card_sm border border-white/8 bg-white/[0.03] p-2">
                       <p className="text-[11px] font-medium text-white/70">
                         {e.context}
                         <span className="text-white/30"> · {new Date(e.time).toLocaleString('de-DE')}</span>
-                        {e.device && <span className="text-white/30"> · {e.device.slice(0, 40)}</span>}
                       </p>
                       <p className="text-[11px] text-white/45 break-words">{e.message}</p>
                     </div>
@@ -832,22 +875,92 @@ export function Settings() {
                     icon={<Copy size={13} />}
                     onClick={async () => {
                       try {
-                        await navigator.clipboard.writeText(JSON.stringify(remoteErrors, null, 2))
-                        notify('Globales Protokoll kopiert')
+                        await navigator.clipboard.writeText(JSON.stringify(errorLog, null, 2))
+                        notify('Fehlerprotokoll kopiert')
                       } catch { /* clipboard unavailable */ }
                     }}
                   >
                     Kopieren
                   </PillButton>
-                  <PillButton variant="ghost" size="sm" icon={<Trash2 size={13} />} onClick={handleClearRemoteErrors}>
+                  <PillButton variant="ghost" size="sm" icon={<Trash2 size={13} />} onClick={clearErrorLog}>
                     Leeren
                   </PillButton>
                 </div>
               </div>
             )}
-          </div>
-        </CollapsibleCard>
 
+            <div className="mt-4 pt-4 border-t border-white/8">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] text-white/60 uppercase tracking-wider">Geräteübergreifend (Server)</p>
+                <PillButton
+                  variant="secondary"
+                  size="sm"
+                  icon={<RefreshCw size={12} className={remoteErrorsLoading ? 'animate-spin' : ''} />}
+                  onClick={loadRemoteErrors}
+                  disabled={remoteErrorsLoading || !getApiKey()}
+                >
+                  {remoteErrors === null ? 'Laden' : 'Aktualisieren'}
+                </PillButton>
+              </div>
+              {!getApiKey() ? (
+                <p className="text-xs text-white/40">Kein API-Key hinterlegt — globales Protokoll nicht verfügbar.</p>
+              ) : remoteErrors === null ? (
+                <p className="text-xs text-white/40">Noch nicht geladen.</p>
+              ) : remoteErrors.length === 0 ? (
+                <p className="text-xs text-white/40">Keine Fehler aufgezeichnet.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+                    {remoteErrors.map(e => (
+                      <div key={e.id} className="rounded-card_sm border border-white/8 bg-white/[0.03] p-2">
+                        <p className="text-[11px] font-medium text-white/70">
+                          {e.context}
+                          <span className="text-white/30"> · {new Date(e.time).toLocaleString('de-DE')}</span>
+                          {e.device && <span className="text-white/30"> · {e.device.slice(0, 40)}</span>}
+                        </p>
+                        <p className="text-[11px] text-white/45 break-words">{e.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <PillButton
+                      variant="secondary"
+                      size="sm"
+                      icon={<Copy size={13} />}
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(JSON.stringify(remoteErrors, null, 2))
+                          notify('Globales Protokoll kopiert')
+                        } catch { /* clipboard unavailable */ }
+                      }}
+                    >
+                      Kopieren
+                    </PillButton>
+                    <PillButton variant="ghost" size="sm" icon={<Trash2 size={13} />} onClick={handleClearRemoteErrors}>
+                      Leeren
+                    </PillButton>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CollapsibleCard>
+        </SettingsGroup>
+
+      </div>
+
+      {/* Pinned footer — sticks to the bottom of the scrollable viewport.
+          The page-scroll container's usual pb-28 clearance (see AppShell) is
+          removed for this page and absorbed here as pb-28 instead, so the
+          blurred background itself extends all the way down behind the nav
+          rather than leaving a plain transparent gap below the footer. */}
+      <div
+        className="sticky bottom-0 left-0 right-0 px-4 pt-3 pb-28 flex flex-col gap-3"
+        style={{
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          background: 'linear-gradient(to top, rgba(10,10,15,0.85) 60%, transparent)',
+        }}
+      >
         <div className="flex justify-center">
           <PillButton variant="ghost" size="sm" icon={<Eye size={13} />} onClick={() => setPreviewLoader(true)}>
             Ladeanimation ansehen
@@ -865,7 +978,7 @@ export function Settings() {
             </span>
           </button>
         </GlassCard>
-
+      </div>
       </div>
 
       {createPortal(

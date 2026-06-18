@@ -109,13 +109,14 @@ export default {
     // ── POST /transactions/update — persist a per-tx edit ─────────────────
     if (request.method === 'POST' && path === '/transactions/update') {
       if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
-      let body: { id?: string; categoryId?: string; customLabel?: string; customIcon?: string }
+      let body: { id?: string; categoryId?: string; customLabel?: string; customIcon?: string; parentId?: string }
       try { body = await request.json() as typeof body } catch { return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors) }
       if (!body.id) return jsonResponse({ error: 'id fehlt' }, 400, cors)
-      const patch: { categoryId?: string; customLabel?: string; customIcon?: string } = {}
+      const patch: { categoryId?: string; customLabel?: string; customIcon?: string; parentId?: string } = {}
       if ('categoryId' in body)  patch.categoryId  = body.categoryId
       if ('customLabel' in body) patch.customLabel = body.customLabel
       if ('customIcon' in body)  patch.customIcon  = body.customIcon
+      if ('parentId' in body)    patch.parentId    = body.parentId
       await updateTransaction(env.DB, body.id, patch)
       return jsonResponse({ ok: true }, 200, cors)
     }

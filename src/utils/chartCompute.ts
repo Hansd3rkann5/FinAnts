@@ -87,6 +87,7 @@ export function filterByTimeFilter(txs: Transaction[], filter: TimeFilter): Tran
   return txs.filter(t => t.date >= start && t.date <= end)
 }
 
+
 // ── Available period discovery ────────────────────────────────────────────────
 
 export function computeAvailablePeriods(transactions: Transaction[]): AvailablePeriods {

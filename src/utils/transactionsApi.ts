@@ -38,7 +38,9 @@ export interface StoredTx {
 // (via updateTransactionRemote) are persisted as overrides. customLabel is the
 // exception: the CSV parser sets it from Verwendungszweck at import time, since
 // that's a per-transaction field (not a derived/pattern value). parentId is
-// the credit-card-import equivalent: set once at import time, never edited.
+// the credit-card-import equivalent — usually set at import time, but can
+// also be patched retroactively via updateTransactionRemote (see the
+// Giro-pull bucketing reconciliation in TransactionsContext).
 export interface MergeRow {
   date: string
   amount: number
@@ -233,7 +235,7 @@ export async function mergeTransactions(rows: MergeRow[], source = 'csv'): Promi
 
 export async function updateTransactionRemote(
   id: string,
-  patch: { categoryId?: string; customLabel?: string; customIcon?: string },
+  patch: { categoryId?: string; customLabel?: string; customIcon?: string; parentId?: string },
 ): Promise<void> {
   const res = await fetch(`${workerUrl()}/transactions/update`, {
     method: 'POST', credentials: 'include', headers: cfHeaders(),

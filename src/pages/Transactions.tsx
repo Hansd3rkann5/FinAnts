@@ -15,7 +15,7 @@ import { PullToRefresh } from '@/components/ui/PullToRefresh'
 import { ChartLoader } from '@/components/ui/ChartLoader'
 
 export function Transactions() {
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('month')
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
   const { allList } = useAllCategories()
