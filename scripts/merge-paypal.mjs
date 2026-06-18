@@ -81,6 +81,11 @@ function normName(s) {
   return s.trim().toLowerCase().replace(/\s+/g, '')
 }
 
+// PayPal BNPL products: the Gegenpartei IS the merchant here (PayPal is
+// fronting/financing the purchase), and the Buchungstext is just "Zahlung" /
+// "Rückzahlung" — too generic to be useful as the displayed label.
+const GENERIC_PRODUCT_NAMES = new Set(['paypalratenzahlung', 'bezahlungnach30tagen'])
+
 function mode(values) {
   const counts = new Map()
   for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1)
@@ -244,7 +249,13 @@ for (const b of bankRows) {
   claimed.add(best)
   const pp = ppRows[best]
   const newCols = [...b.cols]
-  const verwendungszweck = [pp.buchungstext, pp.notiz].filter(Boolean).join(' · ')
+  // PayPal's own BNPL products show up as the Gegenpartei itself ("PayPal
+  // Ratenzahlung", "Bezahlung nach 30 Tagen") with a near-content-free
+  // Buchungstext ("Zahlung"/"Rückzahlung") — the product name IS the useful
+  // label here, so use it instead of the generic boilerplate text.
+  const verwendungszweck = GENERIC_PRODUCT_NAMES.has(normName(pp.gegenpartei))
+    ? pp.gegenpartei
+    : [pp.buchungstext, pp.notiz].filter(Boolean).join(' · ')
   if (b.senderIsPaypal) {
     newCols[col.sender] = csvField(pp.gegenpartei)
     newCols[col.empfaenger] = ''

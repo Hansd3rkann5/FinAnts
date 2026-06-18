@@ -177,12 +177,23 @@ export async function mergeTransactions(
     category_id: string | null; custom_label: string | null; custom_icon: string | null
   }
   const index = new Map<string, Existing[]>()
+  // Looser fallback index keyed by amount only (no counterparty) — PayPal-routed
+  // payments get resolved to different counterparty text by EnableBanking than
+  // by the CSV pipeline (one masks/renames merchants differently than the
+  // other), so the exact (amount, counterparty) key above never matches and
+  // the same real transaction was getting inserted twice. See its use below.
+  const looseIndex = new Map<number, Existing[]>()
   for (const e of existing ?? []) {
+    const entry: Existing = { id: e.id, day: dayNumber(e.date), source: e.source,
+               category_id: e.category_id, custom_label: e.custom_label, custom_icon: e.custom_icon }
     const k = matchKey(e.amount, e.counterparty)
     const arr = index.get(k) ?? []
-    arr.push({ id: e.id, day: dayNumber(e.date), source: e.source,
-               category_id: e.category_id, custom_label: e.custom_label, custom_icon: e.custom_icon })
+    arr.push(entry)
     index.set(k, arr)
+    const cents = Math.round(e.amount * 100)
+    const looseArr = looseIndex.get(cents) ?? []
+    looseArr.push(entry)
+    looseIndex.set(cents, looseArr)
   }
 
   const claimed = new Set<string>()   // existing rows already matched this batch
@@ -213,9 +224,24 @@ export async function mergeTransactions(
         })
       }
       // else: existing row wins → skip incoming
-    } else {
-      toInsertRows.push(r)
+      continue
     }
+
+    // No exact (amount + counterparty) match. For an EnableBanking pull,
+    // also check for a same-amount row within the date window that a CSV
+    // import already covers, just under different counterparty text — drop
+    // the EB duplicate rather than inserting a near-identical second row.
+    if (source === 'eb') {
+      const cents = Math.round(r.amount * 100)
+      const looseMatch = (looseIndex.get(cents) ?? [])
+        .find(c => !claimed.has(c.id) && c.source === 'csv' && Math.abs(day - c.day) <= DEDUP_TOL_DAYS)
+      if (looseMatch) {
+        claimed.add(looseMatch.id)
+        continue
+      }
+    }
+
+    toInsertRows.push(r)
   }
 
   const toInsert = toStored(toInsertRows, source)
