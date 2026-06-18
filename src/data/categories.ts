@@ -25,7 +25,15 @@ export const CATEGORY_LIST = Object.values(CATEGORIES)
 // Transactions in this category are ignored by every calculation (balances,
 // statistics, charts, recurring detection). They stay visible in the list so
 // they can be managed / re-categorised.
+//
+// A transaction with `parentId` set (an itemized credit-card purchase billed
+// under a lump-sum Giro "Kreditkarte" booking) is excluded the same way, but
+// for a different reason: its amount is already counted via the parent's
+// `splits`, and it's only ever meant to be found through that parent's
+// breakdown modal, not as a standalone row — so every call site that already
+// guards on isExcluded() (chart totals, recurring detection, balance summary)
+// correctly skips it too, with no extra checks needed at each site.
 export const EXCLUDE_CATEGORY_ID = 'exclude'
-export function isExcluded(t: { categoryId: string }): boolean {
-  return t.categoryId === EXCLUDE_CATEGORY_ID
+export function isExcluded(t: { categoryId: string; parentId?: string | null }): boolean {
+  return t.categoryId === EXCLUDE_CATEGORY_ID || !!t.parentId
 }

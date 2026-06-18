@@ -3,11 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
 # Secrets are set via:
-#   wrangler secret put FINTS_BLZ
-#   wrangler secret put FINTS_USERNAME
-#   wrangler secret put FINTS_PIN
-#   wrangler secret put FINTS_IBAN       (optional – falls back to first account)
 #   wrangler secret put API_KEY          (random string to protect the endpoint)
+#   wrangler secret put EB_APPLICATION_ID
+#   wrangler secret put EB_PRIVATE_KEY
 
 [vars]
 # Replace with your actual GitHub Pages URL after deploying

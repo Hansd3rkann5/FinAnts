@@ -41,6 +41,11 @@ export interface Transaction {
   isPending?: boolean
   customLabel?: string
   customIcon?: string  // emoji or data URL
+  source?: string  // 'csv' | 'eb' | 'creditcard' | ... — which import path this came from
+  /** Set on an itemized credit-card purchase: the id of the lump-sum Giro
+   *  "Kreditkarte" booking it was billed under. Hidden from the main list and
+   *  from chart totals (see isExcluded) — only reachable via its parent. */
+  parentId?: string
   /** Chart-only overlay: split the amount across categories (signed, sums to `amount`).
    *  Stored in the R2 settings blob, never in the D1 transaction row. */
   splits?: { categoryId: string; amount: number }[]

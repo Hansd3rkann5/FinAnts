@@ -4,7 +4,7 @@
 import { cfHeaders } from './cfAuth'
 import { autoCategory } from './categorizer'
 import { findMerchant } from './merchantLogos'
-import { loadWorkerConfig } from '@/hooks/useWorkerSync'
+import { loadWorkerConfig } from '@/utils/workerConfig'
 import { resolveProfile } from '@/hooks/useMerchantProfiles'
 import type { SplitMap } from '@/hooks/useTxSplits'
 import type { Transaction, MerchantProfile } from '@/types'
@@ -30,13 +30,15 @@ export interface StoredTx {
   customLabel: string | null
   customIcon: string | null
   source: string | null
+  parentId: string | null
 }
 
 // Raw fields sent to the merge endpoint; the server derives the dedup key.
 // Auto-derived categories are intentionally omitted — only explicit user edits
 // (via updateTransactionRemote) are persisted as overrides. customLabel is the
 // exception: the CSV parser sets it from Verwendungszweck at import time, since
-// that's a per-transaction field (not a derived/pattern value).
+// that's a per-transaction field (not a derived/pattern value). parentId is
+// the credit-card-import equivalent: set once at import time, never edited.
 export interface MergeRow {
   date: string
   amount: number
@@ -48,6 +50,7 @@ export interface MergeRow {
   reference?: string
   customLabel?: string
   isPending?: boolean
+  parentId?: string
 }
 
 export interface MergeResult {
@@ -109,6 +112,8 @@ export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[]
       // can match patterns against it (the final value is set again below).
       customLabel: r.customLabel ?? ppMerchant ?? undefined,
       customIcon: r.customIcon ?? undefined,
+      source: r.source ?? undefined,
+      parentId: r.parentId ?? undefined,
     }
     const profile = resolveProfile(tx, profiles)
     tx.categoryId  = r.categoryId  ?? profile?.categoryId ?? autoCategory(r.description, r.counterparty)
@@ -131,6 +136,7 @@ export function transactionToMergeRow(t: Transaction): MergeRow {
     reference: t.reference,
     customLabel: t.customLabel,
     isPending: t.isPending,
+    parentId: t.parentId,
   }
 }
 
@@ -156,7 +162,7 @@ const DEDUP_TOL_DAYS = 2
 // Client-side merge for local-only import (no API key). Mirrors the worker's
 // dedup logic: same amount + counterparty within DEDUP_TOL_DAYS collapses to
 // the existing row. New rows get a random id and are prepended, sorted newest-first.
-export function mergeLocal(existing: StoredTx[], incoming: MergeRow[]): MergeResult {
+export function mergeLocal(existing: StoredTx[], incoming: MergeRow[], source = 'csv'): MergeResult {
   const filtered = incoming.filter(r => !r.isPending && r.date)
 
   const index = new Map<string, { id: string; day: number }[]>()
@@ -196,7 +202,8 @@ export function mergeLocal(existing: StoredTx[], incoming: MergeRow[]): MergeRes
         categoryId: null,
         customLabel: r.customLabel ?? null,
         customIcon: null,
-        source: 'csv',
+        source,
+        parentId: r.parentId ?? null,
       })
     }
   }

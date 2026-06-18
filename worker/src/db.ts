@@ -23,6 +23,9 @@ export interface MergeInput {
   customLabel?: string
   customIcon?: string
   isPending?: boolean
+  // Links an itemized credit-card purchase to the lump-sum Giro "Kreditkarte"
+  // booking it was billed under (see scripts/ and Settings.tsx import flow).
+  parentId?: string
 }
 
 // Row shape returned to the client (camelCase). The client enriches these with
@@ -41,6 +44,7 @@ export interface StoredTx {
   customLabel: string | null
   customIcon: string | null
   source: string | null
+  parentId: string | null
 }
 
 interface DbRow {
@@ -57,6 +61,7 @@ interface DbRow {
   custom_label: string | null
   custom_icon: string | null
   source: string | null
+  parent_id: string | null
 }
 
 // ─── Dedup key ─────────────────────────────────────────────────────────────
@@ -79,9 +84,12 @@ function counterpartyIbanOf(r: MergeInput): string {
 // CSV Buchungstag, so the same transaction carries a slightly different date in
 // each source. We therefore match on amount + counterparty within a small date
 // window (not the exact date), and — when an incoming row matches an existing
-// one — keep the better-structured source (EB > FinTS > CSV).
+// one — keep the better-structured source. Credit card statement rows are
+// itemized purchases with their own distinct amounts (never collide with the
+// lump Giro settlement booking via matchKey), so their rank mostly just needs
+// to be higher than a re-pulled CSV/EB row of the same purchase.
 const DEDUP_TOL_DAYS = 2
-const SOURCE_RANK: Record<string, number> = { csv: 1, fints: 2, eb: 3 }
+const SOURCE_RANK: Record<string, number> = { csv: 1, eb: 2, creditcard: 3 }
 function rankOf(source?: string | null): number {
   return SOURCE_RANK[source ?? ''] ?? 0
 }
@@ -114,6 +122,7 @@ function rowToStored(r: DbRow): StoredTx {
     customLabel: r.custom_label,
     customIcon: r.custom_icon,
     source: r.source,
+    parentId: r.parent_id,
   }
 }
 
@@ -151,6 +160,7 @@ export function toStored(rows: MergeInput[], source: string): StoredTx[] {
       customLabel: r.customLabel ?? null,
       customIcon: r.customIcon ?? null,
       source,
+      parentId: r.parentId ?? null,
     }))
 }
 
@@ -254,11 +264,11 @@ export async function mergeTransactions(
     stmts.push(
       db.prepare(
         `INSERT INTO transactions
-           (id, date, amount, type, description, counterparty, iban, account_iban, reference, category_id, custom_label, custom_icon, source, created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           (id, date, amount, type, description, counterparty, iban, account_iban, reference, category_id, custom_label, custom_icon, source, parent_id, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       ).bind(
         t.id, t.date, t.amount, t.type, t.description, t.counterparty,
-        t.iban, t.accountIban, t.reference, t.categoryId, t.customLabel, t.customIcon, t.source, now,
+        t.iban, t.accountIban, t.reference, t.categoryId, t.customLabel, t.customIcon, t.source, t.parentId, now,
       ),
     )
   }

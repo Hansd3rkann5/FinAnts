@@ -4,7 +4,7 @@
 // persisted error log in localStorage so issues can be reviewed later.
 import { useSyncExternalStore } from 'react'
 import { cfHeaders, getApiKey } from './cfAuth'
-import { resolveWorkerUrl } from '@/hooks/useWorkerSync'
+import { resolveWorkerUrl } from '@/utils/workerConfig'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

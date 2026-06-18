@@ -84,7 +84,9 @@ export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) 
                 {displayLabel || tx.counterparty || tx.description || '–'}
               </p>
               <p className="text-xs text-white/40 truncate mt-0.5 leading-tight">
-                {displayLabel === tx.counterparty
+                {tx.source === 'creditcard'
+                  ? 'Kreditkarte'
+                  : displayLabel === tx.counterparty
                   ? ''
                   : displayLabel
                   ? (/paypal/i.test(tx.counterparty)

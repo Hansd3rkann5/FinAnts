@@ -9,6 +9,7 @@ import { computeAvailablePeriods } from '@/utils/chartCompute'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { TransactionList } from '@/components/transactions/TransactionList'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
+import { KreditkartenBreakdownModal } from '@/components/transactions/KreditkartenBreakdownModal'
 import { PillButton } from '@/components/ui/PillButton'
 import { PullToRefresh } from '@/components/ui/PullToRefresh'
 import { ChartLoader } from '@/components/ui/ChartLoader'
@@ -20,8 +21,19 @@ export function Transactions() {
   const { allList } = useAllCategories()
   const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Transaction | null>(null)
+  const [breakdownParent, setBreakdownParent] = useState<Transaction | null>(null)
   const { transactions, updateTransaction, refreshAll } = useTransactionsCtx()
   const [refreshing, setRefreshing] = useState(false)
+
+  const kreditkarteCategoryId = allList.find(c => c.label.trim().toLowerCase() === 'kreditkarte')?.id
+
+  function handleTransactionClick(tx: Transaction) {
+    if (kreditkarteCategoryId && tx.categoryId === kreditkarteCategoryId) {
+      const hasChildren = transactions.some(t => t.parentId === tx.id)
+      if (hasChildren) { setBreakdownParent(tx); return }
+    }
+    setSelected(tx)
+  }
 
   // Pull-to-refresh: download everything from the cloud — categories + merchant
   // patterns (R2) and the transactions (D1). This is how a new device pulls the
@@ -35,7 +47,9 @@ export function Transactions() {
   const periods = useMemo(() => computeAvailablePeriods(transactions), [transactions])
 
   const displayed = useMemo(() => {
-    let result = timeFiltered
+    // Itemized credit-card purchases only exist to be found via their parent
+    // Giro "Kreditkarte" booking's breakdown modal — never as their own row.
+    let result = timeFiltered.filter(t => !t.parentId)
     if (filterCategory) {
       result = result.filter(t => t.categoryId === filterCategory)
     }
@@ -146,9 +160,16 @@ export function Transactions() {
       <div className="mx-4">
         <TransactionList
           transactions={displayed}
-          onTransactionClick={setSelected}
+          onTransactionClick={handleTransactionClick}
         />
       </div>
+
+      <KreditkartenBreakdownModal
+        parent={breakdownParent}
+        items={breakdownParent ? transactions.filter(t => t.parentId === breakdownParent.id) : []}
+        onClose={() => setBreakdownParent(null)}
+        onSelectChild={setSelected}
+      />
 
       <TransactionDetailModal
         transaction={selected}

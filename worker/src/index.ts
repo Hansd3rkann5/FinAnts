@@ -1,4 +1,3 @@
-import { syncAll, blzFromIban } from './fints'
 import { ebStartAuth, ebExchangeAndSync, ebGetAspsps } from './enablebanking'
 import {
   mergeTransactions, getTransactions, updateTransaction, deleteTransaction, clearTransactions, toStored,
@@ -7,10 +6,6 @@ import {
 } from './db'
 
 export interface Env {
-  FINTS_BLZ?: string
-  FINTS_USERNAME: string
-  FINTS_PIN: string
-  FINTS_IBAN?: string
   ALLOWED_ORIGIN: string
   ICONS: R2Bucket
   DB?: D1Database
@@ -55,20 +50,6 @@ function jsonResponse(body: unknown, status: number, headers: Record<string, str
     status,
     headers: { 'Content-Type': 'application/json', ...headers },
   })
-}
-
-function resolveBlz(env: Env): string {
-  if (env.FINTS_BLZ) return env.FINTS_BLZ
-  if (env.FINTS_IBAN) return blzFromIban(env.FINTS_IBAN)
-  throw new Error('FINTS_BLZ must be set as a Worker Secret')
-}
-
-function formatError(e: unknown): string {
-  const msg = e instanceof Error ? e.message : String(e)
-  if (msg.includes('9010') || msg.includes('9210')) return msg + ' (Falsche Zugangsdaten?)'
-  if (msg.includes('9340')) return msg + ' (Konto gesperrt oder Limit erreicht)'
-  if (msg.includes('9800')) return msg + ' (Bankserver vorübergehend nicht erreichbar)'
-  return msg
 }
 
 // ─── Worker entry ─────────────────────────────────────────────────────────────
@@ -267,64 +248,6 @@ export default {
       if (body.length > 20 * 1024 * 1024) return jsonResponse({ error: 'State too large (max 20 MB)' }, 413, cors)
       await env.ICONS.put('state/user.json', body, { httpMetadata: { contentType: 'application/json' } })
       return jsonResponse({ ok: true }, 200, cors)
-    }
-
-    let blz: string
-    try {
-      blz = resolveBlz(env)
-    } catch (e) {
-      return jsonResponse({ error: String(e) }, 400, cors)
-    }
-
-    const cfg = { blz, username: env.FINTS_USERNAME, pin: env.FINTS_PIN }
-
-    // ── GET / or /sync ────────────────────────────────────────────────────
-    const isSync = request.method === 'GET' && (path === '' || path.endsWith('/sync'))
-    if (isSync) {
-      const daysBack = Math.min(parseInt(url.searchParams.get('days') ?? '90'), 365)
-      const toDate   = new Date()
-      const fromDate = new Date(toDate.getTime() - daysBack * 86_400_000)
-
-      try {
-        const result = await syncAll(cfg, fromDate, toDate)
-        if (result.challenge) {
-          return jsonResponse({ challenge: result.challenge }, 202, cors)
-        }
-        return jsonResponse(await buildSyncResponse(env, result, 'fints', fromDate, toDate), 200, cors)
-      } catch (e) {
-        console.error('FinTS sync error:', e)
-        return jsonResponse({ error: formatError(e) }, 502, cors)
-      }
-    }
-
-    // ── POST /tan ─────────────────────────────────────────────────────────
-    if (request.method === 'POST' && path.endsWith('/tan')) {
-      let body: { tan: string; dialogId: string; secRef: number; secFun: string; days?: number }
-      try {
-        body = await request.json() as typeof body
-      } catch {
-        return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors)
-      }
-
-      const { tan, dialogId, secRef, secFun, days = 90 } = body
-      if (!tan || !dialogId || !secRef || !secFun) {
-        return jsonResponse({ error: 'Fehlende Felder: tan, dialogId, secRef, secFun' }, 400, cors)
-      }
-
-      const daysBack = Math.min(days, 365)
-      const toDate   = new Date()
-      const fromDate = new Date(toDate.getTime() - daysBack * 86_400_000)
-
-      try {
-        const result = await syncAll(cfg, fromDate, toDate, tan, dialogId, secRef, secFun)
-        if (result.challenge) {
-          return jsonResponse({ challenge: result.challenge }, 202, cors)
-        }
-        return jsonResponse(await buildSyncResponse(env, result, 'fints', fromDate, toDate), 200, cors)
-      } catch (e) {
-        console.error('FinTS TAN error:', e)
-        return jsonResponse({ error: formatError(e) }, 502, cors)
-      }
     }
 
     return jsonResponse({ error: 'Not found' }, 404, cors)

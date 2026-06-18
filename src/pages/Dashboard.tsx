@@ -192,7 +192,7 @@ export function Dashboard() {
         <TimeFilterBar value={timeFilter} onChange={handleTimeFilter} id="dash" periods={periods} />
       </div>
 
-      {/* ── FinTS Gesamtvermögen (only meaningful with >1 account) ─────────── */}
+      {/* ── Gesamtvermögen (only meaningful with >1 account) ────────────────── */}
       {hasMultipleAccounts && (
         <GlassCard id="card-wealth" glow="purple" className="mx-4">
           <div className="flex items-center gap-2 mb-1">

@@ -107,9 +107,9 @@ export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: S
   // CSV import → merge delta server-side, then display the canonical set.
   // Pending rows aren't persisted (their key changes once booked), so we keep
   // the freshly parsed pending entries on top transiently for display.
-  const importTransactions = useCallback(async (raw: Transaction[]) => {
+  const importTransactions = useCallback(async (raw: Transaction[], source = 'csv') => {
     const rows = raw.map(transactionToMergeRow)
-    const { transactions: merged, meta } = await mergeTransactions(rows, 'csv')
+    const { transactions: merged, meta } = await mergeTransactions(rows, source)
     rawRowsRef.current = merged
     const pending = raw.filter(t => t.isPending)
     setFromTransactions([...pending, ...enrichTransactions(merged, profilesRef.current, splitsRef.current)])
@@ -118,9 +118,9 @@ export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: S
 
   // Local-only CSV import: same dedup logic as the worker but runs in-browser.
   // Used when no API key is set — data stays in localStorage only, not in D1.
-  const importLocalOnly = useCallback((raw: Transaction[]) => {
+  const importLocalOnly = useCallback((raw: Transaction[], source = 'csv') => {
     const rows = raw.map(transactionToMergeRow)
-    const { transactions: merged, meta } = mergeLocal(rawRowsRef.current, rows)
+    const { transactions: merged, meta } = mergeLocal(rawRowsRef.current, rows, source)
     rawRowsRef.current = merged
     const pending = raw.filter(t => t.isPending)
     setFromTransactions([...pending, ...enrichTransactions(merged, profilesRef.current, splitsRef.current)])

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
-import type { WorkerConfig } from './useWorkerSync'
+import type { WorkerConfig } from '@/utils/workerConfig'
 import { pushCloudState, pullCloudState, type CloudState } from '@/utils/cloudSync'
 
 const LAST_CLOUD_SYNC_KEY = 'finants_cloud_sync'

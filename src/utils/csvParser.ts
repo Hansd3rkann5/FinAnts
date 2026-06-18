@@ -152,6 +152,69 @@ export function parseCommerzbankCSV(text: string): Transaction[] {
   })
 }
 
+// Commerzbank Mastercard statement CSV — itemized credit card purchases, plus
+// "Lastschrifteinzug" rows where the card balance is collected from the Giro
+// account (the same event shows there as one lump-sum "Kreditkarte" booking).
+// Returns the two kinds separately: purchases are real spending to import,
+// settlements are just (date, amount) pairs used to find and reconcile that
+// lump-sum Giro booking — they are never imported as transactions themselves.
+export function parseMastercardCSV(text: string): { purchases: Transaction[]; settlements: { date: Date; amount: number }[] } {
+  const lines = text.split('\n').map(l => l.replace(/\r$/, '')).filter(Boolean)
+  if (lines.length === 0) return { purchases: [], settlements: [] }
+
+  const sep = lines[0].includes('\t') ? '\t' : ';'
+  const headers = lines[0].split(sep).map(cleanField).map(h => h.toLowerCase())
+  const colBuchungstag = headers.findIndex(h => h.includes('buchungstag'))
+  const colUmsatz      = headers.findIndex(h => h === 'umsatz')
+  const colText        = headers.findIndex(h => h.includes('buchungstext'))
+  const colBetrag      = headers.findIndex(h => h === 'betrag')
+
+  const purchases: Transaction[] = []
+  const settlements: { date: Date; amount: number }[] = []
+
+  for (const line of lines.slice(1)) {
+    const cols = line.split(sep)
+    if (cols.length < 4) continue
+
+    const rawAmount = cleanField(cols[colBetrag] ?? '')
+    if (!rawAmount) continue
+    const amount = parseGermanAmount(rawAmount)
+
+    const buchungstag = cleanField(cols[colBuchungstag] ?? '')
+    const isPending = !buchungstag
+    let date = parseGermanDate(buchungstag)
+    if (isNaN(date.getTime())) date = parseGermanDate(cleanField(cols[colUmsatz] ?? ''))
+
+    const buchungstext = cleanField(cols[colText] ?? '')
+
+    if (buchungstext.toLowerCase() === 'lastschrifteinzug') {
+      settlements.push({ date, amount })
+      continue
+    }
+
+    // The merchant name is the part of Buchungstext before the city/country
+    // suffix, e.g. "APPLE.COM/BILL, CORK, IRL" -> "APPLE.COM/BILL". Fee rows
+    // like "Entgelt Auslandseinsatz" have no comma — keep the whole text.
+    const counterparty = buchungstext.split(',')[0]?.trim() || buchungstext
+    const merchant = findMerchant(`${buchungstext} ${counterparty}`)
+    const categoryId = autoCategory(buchungstext, counterparty)
+
+    purchases.push({
+      id: `${date.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
+      date,
+      amount,
+      type: amount >= 0 ? 'income' : 'expense',
+      description: buchungstext,
+      counterparty,
+      categoryId,
+      merchantKey: merchant?.merchantKey,
+      isPending: isPending || undefined,
+    })
+  }
+
+  return { purchases, settlements }
+}
+
 // Alternative: MT940 format (SWIFT standard used by many German banks)
 export function parseMT940(text: string): Transaction[] {
   const transactions: Transaction[] = []

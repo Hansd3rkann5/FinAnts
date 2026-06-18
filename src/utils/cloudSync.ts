@@ -3,7 +3,7 @@
 // Cloud-Backup hook and the automatic sync in TransactionsContext can use it
 // without a circular dependency.
 import { cfHeaders } from './cfAuth'
-import { loadWorkerConfig } from '@/hooks/useWorkerSync'
+import { loadWorkerConfig } from '@/utils/workerConfig'
 import type { Category, MerchantProfile } from '@/types'
 
 const DEFAULT_WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')

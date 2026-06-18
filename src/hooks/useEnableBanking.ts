@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Account } from '@/types'
 import type { StoredTx } from '@/utils/transactionsApi'
-import type { WorkerConfig } from './useWorkerSync'
+import type { WorkerConfig } from '@/utils/workerConfig'
 import { cfHeaders } from '@/utils/cfAuth'
 
 const EB_PENDING_KEY  = 'finants_eb_pending'
