@@ -11,7 +11,7 @@ import { AmountDisplay } from '@/components/ui/AmountDisplay'
 import { CategoryBadge } from '@/components/ui/CategoryBadge'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { resolveProfile } from '@/hooks/useMerchantProfiles'
-import { isExcluded } from '@/data/categories'
+import { EXCLUDE_CATEGORY_ID } from '@/data/categories'
 
 const LONG_PRESS_MS = 500
 
@@ -29,7 +29,15 @@ export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) 
   const displayLabel = tx.customLabel ?? profile?.label
   const displayIcon  = tx.customIcon  ?? profile?.customIcon
   const merchantKey  = tx.merchantKey ?? findMerchant(`${tx.description ?? ''} ${tx.counterparty ?? ''}`)?.merchantKey
-  const excluded = isExcluded(tx)
+  // Only the literal "exclude" category dims a card — that's a visual flag for
+  // "FYI, this one's left out of your calculations" when mixed into a normal
+  // list. A child transaction (parentId set) is also excluded from charts,
+  // but for a different reason (its amount lives in the parent's splits, not
+  // double-counted), and it's never shown mixed into a normal list — only
+  // inside its own parent's breakdown modal, where every card is a child by
+  // definition. Dimming all of them there would just look like a rendering
+  // bug, not convey anything.
+  const excluded = tx.categoryId === EXCLUDE_CATEGORY_ID
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const didLongPress = useRef(false)
