@@ -23,7 +23,8 @@ interface Props {
 
 export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const { merchantProfiles, deleteTransaction } = useTransactionsCtx()
+  const { merchantProfiles, deleteTransaction, newTransactionIds } = useTransactionsCtx()
+  const isNew = newTransactionIds.has(tx.id)
   const profile = resolveProfile(tx, merchantProfiles)
 
   const displayLabel = tx.customLabel ?? profile?.label
@@ -81,8 +82,15 @@ export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) 
         onPointerCancel={cancelLongPress}
         data-component="tx-card"
         data-tx-id={tx.id}
-        className="flex items-center gap-3 p-3 rounded-card_sm bg-white/3 border border-white/6 active:bg-white/[0.07] transition-colors duration-100 cursor-pointer select-none"
+        className="relative flex items-center gap-3 p-3 rounded-card_sm bg-white/3 border border-white/6 active:bg-white/[0.07] transition-colors duration-100 cursor-pointer select-none"
       >
+        {isNew && (
+          <span
+            id={`tx-new-marker-${tx.id}`}
+            className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-blue-400"
+            style={{ boxShadow: '0 0 4px rgba(96,165,250,0.8)' }}
+          />
+        )}
         <MerchantLogo merchantKey={merchantKey} categoryId={tx.categoryId} customIcon={displayIcon} size={42} />
 
         <div className="flex-1 min-w-0">

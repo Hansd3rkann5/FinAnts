@@ -20,7 +20,7 @@ interface EbWorkerAccount {
 interface EbSyncResponse {
   accounts: EbWorkerAccount[]
   transactions: StoredTx[]
-  meta: { accountCount: number; count: number; added: number; from: string; to: string; fetchedAt: string }
+  meta: { accountCount: number; count: number; added: number; newlyAddedIds: string[]; from: string; to: string; fetchedAt: string }
   error?: string
 }
 
@@ -29,6 +29,7 @@ export type EbStatus = 'idle' | 'starting' | 'awaiting_auth' | 'syncing' | 'succ
 export function useEnableBanking(
   onImport: (rows: StoredTx[]) => void,
   onAccounts?: (accounts: Omit<Account, 'included'>[]) => void,
+  onNewIds?: (ids: string[]) => void,
 ) {
   const [status,   setStatus]   = useState<EbStatus>('idle')
   const [message,  setMessage]  = useState('')
@@ -57,6 +58,7 @@ export function useEnableBanking(
       }
 
       onImport(data.transactions ?? [])
+      if (data.meta.newlyAddedIds?.length) onNewIds?.(data.meta.newlyAddedIds)
 
       localStorage.removeItem(EB_PENDING_KEY)
       const syncTime = new Date().toLocaleString('de-DE')
@@ -68,7 +70,7 @@ export function useEnableBanking(
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Verbindungsfehler')
     }
-  }, [onImport, onAccounts])
+  }, [onImport, onAccounts, onNewIds])
 
   // Detect redirect-back from EnableBanking (code in URL)
   useEffect(() => {

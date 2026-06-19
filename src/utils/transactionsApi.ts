@@ -57,7 +57,7 @@ export interface MergeRow {
 
 export interface MergeResult {
   transactions: StoredTx[]
-  meta: { added: number; total: number }
+  meta: { added: number; total: number; newlyAddedIds?: string[] }
 }
 
 // PayPal direct-debits arrive with "PayPal Europe …" as the counterparty, but

@@ -4,6 +4,7 @@ import { useMerchantProfiles } from '@/hooks/useMerchantProfiles'
 import { useCustomCategories } from '@/hooks/useCustomCategories'
 import { useTxSplits, type Split } from '@/hooks/useTxSplits'
 import { useExcludedMerchants } from '@/hooks/useExcludedMerchants'
+import { useNewTransactionMarkers } from '@/hooks/useNewTransactionMarkers'
 import { pushCloudState, pullCloudState } from '@/utils/cloudSync'
 import { computeCreditCardBucket } from '@/utils/creditCardBilling'
 import { reportError } from '@/utils/notify'
@@ -15,6 +16,7 @@ type TransactionsCtx =
   ReturnType<typeof useCustomCategories> &
   ReturnType<typeof useTxSplits> &
   ReturnType<typeof useExcludedMerchants> &
+  ReturnType<typeof useNewTransactionMarkers> &
   { refreshAll: () => Promise<void> }
 
 const Ctx = createContext<TransactionsCtx | null>(null)
@@ -108,6 +110,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   const categories = useCustomCategories()
   const splits = useTxSplits()
   const excludedMerchants = useExcludedMerchants()
+  const newMarkers = useNewTransactionMarkers()
   // Transactions enrich against the current patterns + splits, so build those first.
   const transactions = useTransactions(profiles.merchantProfiles, splits.txSplits)
 
@@ -136,7 +139,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   }, [pullPatterns, transactions])
 
   return (
-    <Ctx.Provider value={{ ...transactions, ...profiles, ...categories, ...splits, ...excludedMerchants, refreshAll }}>
+    <Ctx.Provider value={{ ...transactions, ...profiles, ...categories, ...splits, ...excludedMerchants, ...newMarkers, refreshAll }}>
       {children}
     </Ctx.Provider>
   )

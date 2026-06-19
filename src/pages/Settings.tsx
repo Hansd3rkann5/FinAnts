@@ -185,7 +185,7 @@ function SettingsGroup({
 export function Settings() {
   const {
     transactions, importTransactions, importLocalOnly, applyServerTransactions, clearAll, refreshAll,
-    setSplit,
+    setSplit, markNew,
   } = useTransactionsCtx()
   const { accounts, setAccounts, toggleIncluded } = useAccounts()
   const { allList: allCategories } = useAllCategories()
@@ -271,9 +271,9 @@ export function Settings() {
 
   const [ebBank,    setEbBank]    = useState('Commerzbank')
   const [ebCountry, setEbCountry] = useState('DE')
-  const [ebDays,    setEbDays]    = useState(365)
+  const [ebDays,    setEbDays]    = useState(30)
   const { start: ebStart, status: ebStatus, message: ebMessage, lastSync: ebLastSync } =
-    useEnableBanking(applyServerTransactions, setAccounts)
+    useEnableBanking(applyServerTransactions, setAccounts, markNew)
 
   async function handleFile(file: File) {
     setImportStatus('parsing')

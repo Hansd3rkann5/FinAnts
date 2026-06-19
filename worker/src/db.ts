@@ -174,7 +174,7 @@ export async function mergeTransactions(
   db: D1Database,
   rows: MergeInput[],
   source: string,
-): Promise<{ added: number; total: number }> {
+): Promise<{ added: number; total: number; newlyAddedIds: string[] }> {
   const incoming = rows.filter(r => !r.isPending && r.date)
 
   const { results: existing } = await db
@@ -209,6 +209,10 @@ export async function mergeTransactions(
   const claimed = new Set<string>()   // existing rows already matched this batch
   const toDelete: string[] = []
   const toInsertRows: MergeInput[] = []
+  // Rows with no prior match at all — genuinely new to the user, as opposed to
+  // a same-transaction row from a higher-ranked source replacing an existing
+  // one (toDelete) — used to mark only true newcomers in the UI.
+  const freshRows = new Set<MergeInput>()
   const incomingRank = rankOf(source)
 
   for (const r of incoming) {
@@ -252,9 +256,11 @@ export async function mergeTransactions(
     }
 
     toInsertRows.push(r)
+    freshRows.add(r)
   }
 
   const toInsert = toStored(toInsertRows, source)
+  const newlyAddedIds = toInsert.filter((_, i) => freshRows.has(toInsertRows[i])).map(t => t.id)
   const now = new Date().toISOString()
   const stmts: D1PreparedStatement[] = []
   for (const id of toDelete) {
@@ -274,7 +280,7 @@ export async function mergeTransactions(
   }
   if (stmts.length) await db.batch(stmts)
   const total = await countRows(db)
-  return { added: toInsert.length - toDelete.length, total }
+  return { added: toInsert.length - toDelete.length, total, newlyAddedIds }
 }
 
 export async function updateTransaction(

@@ -268,15 +268,18 @@ async function buildSyncResponse(
   let transactions: StoredTx[]
   let added: number
   let total: number
+  let newlyAddedIds: string[]
   if (env.DB) {
     const meta = await mergeTransactions(env.DB, result.transactions, source)
     added = meta.added
     total = meta.total
+    newlyAddedIds = meta.newlyAddedIds
     transactions = await getTransactions(env.DB)
   } else {
     transactions = toStored(result.transactions, source)
     added = transactions.length
     total = transactions.length
+    newlyAddedIds = transactions.map(t => t.id)
   }
   return {
     accounts: result.accounts,
@@ -285,6 +288,7 @@ async function buildSyncResponse(
       accountCount: result.accounts.length,
       count: total,
       added,
+      newlyAddedIds,
       from: fromDate.toISOString().slice(0, 10),
       to: toDate.toISOString().slice(0, 10),
       fetchedAt: new Date().toISOString(),
