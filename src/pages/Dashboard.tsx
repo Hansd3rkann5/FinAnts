@@ -429,7 +429,7 @@ export function Dashboard() {
               <button
                 id="btn-merchant-breakdown"
                 onClick={() => setMerchBreakdownOpen(true)}
-                className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-1 border-t border-white/6"
+                className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-3 border-t border-white/6"
               >
                 {`Alle anzeigen (${merchantCount})`}
               </button>
