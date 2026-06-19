@@ -247,8 +247,20 @@ export function computeCategoryTrends(
 // twice-only payee isn't a recognizable recurring spending pattern yet.
 const MIN_MERCHANT_BOOKINGS = 2
 
+// Like booked(), but for merchant-frequency analysis: a credit-card purchase
+// linked to its monthly Giro "Kreditkarte" booking (parentId set) is normally
+// hidden from charts since its amount lives in the parent's splits — but for
+// "who do I pay most often" that purchase's own counterparty (Amazon, Wolt,
+// ...) is exactly what should count, not the bank's lump-sum settlement row.
+// So: include children by their own counterparty, and exclude any booking
+// that turned out to *be* a parent (it has no merchant identity of its own).
+function merchantEligible(txs: Transaction[]) {
+  const parentIds = new Set(txs.filter(t => t.parentId).map(t => t.parentId))
+  return txs.filter(t => !t.isPending && t.categoryId !== EXCLUDE_CATEGORY_ID && !parentIds.has(t.id))
+}
+
 export function computeTopMerchants(txs: Transaction[], filter: TimeFilter, excluded?: Set<string>): TopMerchant[] {
-  const b = booked(txs)
+  const b = merchantEligible(txs)
   const { start, end } = getFilterDateRange(filter)
   const rangeBooked = filter === 'all' ? b : b.filter(t => t.date >= start && t.date <= end)
 
@@ -277,7 +289,7 @@ export interface MerchantBreakdownEntry {
 // "Alle anzeigen" sheet — lets the user drill into a merchant's transactions
 // or exclude it from ever being considered a top merchant again.
 export function computeMerchantBreakdown(txs: Transaction[], filter: TimeFilter): MerchantBreakdownEntry[] {
-  const scoped = filterByTimeFilter(booked(txs), filter)
+  const scoped = filterByTimeFilter(merchantEligible(txs), filter)
   const map = new Map<string, MerchantBreakdownEntry>()
   for (const t of scoped.filter(t => t.amount < 0)) {
     const key = (t.counterparty || t.description).trim()

@@ -405,7 +405,6 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                         const sign = total < 0 ? -1 : 1
                         const catA = allMap[splitCatA] ?? CATEGORIES['other']
                         const catB = allMap[splitCatB] ?? CATEGORIES['other']
-                        const valid = aMag > 0 && aMag < Math.abs(total) && splitCatA !== splitCatB
                         return (
                           <div className="mt-2 flex flex-col gap-2.5 rounded-card border border-white/20 bg-white/[0.07] p-3">
                             <p className="text-[10px] text-white/60 uppercase tracking-wider">
@@ -469,19 +468,6 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                                   {splitAffectedCount} Buchung{splitAffectedCount !== 1 ? 'en' : ''} betroffen
                                 </p>
                               )}
-                            </div>
-                            <div id="split-actions" className="flex gap-2 pt-1">
-                              <button id="btn-split-cancel" onClick={() => setSplitting(false)}
-                                className="flex-1 py-2 rounded-card border border-white/20 text-xs text-white/70 hover:text-white/90 transition-colors"
-                              >Abbrechen</button>
-                              {tx.splits?.length ? (
-                                <button id="btn-split-remove" onClick={removeSplit}
-                                  className="flex-1 py-2 rounded-card border border-white/20 text-xs text-red-400/80 hover:text-red-400 transition-colors"
-                                >Entfernen</button>
-                              ) : null}
-                              <button id="btn-split-save" onClick={saveSplit} disabled={!valid}
-                                className="flex-1 py-2 rounded-card bg-purple-600/80 hover:bg-purple-600 disabled:opacity-30 disabled:hover:bg-purple-600/80 text-xs text-white font-medium transition-colors"
-                              >Speichern</button>
                             </div>
                           </div>
                         )
@@ -682,20 +668,60 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                     )}
                   </div>
 
-                  <div id="edit-actions" className="flex gap-2 pt-1">
-                    <button id="btn-edit-cancel" onClick={cancelEdit}
-                      className="flex-1 py-2.5 rounded-card border border-white/20 text-sm text-white/70 hover:text-white/90 transition-colors"
-                    >Abbrechen</button>
-                    <button id="btn-edit-save" onClick={save}
-                      className="flex-1 py-2.5 rounded-card bg-purple-600/80 hover:bg-purple-600 text-sm text-white font-medium flex items-center justify-center gap-1.5 transition-colors"
-                    ><Check size={14} />Speichern</button>
-                  </div>
                 </div>
                 </motion.div>
                 </motion.div>
               )}
               </AnimatePresence>
             </div>
+
+            {/* ── Sticky action footer — Speichern/Abbrechen (and Entfernen for
+                a split) always stay reachable instead of requiring a scroll
+                through the category grid / icon picker / chip list above. ── */}
+            <AnimatePresence initial={false}>
+              {(editing || splitting) && (
+                <motion.div
+                  key="tx-actions-footer"
+                  id="modal-tx-actions-footer"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                  className="overflow-hidden shrink-0 border-t border-white/8"
+                  style={{ background: 'rgba(18,15,36,0.05)', backdropFilter: 'blur(var(--blur-modal))', WebkitBackdropFilter: 'blur(var(--blur-modal))' }}
+                >
+                  {editing && (
+                    <div id="edit-actions" className="flex gap-2 px-5 py-3">
+                      <button id="btn-edit-cancel" onClick={cancelEdit}
+                        className="flex-1 py-2.5 rounded-card border border-white/20 text-sm text-white/70 hover:text-white/90 transition-colors"
+                      >Abbrechen</button>
+                      <button id="btn-edit-save" onClick={save}
+                        className="flex-1 py-2.5 rounded-card bg-purple-600/80 hover:bg-purple-600 text-sm text-white font-medium flex items-center justify-center gap-1.5 transition-colors"
+                      ><Check size={14} />Speichern</button>
+                    </div>
+                  )}
+                  {splitting && (() => {
+                    const aMag = parseFloat(splitAmtA.replace(',', '.')) || 0
+                    const valid = aMag > 0 && aMag < Math.abs(tx.amount) && splitCatA !== splitCatB
+                    return (
+                      <div id="split-actions" className="flex gap-2 px-5 py-3">
+                        <button id="btn-split-cancel" onClick={() => setSplitting(false)}
+                          className="flex-1 py-2.5 rounded-card border border-white/20 text-sm text-white/70 hover:text-white/90 transition-colors"
+                        >Abbrechen</button>
+                        {tx.splits?.length ? (
+                          <button id="btn-split-remove" onClick={removeSplit}
+                            className="flex-1 py-2.5 rounded-card border border-white/20 text-sm text-red-400/80 hover:text-red-400 transition-colors"
+                          >Entfernen</button>
+                        ) : null}
+                        <button id="btn-split-save" onClick={saveSplit} disabled={!valid}
+                          className="flex-1 py-2.5 rounded-card bg-purple-600/80 hover:bg-purple-600 disabled:opacity-30 disabled:hover:bg-purple-600/80 text-sm text-white font-medium transition-colors"
+                        >Speichern</button>
+                      </div>
+                    )
+                  })()}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
 
           <CategoryPicker
