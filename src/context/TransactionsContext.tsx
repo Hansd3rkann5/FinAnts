@@ -78,13 +78,23 @@ function useAutoSyncPatterns(
   return { pull }
 }
 
+function splitsEqual(a: Split[] | undefined, b: Split[]): boolean {
+  const x = a ?? []
+  if (x.length !== b.length) return false
+  return x.every((s, i) => s.categoryId === b[i].categoryId && s.amount === b[i].amount)
+}
+
 // Whenever a new "Kreditkarte" Giro booking appears — via CSV import,
 // EnableBanking, or PSD2, i.e. any path that pulls fresh bank data — link
 // any already-imported standalone credit-card purchases that fall in its
 // billing window (extracted from its own "Abrechnung vom ..." label) to it,
-// the same way uploading a Mastercard CSV does. Idempotent: once every
-// eligible purchase is already linked, computeCreditCardBucket reports no
-// new ids and this is a no-op, so it's safe to re-run on every change.
+// the same way uploading a Mastercard CSV does. Also keeps an already-fully-
+// linked bucket's splits in sync if anything about its children changes
+// later (one gets deleted, recategorized, etc.) — without this, a stale
+// "Remaining"/Sonstiges split could keep showing in the overview even after
+// the gap it represented has actually closed. Idempotent: once the computed
+// splits already match what's stored, this is a no-op, safe to re-run on
+// every change.
 function useAutoBucketCreditCard(
   allTransactions: Transaction[],
   customCategories: Category[],
@@ -97,8 +107,11 @@ function useAutoBucketCreditCard(
     const giroBookings = allTransactions.filter(t => t.categoryId === kreditkarte.id)
     for (const giro of giroBookings) {
       const bucket = computeCreditCardBucket(giro, allTransactions, kreditkarte.id)
-      if (bucket && bucket.newlyLinkedIds.length > 0) {
+      if (!bucket) continue
+      if (bucket.newlyLinkedIds.length > 0) {
         batchUpdateParent(bucket.newlyLinkedIds, bucket.giroId)
+      }
+      if (!splitsEqual(giro.splits, bucket.splits)) {
         setSplit(bucket.giroId, bucket.splits)
       }
     }

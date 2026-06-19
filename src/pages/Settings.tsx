@@ -412,6 +412,8 @@ export function Settings() {
         } else {
           fullyExplained++
         }
+        // Biggest spend first, same convention as computeCreditCardBucket / CategoryBreakdownModal.
+        splits.sort((a, b) => a.amount - b.amount)
         setSplit(best.id, splits)
       })
 

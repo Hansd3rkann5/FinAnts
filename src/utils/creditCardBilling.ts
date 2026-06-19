@@ -60,5 +60,10 @@ export function computeCreditCardBucket(
   const remaining = Math.round((giroBooking.amount - knownSum) * 100) / 100
   if (Math.abs(remaining) >= 0.01) splits.push({ categoryId: 'other', amount: remaining })
 
+  // Biggest spend first — amounts are negative for expenses, so ascending
+  // puts the most-negative (largest expense) first, same convention as
+  // CategoryBreakdownModal's sort.
+  splits.sort((a, b) => a.amount - b.amount)
+
   return { giroId: giroBooking.id, newlyLinkedIds, splits }
 }
