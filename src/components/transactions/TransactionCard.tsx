@@ -115,24 +115,26 @@ export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) 
           </div>
 
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] text-white/30">
+            <span className="text-[10px] text-white/30 shrink-0">
               {tx.isPending ? 'Ausstehend' : format(tx.date, 'dd. MMM', { locale: de })}
             </span>
             {tx.isPending ? (
-              <span className="inline-flex items-center text-[10px] text-amber-400/80 rounded-pill border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5">
+              <span className="inline-flex items-center text-[10px] text-amber-400/80 rounded-pill border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 shrink-0">
                 Ausstehend
               </span>
             ) : tx.splits && tx.splits.length ? (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-1 min-w-0 overflow-hidden">
                 {tx.splits.map((s, i) => (
-                  <CategoryBadge key={i} categoryId={s.categoryId} size="sm" showLabel={false} />
+                  <span key={i} className="shrink-0">
+                    <CategoryBadge categoryId={s.categoryId} size="sm" showLabel={false} />
+                  </span>
                 ))}
               </div>
             ) : (
               <CategoryBadge categoryId={tx.categoryId} size="sm" />
             )}
             {tx.isRecurring && !tx.isPending && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-purple-400/70 rounded-pill border border-purple-500/20 bg-purple-500/10 px-1.5 py-0.5">
+              <span className="inline-flex items-center gap-1 text-[10px] text-purple-400/70 rounded-pill border border-purple-500/20 bg-purple-500/10 px-1.5 py-0.5 shrink-0">
                 <RefreshCw size={9} />
                 Wiederkehrend
               </span>

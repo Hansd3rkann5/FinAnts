@@ -17,6 +17,7 @@ import { ChartLoader } from '@/components/ui/ChartLoader'
 export function Transactions() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
   const [search, setSearch] = useState('')
+  const [amountSearch, setAmountSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
   const { allList } = useAllCategories()
   const [filterOpen, setFilterOpen] = useState(false)
@@ -61,8 +62,12 @@ export function Transactions() {
         (t.customLabel ?? '').toLowerCase().includes(q)
       )
     }
+    if (amountSearch.trim()) {
+      const q = amountSearch.trim().replace(',', '.')
+      result = result.filter(t => Math.abs(t.amount).toFixed(2).includes(q))
+    }
     return result
-  }, [timeFiltered, filterCategory, search])
+  }, [timeFiltered, filterCategory, search, amountSearch])
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
@@ -86,31 +91,50 @@ export function Transactions() {
         <TimeFilterBar value={timeFilter} onChange={setTimeFilter} id="tx" periods={periods} />
       </div>
 
-      <div id="tx-search-bar" className="relative flex items-center mx-4">
-        <Search size={14} className="absolute left-3 text-white/30 pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Suchen…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full rounded-pill bg-white/5 border border-white/8 pl-8 pr-4 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-purple-500/40 focus:bg-white/[0.07] transition-all duration-200"
-        />
-        <div className="absolute right-2 flex items-center gap-1">
-          {search && (
-            <button onClick={() => setSearch('')} className="p-1 text-white/30 hover:text-white/70">
+      <div id="tx-search-row" className="flex items-center gap-2 mx-4">
+        <div id="tx-search-bar" className="relative flex-1 flex items-center">
+          <Search size={14} className="absolute left-3 text-white/30 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Suchen…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full rounded-pill bg-white/5 border border-white/8 pl-8 pr-4 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-purple-500/40 focus:bg-white/[0.07] transition-all duration-200"
+          />
+          <div className="absolute right-1.5 flex items-center gap-1">
+            {search && (
+              <button onClick={() => setSearch('')} className="p-1 text-white/30 hover:text-white/70">
+                <X size={14} />
+              </button>
+            )}
+            <button
+              onClick={() => setFilterOpen(v => !v)}
+              className={`p-1.5 rounded-pill border transition-colors duration-150 ${
+                filterCategory
+                  ? 'text-purple-400 border-purple-500/40 bg-purple-500/10'
+                  : 'text-white/40 border-white/10'
+              }`}
+            >
+              <SlidersHorizontal size={14} />
+            </button>
+          </div>
+        </div>
+
+        <div id="tx-amount-search" className="relative flex items-center w-21 shrink-0">
+          <span className="absolute left-3 text-white/30 text-sm pointer-events-none">€</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            placeholder="Betrag"
+            value={amountSearch}
+            onChange={e => setAmountSearch(e.target.value)}
+            className="w-full rounded-pill bg-white/5 border border-white/8 pl-6 pr-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-purple-500/40 focus:bg-white/[0.07] transition-all duration-200"
+          />
+          {amountSearch && (
+            <button onClick={() => setAmountSearch('')} className="absolute right-2 p-1 text-white/30 hover:text-white/70">
               <X size={14} />
             </button>
           )}
-          <button
-            onClick={() => setFilterOpen(v => !v)}
-            className={`p-1.5 rounded-pill border transition-colors duration-150 ${
-              filterCategory
-                ? 'text-purple-400 border-purple-500/40 bg-purple-500/10'
-                : 'text-white/40 border-white/10'
-            }`}
-          >
-            <SlidersHorizontal size={14} />
-          </button>
         </div>
       </div>
 

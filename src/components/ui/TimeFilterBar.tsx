@@ -16,6 +16,27 @@ const MODES: { label: string; value: Mode }[] = [
   { label: 'Alles',  value: 'all'   },
 ]
 
+// Every period for a given mode, newest first. Pulled out of the component so
+// clickMode can look up the *target* mode's options (before `mode` itself has
+// switched) to immediately select its current period, not just the generic mode.
+function periodOptionsFor(m: Mode, periods?: AvailablePeriods): { value: TimeFilter; label: string }[] {
+  if (m === 'all' || !periods) return []
+  if (m === 'year') {
+    return periods.years.map(yr => ({ value: `year/${yr}` as TimeFilter, label: `${yr}` })).reverse()
+  }
+  if (m === 'month') {
+    return periods.months.map(({ year, month }) => ({
+      value: `month/${year}/${month}` as TimeFilter,
+      label: format(new Date(year, month - 1, 1), "MMM ''yy", { locale: de }),
+    })).reverse()
+  }
+  const multiYear = new Set(periods.weeks.map(w => w.year)).size > 1
+  return periods.weeks.map(({ year, week }) => ({
+    value: `week/${year}/${week}` as TimeFilter,
+    label: multiYear ? `KW ${week} '${String(year).slice(2)}` : `KW ${week}`,
+  })).reverse()
+}
+
 interface Props {
   value: TimeFilter
   onChange: (v: TimeFilter) => void
@@ -52,23 +73,10 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
   // Newest first. Every period for the current mode, regardless of whether
   // it's the one currently selected — `options` below removes that one for
   // the dropdown list, since it's already shown as the pill label.
-  const allOptions = useMemo((): { value: TimeFilter; label: string }[] => {
-    if (!hasPicker || !periods) return []
-    if (mode === 'year') {
-      return periods.years.map(yr => ({ value: `year/${yr}` as TimeFilter, label: `${yr}` })).reverse()
-    }
-    if (mode === 'month') {
-      return periods.months.map(({ year, month }) => ({
-        value: `month/${year}/${month}` as TimeFilter,
-        label: format(new Date(year, month - 1, 1), "MMM ''yy", { locale: de }),
-      })).reverse()
-    }
-    const multiYear = new Set(periods.weeks.map(w => w.year)).size > 1
-    return periods.weeks.map(({ year, week }) => ({
-      value: `week/${year}/${week}` as TimeFilter,
-      label: multiYear ? `KW ${week} '${String(year).slice(2)}` : `KW ${week}`,
-    })).reverse()
-  }, [mode, hasPicker, periods])
+  const allOptions = useMemo(
+    () => (hasPicker ? periodOptionsFor(mode as Mode, periods) : []),
+    [mode, hasPicker, periods],
+  )
 
   // The dropdown only ever offers periods other than the one already active —
   // picking one replaces the pill's current override, so showing it again in
@@ -131,7 +139,11 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
     if (m === mode) { if (hasPicker) setOpen(o => !o); return }   // re-tap active → toggle instantly
     setOpen(false)                    // close any open dropdown before the pill slides
     setDirection('down')              // switching mode always resets any override → label slides down
-    onChange(m)                       // switch mode — the indicator pill slides over ~0.22s
+    // Jump straight to the current period for the new mode (e.g. clicking
+    // "Monat" selects this month directly, label shows "Jun '26" right away)
+    // instead of the generic mode — that's what "Aktuell" used to mean anyway.
+    const current = m !== 'all' ? periodOptionsFor(m, periods)[0]?.value : undefined
+    onChange(current ?? m)            // switch mode — the indicator pill slides over ~0.22s
     if (m !== 'all') {
       // open the picker only after the pill has finished moving to the new mode
       openTimer.current = window.setTimeout(() => setOpen(true), 240)

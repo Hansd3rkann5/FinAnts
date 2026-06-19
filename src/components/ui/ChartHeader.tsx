@@ -151,33 +151,27 @@ export function ChartHeader({
                         style={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}
                       >
                         <div className="flex flex-col py-1 h-full overflow-y-auto" style={{ minWidth: 88 }}>
-                          <button
-                            id={chartId ? `dropdown-${chartId}-period-current` : undefined}
-                            onClick={() => selectPeriod(mode)}
-                            className={`w-full px-3 py-1.5 text-xs flex items-center justify-between gap-3 transition-colors ${
-                              effectiveFilter === mode
-                                ? 'text-purple-300 bg-purple-500/15'
-                                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-                            }`}
-                          >
-                            Aktuell
-                            {effectiveFilter === mode && <Check size={9} className="shrink-0" />}
-                          </button>
-                          {specificChips.map(chip => (
-                            <button
-                              id={chartId ? `dropdown-${chartId}-period-${String(chip.value).replace(/\//g, '-')}` : undefined}
-                              key={String(chip.value)}
-                              onClick={() => selectPeriod(chip.value)}
-                              className={`w-full px-3 py-1.5 text-xs flex items-center justify-between gap-3 transition-colors ${
-                                effectiveFilter === chip.value
-                                  ? 'text-purple-300 bg-purple-500/15'
-                                  : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-                              }`}
-                            >
-                              {chip.label}
-                              {effectiveFilter === chip.value && <Check size={9} className="shrink-0" />}
-                            </button>
-                          ))}
+                          {specificChips.map((chip, i) => {
+                            // The first chip is the current period — also highlight it when
+                            // effectiveFilter is still the generic mode (e.g. "year"), same as
+                            // the old separate "Aktuell" row used to.
+                            const isActive = effectiveFilter === chip.value || (i === 0 && effectiveFilter === mode)
+                            return (
+                              <button
+                                id={chartId ? `dropdown-${chartId}-period-${String(chip.value).replace(/\//g, '-')}` : undefined}
+                                key={String(chip.value)}
+                                onClick={() => selectPeriod(chip.value)}
+                                className={`w-full px-3 py-1.5 text-xs flex items-center justify-between gap-3 transition-colors ${
+                                  isActive
+                                    ? 'text-purple-300 bg-purple-500/15'
+                                    : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                                }`}
+                              >
+                                {chip.label}
+                                {isActive && <Check size={9} className="shrink-0" />}
+                              </button>
+                            )
+                          })}
                         </div>
                       </motion.div>
                     )}

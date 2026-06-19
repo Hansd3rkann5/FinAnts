@@ -491,9 +491,11 @@ export function Settings() {
         }}
       ></div>
 
-        <p className="text-center text-[30px] text-white/45 tracking-[0.2em] uppercase pb-6">
-          FinAnts
-        </p>
+        <div className="pb-6">
+          <p className="relative text-center text-[30px] text-white/45 tracking-[0.2em] uppercase">
+            FinAnts
+          </p>
+        </div>
         {/* ── Gruppe: Konten & Zugang ─────────────────────────────────────── */}
         <SettingsGroup
           icon={<Wallet size={15} className="text-white/50" />}
