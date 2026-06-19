@@ -29,6 +29,7 @@ export function MerchantBreakdownModal({ open, onClose, onTransactionSelect, fil
   const { transactions, excludedMerchants, excludeMerchant } = useTransactionsCtx()
   const { allMap } = useAllCategories()
   const [expandedName, setExpandedName] = useState<string | null>(null)
+  const [confirmName, setConfirmName] = useState<string | null>(null)
 
   const excludedSet = useMemo(() => new Set(excludedMerchants), [excludedMerchants])
 
@@ -112,7 +113,7 @@ export function MerchantBreakdownModal({ open, onClose, onTransactionSelect, fil
                           </button>
                           <button
                             id={`btn-merchbreak-exclude-${name}`}
-                            onClick={() => excludeMerchant(name)}
+                            onClick={() => setConfirmName(name)}
                             className="w-7 h-7 rounded-full flex items-center justify-center text-white/30 hover:text-red-400 transition-colors shrink-0"
                           >
                             <Trash2 size={13} />
@@ -159,6 +160,61 @@ export function MerchantBreakdownModal({ open, onClose, onTransactionSelect, fil
                       </div>
                     )
                   })}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {confirmName && (
+          <>
+            <motion.div
+              id="modal-merchdelete-backdrop"
+              key="merchdelete-backdrop"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-60 bg-black/70 backdrop-blur-md"
+              onClick={() => setConfirmName(null)}
+            />
+            <motion.div
+              id="modal-merchdelete-dialog"
+              key="merchdelete-dialog"
+              initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              className="fixed inset-0 z-61 flex items-center justify-center px-6 pointer-events-none"
+            >
+              <div
+                id="modal-merchdelete-card"
+                className="pointer-events-auto w-full max-w-xs rounded-2xl border border-white/10 overflow-hidden"
+                style={{ background: 'linear-gradient(160deg, rgba(28,24,46,0.2) 0%, rgba(18,15,36,0.6) 100%)', backdropFilter: 'blur(var(--blur-modal))', WebkitBackdropFilter: 'blur(var(--blur-modal))' }}
+              >
+                <div className="flex flex-col items-center gap-1 px-5 pt-6 pb-4 text-center">
+                  <div className="w-11 h-11 rounded-full bg-red-500/15 border border-red-500/25 flex items-center justify-center mb-2">
+                    <Trash2 size={18} className="text-red-400" />
+                  </div>
+                  <p id="merchdelete-title" className="text-sm font-semibold text-white/90">Händler entfernen?</p>
+                  <p id="merchdelete-name" className="text-xs text-white/50 truncate max-w-full mt-0.5">{confirmName}</p>
+                  <p className="text-[11px] text-white/30 mt-2">
+                    Wird nicht mehr als Top-Händler berücksichtigt. Die Buchungen selbst bleiben erhalten.
+                  </p>
+                </div>
+                <div className="flex border-t border-white/8">
+                  <button
+                    id="btn-merchdelete-cancel"
+                    onClick={() => setConfirmName(null)}
+                    className="flex-1 py-3.5 text-sm text-white/50 hover:text-white/80 transition-colors border-r border-white/8"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    id="btn-merchdelete-confirm"
+                    onClick={() => { excludeMerchant(confirmName); setConfirmName(null) }}
+                    className="flex-1 py-3.5 text-sm font-medium text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    Entfernen
+                  </button>
                 </div>
               </div>
             </motion.div>

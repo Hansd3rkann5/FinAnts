@@ -243,6 +243,10 @@ export function computeCategoryTrends(
 
 // ── TopMerchantsBar data ──────────────────────────────────────────────────────
 
+// A "frequent" merchant needs more than this many bookings — a one-off or
+// twice-only payee isn't a recognizable recurring spending pattern yet.
+const MIN_MERCHANT_BOOKINGS = 2
+
 export function computeTopMerchants(txs: Transaction[], filter: TimeFilter, excluded?: Set<string>): TopMerchant[] {
   const b = booked(txs)
   const { start, end } = getFilterDateRange(filter)
@@ -257,6 +261,7 @@ export function computeTopMerchants(txs: Transaction[], filter: TimeFilter, excl
   }
   return Array.from(map.entries())
     .map(([name, v]) => ({ name, ...v }))
+    .filter(m => m.count > MIN_MERCHANT_BOOKINGS)
     .sort((a, b) => b.total - a.total)
     .slice(0, 8)
 }
@@ -281,5 +286,5 @@ export function computeMerchantBreakdown(txs: Transaction[], filter: TimeFilter)
     entry.items.push(t)
     map.set(key, entry)
   }
-  return [...map.values()].sort((a, b) => b.total - a.total)
+  return [...map.values()].filter(e => e.items.length > MIN_MERCHANT_BOOKINGS).sort((a, b) => b.total - a.total)
 }

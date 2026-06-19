@@ -978,7 +978,7 @@ export function Settings() {
           <button
             onClick={() => window.location.reload()}
             className="w-full text-xs text-white/20 text-center active:opacity-50 transition-opacity">
-            <span className="ml-2 text-white/80 tracking-widest uppercase">FinAnts  •</span><span className="ml-2 text-white/80">{import.meta.env.DEV ? `local V${DEV_VERSION}` : `git ${__APP_VERSION__}`}</span>
+            <span className="ml-2 text-white/80 tracking-widest uppercase">FinAnts  •</span><span className="ml-2 text-white/80">{import.meta.env.DEV ? `local V${DEV_VERSION}` : `Git ${__APP_VERSION__}`}</span>
           </button>
         </GlassCard>
       </div>
