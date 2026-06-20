@@ -11,7 +11,10 @@ interface LockConfig {
   pinHash: string
   salt: string
   pinLength: number       // digit count (not sensitive) so the lock screen can auto-submit
+  lockTimeoutMin?: number // minutes the app may sit backgrounded before re-locking (default 1)
 }
+
+const DEFAULT_LOCK_TIMEOUT_MIN = 1
 
 function load(): LockConfig | null {
   try {
@@ -32,6 +35,16 @@ export function hasBiometric(): boolean {
 
 export function pinLength(): number {
   return load()?.pinLength ?? 0
+}
+
+export function lockTimeoutMinutes(): number {
+  return load()?.lockTimeoutMin ?? DEFAULT_LOCK_TIMEOUT_MIN
+}
+
+export function setLockTimeoutMinutes(minutes: number): void {
+  const c = load()
+  if (!c) return
+  localStorage.setItem(KEY, JSON.stringify({ ...c, lockTimeoutMin: minutes } satisfies LockConfig))
 }
 
 export function webauthnSupported(): boolean {
@@ -95,7 +108,9 @@ export async function enableLock(pin: string, withBiometric: boolean): Promise<{
     }
   }
 
-  localStorage.setItem(KEY, JSON.stringify({ enabled: true, credentialId, pinHash, salt, pinLength: pin.length } satisfies LockConfig))
+  localStorage.setItem(KEY, JSON.stringify({
+    enabled: true, credentialId, pinHash, salt, pinLength: pin.length, lockTimeoutMin: DEFAULT_LOCK_TIMEOUT_MIN,
+  } satisfies LockConfig))
   return { biometric: !!credentialId }
 }
 

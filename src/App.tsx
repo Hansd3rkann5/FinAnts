@@ -6,21 +6,33 @@ import { AppShell } from './components/layout/AppShell'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { ToastHost } from './components/ui/ToastHost'
 import { LockScreen } from './components/ui/LockScreen'
-import { isLockEnabled } from './utils/appLock'
+import { isLockEnabled, lockTimeoutMinutes } from './utils/appLock'
 
 export default function App() {
-  // Locked on first open, and re-locked whenever the app is backgrounded
-  // (home screen / app switch). The LockScreen is an opaque overlay so the app
-  // stays mounted underneath — no reload/re-fetch on every return.
+  // Locked on first open, and re-locked once the app has been backgrounded
+  // (home screen / app switch) for at least the configured timeout — a quick
+  // switch-away-and-back within that window doesn't re-prompt. The LockScreen
+  // is an opaque overlay so the app stays mounted underneath — no reload/
+  // re-fetch on every return.
   const [locked, setLocked] = useState(isLockEnabled)
 
   useEffect(() => {
-    const relock = () => { if (document.hidden && isLockEnabled()) setLocked(true) }
-    document.addEventListener('visibilitychange', relock)
-    window.addEventListener('pagehide', relock)
+    let hiddenAt: number | null = null
+
+    const onHide = () => { hiddenAt = Date.now() }
+    const onVisibilityChange = () => {
+      if (document.hidden) { onHide(); return }
+      if (hiddenAt === null) return
+      const elapsedMin = (Date.now() - hiddenAt) / 60_000
+      if (isLockEnabled() && elapsedMin >= lockTimeoutMinutes()) setLocked(true)
+      hiddenAt = null
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('pagehide', onHide)
     return () => {
-      document.removeEventListener('visibilitychange', relock)
-      window.removeEventListener('pagehide', relock)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('pagehide', onHide)
     }
   }, [])
 

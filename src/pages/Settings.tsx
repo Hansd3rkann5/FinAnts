@@ -21,7 +21,10 @@ import { useAllCategories } from '@/hooks/useAllCategories'
 import { detectAndParse, parseMastercardCSV } from '@/utils/csvParser'
 import { ChartLoader } from '@/components/ui/ChartLoader'
 import { useErrorLog, notify, reportError, fetchErrorLogRemote, clearErrorLogRemote, type RemoteLoggedError } from '@/utils/notify'
-import { isLockEnabled, hasBiometric, webauthnSupported, enableLock, disableLock } from '@/utils/appLock'
+import {
+  isLockEnabled, hasBiometric, webauthnSupported, enableLock, disableLock,
+  lockTimeoutMinutes, setLockTimeoutMinutes,
+} from '@/utils/appLock'
 
 const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
@@ -196,6 +199,12 @@ export function Settings() {
   const [lockEnabled, setLockEnabled] = useState(isLockEnabled())
   const [pinInput, setPinInput] = useState('')
   const [useFaceId, setUseFaceId] = useState(webauthnSupported())
+  const [lockTimeout, setLockTimeout] = useState(lockTimeoutMinutes())
+
+  function changeLockTimeout(minutes: number) {
+    setLockTimeoutMinutes(minutes)
+    setLockTimeout(minutes)
+  }
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function activateLock() {
@@ -816,10 +825,31 @@ export function Settings() {
                 </PillButton>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 <p className="text-xs text-white/40">
                   {hasBiometric() ? 'Face ID / Touch ID + PIN aktiv.' : 'PIN aktiv.'} Wird beim nächsten Öffnen abgefragt.
                 </p>
+                <div>
+                  <label className="text-[10px] text-white/40 uppercase tracking-wider mb-1 block">
+                    Sperrt nach {lockTimeout} {lockTimeout === 1 ? 'Minute' : 'Minuten'} im Hintergrund
+                  </label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 5, 10].map(m => (
+                      <button
+                        key={m}
+                        onClick={() => changeLockTimeout(m)}
+                        className="flex-1 py-1.5 rounded-pill text-xs border transition-all duration-150"
+                        style={{
+                          backgroundColor: lockTimeout === m ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
+                          borderColor:     lockTimeout === m ? 'rgba(168,85,247,0.4)' : 'rgba(255,255,255,0.08)',
+                          color:           lockTimeout === m ? '#d8b4fe' : 'rgba(255,255,255,0.4)',
+                        }}
+                      >
+                        {m}m
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <PillButton variant="danger" size="sm" icon={<Trash2 size={13} />} onClick={deactivateLock}>
                   Sperre deaktivieren
                 </PillButton>
