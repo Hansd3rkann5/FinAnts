@@ -33,6 +33,10 @@ export interface Transaction {
   description: string
   counterparty: string
   iban?: string
+  /** IBAN of the user's own account this booking belongs to (not the
+   *  counterparty's IBAN, which lives in `iban`) — set for EnableBanking and
+   *  CSV-imported rows, used to filter the dashboard/transactions by account. */
+  accountIban?: string
   reference?: string
   categoryId: string
   merchantKey?: string

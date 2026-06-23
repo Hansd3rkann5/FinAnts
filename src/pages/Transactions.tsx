@@ -6,6 +6,7 @@ import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions } from '@/hooks/useFilteredTransactions'
 import { useAllCategories } from '@/hooks/useAllCategories'
 import { computeAvailablePeriods } from '@/utils/chartCompute'
+import { filterTransactionsByAccounts } from '@/utils/accountFilter'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { TransactionList } from '@/components/transactions/TransactionList'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
@@ -23,14 +24,25 @@ export function Transactions() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [selected, setSelected] = useState<Transaction | null>(null)
   const [breakdownParent, setBreakdownParent] = useState<Transaction | null>(null)
-  const { transactions, updateTransaction, refreshAll } = useTransactionsCtx()
+  const {
+    transactions, updateTransaction, refreshAll,
+    accounts, selectedAccountIbans,
+  } = useTransactionsCtx()
   const [refreshing, setRefreshing] = useState(false)
+
+  // Same account-selection state as the Dashboard's Kontostand-replacement
+  // card (shared via TransactionsContext) — everything below derives from
+  // this, not the raw context `transactions`.
+  const accountTransactions = useMemo(
+    () => filterTransactionsByAccounts(transactions, accounts, selectedAccountIbans),
+    [transactions, accounts, selectedAccountIbans],
+  )
 
   const kreditkarteCategoryId = allList.find(c => c.label.trim().toLowerCase() === 'kreditkarte')?.id
 
   function handleTransactionClick(tx: Transaction) {
     if (kreditkarteCategoryId && tx.categoryId === kreditkarteCategoryId) {
-      const hasChildren = transactions.some(t => t.parentId === tx.id)
+      const hasChildren = accountTransactions.some(t => t.parentId === tx.id)
       if (hasChildren) { setBreakdownParent(tx); return }
     }
     setSelected(tx)
@@ -44,8 +56,8 @@ export function Transactions() {
     try { await refreshAll() } finally { setRefreshing(false) }
   }
 
-  const timeFiltered = useFilteredTransactions(transactions, timeFilter)
-  const periods = useMemo(() => computeAvailablePeriods(transactions), [transactions])
+  const timeFiltered = useFilteredTransactions(accountTransactions, timeFilter)
+  const periods = useMemo(() => computeAvailablePeriods(accountTransactions), [accountTransactions])
 
   const displayed = useMemo(() => {
     // Itemized credit-card purchases only exist to be found via their parent
@@ -190,7 +202,7 @@ export function Transactions() {
 
       <KreditkartenBreakdownModal
         parent={breakdownParent}
-        items={breakdownParent ? transactions.filter(t => t.parentId === breakdownParent.id) : []}
+        items={breakdownParent ? accountTransactions.filter(t => t.parentId === breakdownParent.id) : []}
         onClose={() => setBreakdownParent(null)}
         onSelectChild={setSelected}
       />

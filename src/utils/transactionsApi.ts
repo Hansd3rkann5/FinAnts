@@ -106,6 +106,7 @@ export function enrichTransactions(rows: StoredTx[], profiles: MerchantProfile[]
       description: cleanPaypalDescription(r.counterparty, r.description),
       counterparty: r.counterparty,
       iban: r.iban ?? undefined,
+      accountIban: r.accountIban ?? undefined,
       reference: r.reference ?? undefined,
       categoryId: '',
       // For PayPal, look up the logo by the real merchant rather than "PayPal".
@@ -134,7 +135,10 @@ export function transactionToMergeRow(t: Transaction): MergeRow {
     type: t.type,
     description: t.description,
     counterparty: t.counterparty,
-    accountIban: t.iban,   // Commerzbank CSV exports put the account-holder IBAN here
+    // Commerzbank CSV exports put the account-holder IBAN in `.iban` (legacy
+    // convention, kept for backward compat); other sources (e.g. Trade
+    // Republic) set `.accountIban` explicitly instead, which takes priority.
+    accountIban: t.accountIban ?? t.iban,
     reference: t.reference,
     customLabel: t.customLabel,
     isPending: t.isPending,

@@ -1,0 +1,1955 @@
+[
+  {
+    "id": "7e580317-b168-4949-b66d-3b12ed0eef33",
+    "timestamp": "2026-06-15T23:18:36.671+0000",
+    "title": "Rechtliche Dokumente",
+    "icon": "logos/timeline_document/v2",
+    "subtitle": "Akzeptiert",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "7e580317-b168-4949-b66d-3b12ed0eef33"
+    },
+    "trailing": null,
+    "eventType": "DOCUMENTS_ACCEPTED",
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity",
+    "details": {
+      "id": "7e580317-b168-4949-b66d-3b12ed0eef33",
+      "sections": [
+        {
+          "title": "Du hast unsere Dokumente akzeptiert",
+          "data": {
+            "icon": "logos/timeline_document/v2",
+            "subtitleText": null,
+            "timestamp": "2026-06-15T23:18:36.671+0000",
+            "status": "executed"
+          },
+          "action": null,
+          "type": "header"
+        },
+        {
+          "title": "Dokumente",
+          "data": [
+            {
+              "title": "Kundenvereinbarung",
+              "detail": "Aktuell von Trade Republic verwendete Kundenvereinbarung",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/CONTRACT_CUSTOMER_AGREEMENT_20260604163100.pdf"
+              },
+              "id": "f01eaf85-94fd-451b-9c44-81a967e201ba",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Datenschutzhinweis",
+              "detail": "Wie wir Deine vertraglichen Daten schützen",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/FURTHER_INFORMATION_DATA_PROTECTION_20260511221121.pdf"
+              },
+              "id": "f01eaf85-94fd-451b-9c44-81a967e201ba",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Preis- & Leistungsverzeichnis",
+              "detail": "Unsere Preise, fair und transparent",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/FURTHER_INFORMATION_PRICE_LIST_20260205083129.pdf"
+              },
+              "id": "f01eaf85-94fd-451b-9c44-81a967e201ba",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Gebühreninformationen",
+              "detail": "Gebühreninformationen",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/FURTHER_INFORMATION_FEES_20250408133203.pdf"
+              },
+              "id": "f01eaf85-94fd-451b-9c44-81a967e201ba",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "NCP-AGB",
+              "detail": "NCP-AGB",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/STOCK_PERK_TERMS_AND_CONDITIONS_20260601081725.pdf"
+              },
+              "id": "f01eaf85-94fd-451b-9c44-81a967e201ba",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            }
+          ],
+          "action": null,
+          "type": "documents"
+        }
+      ]
+    }
+  },
+  {
+    "id": "50028dac-1f5c-41b6-b2d7-308a4e23cba0",
+    "timestamp": "2026-06-16T05:50:09.478+0000",
+    "title": "E-Mail",
+    "icon": "logos/timeline_email/v2",
+    "subtitle": "Bestätigt",
+    "action": null,
+    "trailing": null,
+    "eventType": "EMAIL_VALIDATED",
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity"
+  },
+  {
+    "id": "6c3e4059-7873-4e9c-889d-6820356affc5",
+    "timestamp": "2026-06-16T05:51:25.585+0000",
+    "title": "Rechtliche Dokumente",
+    "icon": "logos/timeline_document/v2",
+    "subtitle": "Akzeptiert",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "6c3e4059-7873-4e9c-889d-6820356affc5"
+    },
+    "trailing": null,
+    "eventType": "DOCUMENTS_ACCEPTED",
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity",
+    "details": {
+      "id": "6c3e4059-7873-4e9c-889d-6820356affc5",
+      "sections": [
+        {
+          "title": "Du hast unsere Dokumente akzeptiert",
+          "data": {
+            "icon": "logos/timeline_document/v2",
+            "subtitleText": null,
+            "timestamp": "2026-06-16T05:51:25.585+0000",
+            "status": "executed"
+          },
+          "action": null,
+          "type": "header"
+        },
+        {
+          "title": "Dokumente",
+          "data": [
+            {
+              "title": "NCP-AGB",
+              "detail": "16.06.2026",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/STOCK_PERK_TERMS_AND_CONDITIONS_20260601081725.pdf"
+              },
+              "id": "1b09b6e2-2a71-4db8-966d-8d3f0bf873ee",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            }
+          ],
+          "action": null,
+          "type": "documents"
+        }
+      ]
+    }
+  },
+  {
+    "id": "077863b5-cdf2-45b0-937e-6c11c4d758f5",
+    "timestamp": "2026-06-16T05:51:25.443+0000",
+    "title": "Rechtliche Dokumente",
+    "icon": "logos/timeline_document/v2",
+    "subtitle": "Akzeptiert",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "077863b5-cdf2-45b0-937e-6c11c4d758f5"
+    },
+    "trailing": null,
+    "eventType": "DOCUMENTS_ACCEPTED",
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity",
+    "details": {
+      "id": "077863b5-cdf2-45b0-937e-6c11c4d758f5",
+      "sections": [
+        {
+          "title": "Du hast unsere Dokumente akzeptiert",
+          "data": {
+            "icon": "logos/timeline_document/v2",
+            "subtitleText": null,
+            "timestamp": "2026-06-16T05:51:25.443+0000",
+            "status": "executed"
+          },
+          "action": null,
+          "type": "header"
+        },
+        {
+          "title": "Dokumente",
+          "data": [
+            {
+              "title": "Einlagensicherung",
+              "detail": "Informationen zur Einlagensicherung",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_20260409102626.pdf"
+              },
+              "id": "47a9d61d-9958-4900-896f-813bee49fb8d",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Einlagensicherung",
+              "detail": "Informationen zur Einlagensicherung",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_20260409102645.pdf"
+              },
+              "id": "47a9d61d-9958-4900-896f-813bee49fb8d",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Treuhandsammelkonto",
+              "detail": "Zustimmung Treuhandkonto",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_ESCROW_ACCOUNT_20260609170955.pdf"
+              },
+              "id": "47a9d61d-9958-4900-896f-813bee49fb8d",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Einlagensicherung - Trade Republic",
+              "detail": "Informationen zur Einlagensicherung - Trade Republic",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_TR_20260409102427.pdf"
+              },
+              "id": "47a9d61d-9958-4900-896f-813bee49fb8d",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Einlagensicherung",
+              "detail": "Informationen zur Einlagensicherung",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_20260409102705.pdf"
+              },
+              "id": "47a9d61d-9958-4900-896f-813bee49fb8d",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Einlagensicherung",
+              "detail": "Informationen zur Einlagensicherung",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_20260409102730.pdf"
+              },
+              "id": "47a9d61d-9958-4900-896f-813bee49fb8d",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Einlagensicherung",
+              "detail": "Informationen zur Einlagensicherung",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_20260409102748.pdf"
+              },
+              "id": "47a9d61d-9958-4900-896f-813bee49fb8d",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Treuhandsammelkonto",
+              "detail": "Zustimmung Treuhandkonto",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_ESCROW_ACCOUNT_20260609124458.pdf"
+              },
+              "id": "47a9d61d-9958-4900-896f-813bee49fb8d",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            },
+            {
+              "title": "Treuhandsammelkonto",
+              "detail": "Zustimmung Treuhandkonto",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_ESCROW_ACCOUNT_20260609124458.pdf"
+              },
+              "id": "47a9d61d-9958-4900-896f-813bee49fb8d",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            }
+          ],
+          "action": null,
+          "type": "documents"
+        }
+      ]
+    }
+  },
+  {
+    "id": "8e7a24df-7f32-45ba-a78b-327134fa4b71",
+    "timestamp": "2026-06-22T08:37:06.015+0000",
+    "title": "Rechtliche Dokumente",
+    "icon": "logos/timeline_document/v2",
+    "subtitle": "Akzeptiert",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "8e7a24df-7f32-45ba-a78b-327134fa4b71"
+    },
+    "trailing": null,
+    "eventType": null,
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity",
+    "details": {
+      "id": "8e7a24df-7f32-45ba-a78b-327134fa4b71",
+      "sections": [
+        {
+          "title": "Du hast unsere Dokumente akzeptiert",
+          "data": {
+            "icon": {
+              "asset": "logos/timeline_document/v2",
+              "badge": null
+            },
+            "timestamp": "2026-06-22T08:37:06.013999Z",
+            "status": "executed"
+          },
+          "type": "header"
+        },
+        {
+          "title": "Dokumente",
+          "data": [
+            {
+              "title": "Kundenvereinbarung",
+              "detail": "Aktuell von Trade Republic verwendete Kundenvereinbarung",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/CONTRACT_CUSTOMER_AGREEMENT_20260618154131.pdf",
+                "type": "browserModal"
+              },
+              "id": "b4e4f76e-6de3-45b0-9dd4-0ccfcff6e179",
+              "postboxType": ""
+            }
+          ],
+          "type": "documents"
+        },
+        {
+          "data": [
+            {
+              "title": "",
+              "detail": {
+                "content": {
+                  "type": "default",
+                  "title": ""
+                },
+                "action": {
+                  "payload": {
+                    "contextCategory": "NHC",
+                    "contextParams": {
+                      "NHC_chat_flow_key": "LIVE_CHAT_HELPCENTER"
+                    }
+                  },
+                  "type": "customerSupportChat"
+                },
+                "type": "listItem"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        }
+      ]
+    }
+  },
+  {
+    "id": "15dccc6b-8c41-4da1-a045-fb54919b9844",
+    "timestamp": "2026-06-22T08:40:57.127+0000",
+    "title": "Rechtliche Dokumente",
+    "icon": "logos/timeline_document/v2",
+    "subtitle": "Hinzugefügt",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "15dccc6b-8c41-4da1-a045-fb54919b9844"
+    },
+    "trailing": null,
+    "eventType": null,
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity",
+    "details": {
+      "id": "15dccc6b-8c41-4da1-a045-fb54919b9844",
+      "sections": [
+        {
+          "title": "Du hast neue Dokumente erhalten",
+          "data": {
+            "icon": {
+              "asset": "logos/timeline_document/v2",
+              "badge": null
+            },
+            "timestamp": "2026-06-22T08:40:57.126189Z",
+            "status": "executed"
+          },
+          "type": "header"
+        },
+        {
+          "title": "Dokumente",
+          "data": [
+            {
+              "title": "Kundenvereinbarung",
+              "detail": "Aktuell von Trade Republic verwendete Kundenvereinbarung",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/CONTRACT_CUSTOMER_AGREEMENT_20260604163100.pdf",
+                "type": "browserModal"
+              },
+              "id": "b4e4f76e-6de3-45b0-9dd4-0ccfcff6e179",
+              "postboxType": ""
+            },
+            {
+              "title": "Datenschutzhinweis",
+              "detail": "Wie wir Deine vertraglichen Daten schützen",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/FURTHER_INFORMATION_DATA_PROTECTION_20260511221121.pdf",
+                "type": "browserModal"
+              },
+              "id": "2e2bca0b-65a2-4646-a06a-eabc552982a2",
+              "postboxType": ""
+            },
+            {
+              "title": "Preis- & Leistungsverzeichnis",
+              "detail": "Unsere Preise, fair und transparent",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/FURTHER_INFORMATION_PRICE_LIST_20260205083129.pdf",
+                "type": "browserModal"
+              },
+              "id": "73c101d0-e27b-41c3-8c82-80fc1bcc65df",
+              "postboxType": ""
+            },
+            {
+              "title": "Gebühreninformationen",
+              "detail": "Gebühreninformationen",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/FURTHER_INFORMATION_FEES_20250408133203.pdf",
+                "type": "browserModal"
+              },
+              "id": "30150557-fcdb-4891-9fdb-17b2a739a6fe",
+              "postboxType": ""
+            },
+            {
+              "title": "NCP-AGB",
+              "detail": "NCP-AGB",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/STOCK_PERK_TERMS_AND_CONDITIONS_20260601081725.pdf",
+                "type": "browserModal"
+              },
+              "id": "e169d8cf-56cc-4b41-b173-c4aa776c8028",
+              "postboxType": ""
+            },
+            {
+              "title": "Einlagensicherung",
+              "detail": "Informationen zur Einlagensicherung",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_20260409102626.pdf",
+                "type": "browserModal"
+              },
+              "id": "51ff54f7-45f7-41d6-b4d2-c915329c3824",
+              "postboxType": ""
+            },
+            {
+              "title": "Einlagensicherung",
+              "detail": "Informationen zur Einlagensicherung",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_20260409102645.pdf",
+                "type": "browserModal"
+              },
+              "id": "62c2adfc-a7f7-468d-bc10-8a632064ccd6",
+              "postboxType": ""
+            },
+            {
+              "title": "Treuhandsammelkonto",
+              "detail": "Zustimmung Treuhandkonto",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_ESCROW_ACCOUNT_20260609170955.pdf",
+                "type": "browserModal"
+              },
+              "id": "fb7a02bb-94b6-4048-8376-311e2c657034",
+              "postboxType": ""
+            },
+            {
+              "title": "Einlagensicherung - Trade Republic",
+              "detail": "Informationen zur Einlagensicherung - Trade Republic",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_TR_20260409102427.pdf",
+                "type": "browserModal"
+              },
+              "id": "afe131bb-8007-451a-bc56-9e4106ab496b",
+              "postboxType": ""
+            },
+            {
+              "title": "Einlagensicherung",
+              "detail": "Informationen zur Einlagensicherung",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_20260409102705.pdf",
+                "type": "browserModal"
+              },
+              "id": "0e04a186-fede-4d2f-98b1-43934b3248bb",
+              "postboxType": ""
+            },
+            {
+              "title": "Einlagensicherung",
+              "detail": "Informationen zur Einlagensicherung",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_20260409102730.pdf",
+                "type": "browserModal"
+              },
+              "id": "0777515c-0c44-413a-b9ab-c5bdd63baf2a",
+              "postboxType": ""
+            },
+            {
+              "title": "Einlagensicherung",
+              "detail": "Informationen zur Einlagensicherung",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_DEPOSIT_PROTECTION_20260409102748.pdf",
+                "type": "browserModal"
+              },
+              "id": "782fb853-047d-4b4f-97e2-17ba1f51a565",
+              "postboxType": ""
+            },
+            {
+              "title": "Treuhandsammelkonto",
+              "detail": "Zustimmung Treuhandkonto",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_ESCROW_ACCOUNT_20260609124458.pdf",
+                "type": "browserModal"
+              },
+              "id": "4ea0303f-b559-4854-82bd-cbbc14ec6048",
+              "postboxType": ""
+            },
+            {
+              "title": "Treuhandsammelkonto",
+              "detail": "Zustimmung Treuhandkonto",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/ESCROW_ACCOUNT_CONSENT_ESCROW_ACCOUNT_20260609124458.pdf",
+                "type": "browserModal"
+              },
+              "id": "a65b0ff2-a2a7-4116-aa05-767444f5aca3",
+              "postboxType": ""
+            },
+            {
+              "title": "Kundenvereinbarung",
+              "detail": "Aktuell von Trade Republic verwendete Kundenvereinbarung",
+              "action": {
+                "payload": "https://assets.traderepublic.com/documents/DE/CONTRACT_CUSTOMER_AGREEMENT_20260618154131.pdf",
+                "type": "browserModal"
+              },
+              "id": "b4e4f76e-6de3-45b0-9dd4-0ccfcff6e179",
+              "postboxType": ""
+            }
+          ],
+          "type": "documents"
+        },
+        {
+          "data": [
+            {
+              "title": "",
+              "detail": {
+                "content": {
+                  "type": "default",
+                  "title": ""
+                },
+                "action": {
+                  "payload": {
+                    "contextCategory": "NHC",
+                    "contextParams": {
+                      "NHC_chat_flow_key": "LIVE_CHAT_HELPCENTER"
+                    }
+                  },
+                  "type": "customerSupportChat"
+                },
+                "type": "listItem"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        }
+      ]
+    }
+  },
+  {
+    "id": "f0a94988-5012-4033-a3ba-645d23f07461",
+    "timestamp": "2026-06-22T08:44:35.725+0000",
+    "title": "Simon Jakob Bader",
+    "icon": "logos/contacts-S-Grey/v2",
+    "avatar": {
+      "asset": "logos/contacts-S-Grey/v2",
+      "badge": null
+    },
+    "badge": null,
+    "subtitle": "Fertig",
+    "amount": {
+      "currency": "EUR",
+      "value": 4500.0,
+      "fractionDigits": 2
+    },
+    "subAmount": null,
+    "status": "EXECUTED",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "f0a94988-5012-4033-a3ba-645d23f07461"
+    },
+    "cashAccountNumber": "4047536911",
+    "hidden": false,
+    "deleted": false,
+    "eventType": "BANK_TRANSACTION_INCOMING",
+    "source": "timelineTransaction",
+    "details": {
+      "id": "f0a94988-5012-4033-a3ba-645d23f07461",
+      "sections": [
+        {
+          "title": "Du hast 4.500,00 € von Simon Jakob Bader erhalten",
+          "data": {
+            "icon": {
+              "asset": "logos/contacts-S-Grey/v2",
+              "badge": null
+            },
+            "timestamp": "2026-06-22T08:44:35.62078Z",
+            "status": "executed"
+          },
+          "type": "header"
+        },
+        {
+          "title": "Übersicht",
+          "data": [
+            {
+              "title": "Überweisung",
+              "detail": {
+                "text": "Abgeschlossen",
+                "functionalStyle": "EXECUTED",
+                "type": "status"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Absender",
+              "detail": {
+                "text": "Simon Jakob Bader",
+                "displayValue": {
+                  "text": "Simon Jakob Bader",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "IBAN",
+              "detail": {
+                "text": "..2000",
+                "action": {
+                  "payload": {
+                    "id": "f0a94988-5012-4033-a3ba-645d23f07461",
+                    "sections": [
+                      {
+                        "title": "IBAN",
+                        "data": [
+                          {
+                            "title": "DE25 7004 0045 0230 0820 00",
+                            "detail": {
+                              "icon": "logos/bank_commerzbank/v2",
+                              "style": "highlighted",
+                              "type": "listItemAvatarDefault"
+                            },
+                            "style": "plain"
+                          }
+                        ],
+                        "type": "table"
+                      }
+                    ]
+                  },
+                  "displayMode": "bottomSheet",
+                  "type": "infoPage"
+                },
+                "displayValue": {
+                  "text": "..2000",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Gesamt",
+              "detail": {
+                "text": "+4.500,00 €",
+                "displayValue": {
+                  "text": "+4.500,00 €",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "data": {
+            "text": "Sparen"
+          },
+          "type": "note"
+        },
+        {
+          "title": "Absender",
+          "data": [
+            {
+              "title": "Absender",
+              "detail": {
+                "text": "Simon Jakob Bader",
+                "displayValue": {
+                  "text": "Simon Jakob Bader",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "IBAN",
+              "detail": {
+                "text": "DE25 7004 0045 0230 0820 00",
+                "displayValue": {
+                  "text": "DE25 7004 0045 0230 0820 00",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "title": "Dokument",
+          "data": [
+            {
+              "title": "Transaction confirmation",
+              "action": {
+                "payload": {
+                  "path": "/api/v1/payments/documents/incoming-transfer/f0a94988-5012-4033-a3ba-645d23f07461",
+                  "title": "Transaction confirmation",
+                  "shareable": true
+                },
+                "type": "authenticatedBrowserModal"
+              },
+              "id": "f0a94988-5012-4033-a3ba-645d23f07461",
+              "postboxType": "INCOMING_TRANSFER"
+            }
+          ],
+          "type": "documents"
+        },
+        {
+          "data": [
+            {
+              "title": "",
+              "detail": {
+                "leading": {
+                  "type": "avatar",
+                  "icon": "logos/timeline_communication/v2"
+                },
+                "content": {
+                  "type": "default",
+                  "title": "Ein Problem melden"
+                },
+                "trailing": {
+                  "type": "chevron"
+                },
+                "action": {
+                  "payload": {
+                    "contextCategory": "NHC",
+                    "contextParams": {
+                      "chat_flow_key": "NHC_0024_deposit_report_an_issue",
+                      "transferId": "52ec0e54-816e-4b94-aaba-2c223a521e4b",
+                      "timelineEventId": "f0a94988-5012-4033-a3ba-645d23f07461"
+                    }
+                  },
+                  "type": "customerSupportChat"
+                },
+                "type": "listItem"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        }
+      ]
+    }
+  },
+  {
+    "id": "1f4cb932-2142-4966-890a-dfc87bf18ddf",
+    "timestamp": "2026-06-22T08:44:37.678+0000",
+    "title": "Überprüfung der Identität",
+    "icon": "logos/timeline_person/v2",
+    "subtitle": "Erfolgreich verifiziert",
+    "action": null,
+    "trailing": null,
+    "eventType": "VERIFICATION_TRANSFER_ACCEPTED",
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity"
+  },
+  {
+    "id": "c1548189-61aa-4f56-ac84-f9fafca3af17",
+    "timestamp": "2026-06-22T12:04:33.937+0000",
+    "title": "Passcode",
+    "icon": "logos/timeline_lock/v2",
+    "subtitle": "Geändert",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "c1548189-61aa-4f56-ac84-f9fafca3af17"
+    },
+    "trailing": null,
+    "eventType": null,
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity",
+    "details": {
+      "id": "c1548189-61aa-4f56-ac84-f9fafca3af17",
+      "sections": [
+        {
+          "title": "Du hast deinen Passcode geändert",
+          "data": {
+            "icon": {
+              "asset": "logos/timeline_lock/v2",
+              "badge": null
+            },
+            "timestamp": "2026-06-22T12:04:33.937487Z",
+            "status": "executed"
+          },
+          "type": "header"
+        },
+        {
+          "data": [
+            {
+              "title": "Gerät",
+              "detail": {
+                "text": "iPhone 13 Mini",
+                "displayValue": {
+                  "text": "iPhone 13 Mini"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Ort",
+              "detail": {
+                "text": "Stuttgart, DE",
+                "displayValue": {
+                  "text": "Stuttgart, DE"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "IP",
+              "detail": {
+                "text": "80.187.69.244",
+                "displayValue": {
+                  "text": "80.187.69.244"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "data": [
+            {
+              "title": "",
+              "detail": {
+                "content": {
+                  "type": "default",
+                  "title": ""
+                },
+                "action": {
+                  "payload": {
+                    "contextCategory": "NHC",
+                    "contextParams": {
+                      "chat_flow_key": "LIVE_CHAT_HELPCENTER",
+                      "NHC_article_id": "3a86a439-5f74-4142-9314-7bfb4217c6bf"
+                    }
+                  },
+                  "type": "customerSupportChat"
+                },
+                "type": "listItem"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        }
+      ],
+      "floatingActionButton": {
+        "title": "Das war nicht ich",
+        "icon": "interest-icons/chevron-right",
+        "action": {
+          "payload": {
+            "link": "traderepublic://activity-review-unauthenticated?token=k1tz3JVpGCegq1N21rdLUgYXMj_9xclvdX3_oqDo5WXjvfT7bBH5KMszJjWuP0ljmppzfESxbb7XuDF7meGwNw__"
+          },
+          "type": "deeplink"
+        }
+      },
+      "buttonBar": {
+        "trailing": {
+          "title": "Das war nicht ich",
+          "icon": "interest-icons/chevron-right",
+          "action": {
+            "payload": {
+              "link": "traderepublic://activity-review-unauthenticated?token=k1tz3JVpGCegq1N21rdLUgYXMj_9xclvdX3_oqDo5WXjvfT7bBH5KMszJjWuP0ljmppzfESxbb7XuDF7meGwNw__"
+            },
+            "type": "deeplink"
+          }
+        },
+        "style": "EMPTY_PRIMARY"
+      }
+    }
+  },
+  {
+    "id": "8528cc40-c87f-4e1f-84a1-a746c3c5cff3",
+    "timestamp": "2026-06-22T12:06:04.206+0000",
+    "title": "Steuer-ID",
+    "icon": "logos/timeline_document/v2",
+    "subtitle": "Hinzugefügt",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "8528cc40-c87f-4e1f-84a1-a746c3c5cff3"
+    },
+    "trailing": null,
+    "eventType": null,
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity",
+    "details": {
+      "id": "8528cc40-c87f-4e1f-84a1-a746c3c5cff3",
+      "sections": [
+        {
+          "title": "Du hast eine Steuer-ID hinzugefügt",
+          "data": {
+            "icon": {
+              "asset": "logos/timeline_document/v2",
+              "badge": null
+            },
+            "timestamp": "2026-06-22T12:06:04.206446Z",
+            "status": "executed"
+          },
+          "type": "header"
+        },
+        {
+          "data": [
+            {
+              "title": "Steuer-ID",
+              "detail": {
+                "text": "69 251 278 048",
+                "icon": "logos/flag-DE/v2",
+                "type": "iconWithText"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "data": [
+            {
+              "title": "",
+              "detail": {
+                "content": {
+                  "type": "default",
+                  "title": ""
+                },
+                "action": {
+                  "payload": {
+                    "contextCategory": "NHC",
+                    "contextParams": {
+                      "chat_flow_key": "LIVE_CHAT_HELPCENTER",
+                      "article_id": "37eb6471-c83e-4c0a-95e9-c0f19463e9f0"
+                    }
+                  },
+                  "type": "customerSupportChat"
+                },
+                "type": "listItem"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        }
+      ]
+    }
+  },
+  {
+    "id": "cd6cb59a-46dd-418e-912b-70fdf72e5f83",
+    "timestamp": "2026-06-22T12:06:45.391+0000",
+    "title": "Rechtliche Dokumente",
+    "icon": "logos/timeline_document/v2",
+    "subtitle": "Akzeptiert",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "cd6cb59a-46dd-418e-912b-70fdf72e5f83"
+    },
+    "trailing": null,
+    "eventType": "DOCUMENTS_ACCEPTED",
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity",
+    "details": {
+      "id": "cd6cb59a-46dd-418e-912b-70fdf72e5f83",
+      "sections": [
+        {
+          "title": "Du hast unsere Dokumente akzeptiert",
+          "data": {
+            "icon": "logos/timeline_document/v2",
+            "subtitleText": null,
+            "timestamp": "2026-06-22T12:06:45.391+0000",
+            "status": "executed"
+          },
+          "action": null,
+          "type": "header"
+        },
+        {
+          "title": "Dokumente",
+          "data": [
+            {
+              "title": "Kundenvereinbarung",
+              "detail": "Aktuell von Trade Republic verwendete Kundenvereinbarung",
+              "action": {
+                "type": "browserModal",
+                "payload": "https://assets.traderepublic.com/documents/DE/CONTRACT_CUSTOMER_AGREEMENT_20260618154131.pdf"
+              },
+              "id": "4d1e0413-8250-4223-a3b7-6f3d9c8bb7a6",
+              "postboxType": "DOCUMENTS_ACCEPTED"
+            }
+          ],
+          "action": null,
+          "type": "documents"
+        }
+      ]
+    }
+  },
+  {
+    "id": "4473e319-28d5-4333-a7c7-81b90251d221",
+    "timestamp": "2026-06-22T12:11:05.111+0000",
+    "title": "Ethereum",
+    "icon": "logos/XF000ETH0019/v2",
+    "subtitle": "0.006497 ETH",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "4473e319-28d5-4333-a7c7-81b90251d221"
+    },
+    "trailing": null,
+    "eventType": "CRYPTO_TRANSACTION_INCOMING",
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity",
+    "details": {
+      "id": "4473e319-28d5-4333-a7c7-81b90251d221",
+      "sections": [
+        {
+          "title": "Du erhältst 9.98 €",
+          "data": {
+            "icon": {
+              "asset": "logos/XF000ETH0019/v2",
+              "badge": null
+            },
+            "timestamp": "2026-06-22T12:11:05.111603Z",
+            "status": "executed"
+          },
+          "type": "header"
+        },
+        {
+          "title": "Weitere Informationen angeben",
+          "actionableTitle": {
+            "title": "Weitere Informationen angeben",
+            "action": {
+              "payload": {
+                "link": "traderepublic://crypto_wallet_regulations?transactionId=4473e319-28d5-4333-a7c7-81b90251d221"
+              },
+              "type": "deeplink"
+            }
+          },
+          "description": "Um deinen eingehenden Transfer zu erhalten, gib bitte weitere Angaben an.",
+          "type": "banner"
+        },
+        {
+          "title": "Übersicht",
+          "data": [
+            {
+              "title": "Crypto Transfer",
+              "detail": {
+                "text": "Ausstehend",
+                "trend": "positive",
+                "displayValue": {
+                  "text": "Ausstehend",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Absender",
+              "detail": {
+                "text": "Unbekannt",
+                "action": {
+                  "payload": {
+                    "id": "4473e319-28d5-4333-a7c7-81b90251d221",
+                    "sections": [
+                      {
+                        "title": "Absender",
+                        "type": "title"
+                      },
+                      {
+                        "data": [
+                          {
+                            "title": "Absender",
+                            "detail": {
+                              "text": "Unbekannt",
+                              "displayValue": {
+                                "text": "Unbekannt",
+                                "textDataSensitivity": "PUBLIC"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          },
+                          {
+                            "title": "Wallet-Adresse",
+                            "detail": {
+                              "text": "0x9be2⋯b74570",
+                              "trailingIcon": "logos/timeline_copy/v2",
+                              "action": {
+                                "payload": "0x9be26bf48679f4fC29aE7579E05ADae29Eb74570",
+                                "type": "copyToClipboard"
+                              },
+                              "type": "smallButton"
+                            },
+                            "style": "plain"
+                          }
+                        ],
+                        "type": "table"
+                      },
+                      {
+                        "text": "Erfahre mehr zu übertragenen Coins.",
+                        "action": {
+                          "payload": {
+                            "id": "cf24a239-b746-4fc5-9ae9-6bba3346785d",
+                            "sections": []
+                          },
+                          "displayMode": "bottomSheet",
+                          "type": "infoPage"
+                        },
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "displayMode": "bottomSheet",
+                  "type": "infoPage"
+                },
+                "displayValue": {
+                  "text": "Unbekannt",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Transaktions-Hash",
+              "detail": {
+                "text": "0x95af⋯9127c1",
+                "trailingIcon": "logos/timeline_copy/v2",
+                "action": {
+                  "payload": "0x95af28b748c8fb08ce3919591bb6510cab24424cb2645a6a405caa22069127c1",
+                  "type": "copyToClipboard"
+                },
+                "type": "smallButton"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Transaktion",
+              "detail": {
+                "text": "0.006497 ETH 9.98 €",
+                "action": {
+                  "payload": {
+                    "id": "4473e319-28d5-4333-a7c7-81b90251d221",
+                    "sections": [
+                      {
+                        "title": "Transaction",
+                        "type": "title"
+                      },
+                      {
+                        "data": [
+                          {
+                            "title": "Asset",
+                            "detail": {
+                              "text": "Ethereum",
+                              "displayValue": {
+                                "text": "Ethereum",
+                                "textDataSensitivity": "PUBLIC"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          },
+                          {
+                            "title": "Coins",
+                            "detail": {
+                              "text": "0.006497 ETH",
+                              "displayValue": {
+                                "text": "0.006497 ETH",
+                                "textDataSensitivity": "PUBLIC"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          },
+                          {
+                            "title": "Exchange Rate",
+                            "detail": {
+                              "text": "1 ETH 1536.25 €",
+                              "displayValue": {
+                                "text": "1536.25 €",
+                                "prefix": "1 ETH",
+                                "textDataSensitivity": "PUBLIC"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          },
+                          {
+                            "title": "Amount",
+                            "detail": {
+                              "text": "9.98 €",
+                              "displayValue": {
+                                "text": "9.98 €",
+                                "textDataSensitivity": "PUBLIC"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          }
+                        ],
+                        "type": "table"
+                      },
+                      {
+                        "text": "Erfahre mehr zu übertragenen Coins.",
+                        "action": {
+                          "payload": {
+                            "id": "78382bd2-b975-4144-9bd5-d259e20262c9",
+                            "sections": []
+                          },
+                          "displayMode": "bottomSheet",
+                          "type": "infoPage"
+                        },
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "displayMode": "bottomSheet",
+                  "type": "infoPage"
+                },
+                "displayValue": {
+                  "text": "9.98 €",
+                  "prefix": "0.006497 ETH",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Kaufpreis",
+              "detail": {
+                "text": "Unbekannt",
+                "action": {
+                  "payload": {
+                    "link": "traderepublic://crypto/buyInPrice/4c709918-4e46-4270-947a-be7a1d610357"
+                  },
+                  "type": "deeplink"
+                },
+                "displayValue": {
+                  "text": "Unbekannt",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Gebühr",
+              "detail": {
+                "text": "Kostenlos",
+                "displayValue": {
+                  "text": "Kostenlos",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Gesamt",
+              "detail": {
+                "text": "0.006497 ETH 9.98 €",
+                "displayValue": {
+                  "text": "9.98 €",
+                  "prefix": "0.006497 ETH",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "title": "Status",
+          "steps": [
+            {
+              "leading": {
+                "avatar": {
+                  "status": "completed",
+                  "type": "bullet"
+                },
+                "connection": {
+                  "order": "first"
+                }
+              },
+              "content": {
+                "title": "Erkannt",
+                "subtitle": "22. Jun · 12:11 PM"
+              }
+            },
+            {
+              "leading": {
+                "avatar": {
+                  "status": "inProgress",
+                  "type": "bullet"
+                },
+                "connection": {
+                  "order": "first"
+                }
+              },
+              "content": {
+                "title": "Verifizierung",
+                "subtitle": "Pending",
+                "cta": {
+                  "title": "Mehr Informationen werden benötigt",
+                  "action": {
+                    "payload": {
+                      "link": "traderepublic://crypto_wallet_regulations?transactionId=4473e319-28d5-4333-a7c7-81b90251d221"
+                    },
+                    "type": "deeplink"
+                  }
+                }
+              }
+            },
+            {
+              "leading": {
+                "avatar": {
+                  "status": "todo",
+                  "type": "bullet"
+                },
+                "connection": {
+                  "order": "first"
+                }
+              },
+              "content": {
+                "title": "Erhalten",
+                "subtitle": ""
+              }
+            }
+          ],
+          "type": "steps"
+        },
+        {
+          "title": "",
+          "data": {
+            "title": "Report an issue",
+            "action": {
+              "payload": {
+                "contextCategory": "NHC",
+                "contextParams": {
+                  "timelineEventId": "4473e319-28d5-4333-a7c7-81b90251d221",
+                  "chat_flow_key": "NHC_0029_wealth_crypto_incoming_transfer_report_an_issue"
+                }
+              },
+              "type": "customerSupportChat"
+            }
+          },
+          "type": "actionButtons"
+        }
+      ]
+    }
+  },
+  {
+    "id": "fffdf6a4-d825-4e82-abc9-9de6388e22a5",
+    "timestamp": "2026-06-22T12:12:28.997+0000",
+    "title": "Ethereum",
+    "icon": "logos/XF000ETH0019/v2",
+    "subtitle": "0.181564 ETH",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "fffdf6a4-d825-4e82-abc9-9de6388e22a5"
+    },
+    "trailing": null,
+    "eventType": "CRYPTO_TRANSACTION_INCOMING",
+    "hidden": false,
+    "deleted": false,
+    "source": "timelineActivity",
+    "details": {
+      "id": "fffdf6a4-d825-4e82-abc9-9de6388e22a5",
+      "sections": [
+        {
+          "title": "Du erhältst 279.15 €",
+          "data": {
+            "icon": {
+              "asset": "logos/XF000ETH0019/v2",
+              "badge": null
+            },
+            "timestamp": "2026-06-22T12:12:28.99732Z",
+            "status": "executed"
+          },
+          "type": "header"
+        },
+        {
+          "title": "Weitere Informationen angeben",
+          "actionableTitle": {
+            "title": "Weitere Informationen angeben",
+            "action": {
+              "payload": {
+                "link": "traderepublic://crypto_wallet_regulations?transactionId=fffdf6a4-d825-4e82-abc9-9de6388e22a5"
+              },
+              "type": "deeplink"
+            }
+          },
+          "description": "Um deinen eingehenden Transfer zu erhalten, gib bitte weitere Angaben an.",
+          "type": "banner"
+        },
+        {
+          "title": "Übersicht",
+          "data": [
+            {
+              "title": "Crypto Transfer",
+              "detail": {
+                "text": "Ausstehend",
+                "trend": "positive",
+                "displayValue": {
+                  "text": "Ausstehend",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Absender",
+              "detail": {
+                "text": "Unbekannt",
+                "action": {
+                  "payload": {
+                    "id": "fffdf6a4-d825-4e82-abc9-9de6388e22a5",
+                    "sections": [
+                      {
+                        "title": "Absender",
+                        "type": "title"
+                      },
+                      {
+                        "data": [
+                          {
+                            "title": "Absender",
+                            "detail": {
+                              "text": "Unbekannt",
+                              "displayValue": {
+                                "text": "Unbekannt",
+                                "textDataSensitivity": "PUBLIC"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          },
+                          {
+                            "title": "Wallet-Adresse",
+                            "detail": {
+                              "text": "0x9be2⋯b74570",
+                              "trailingIcon": "logos/timeline_copy/v2",
+                              "action": {
+                                "payload": "0x9be26bf48679f4fC29aE7579E05ADae29Eb74570",
+                                "type": "copyToClipboard"
+                              },
+                              "type": "smallButton"
+                            },
+                            "style": "plain"
+                          }
+                        ],
+                        "type": "table"
+                      },
+                      {
+                        "text": "Erfahre mehr zu übertragenen Coins.",
+                        "action": {
+                          "payload": {
+                            "id": "85a23379-5546-4646-9cc2-7ad809e4c882",
+                            "sections": []
+                          },
+                          "displayMode": "bottomSheet",
+                          "type": "infoPage"
+                        },
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "displayMode": "bottomSheet",
+                  "type": "infoPage"
+                },
+                "displayValue": {
+                  "text": "Unbekannt",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Transaktions-Hash",
+              "detail": {
+                "text": "0xeadb⋯72d935",
+                "trailingIcon": "logos/timeline_copy/v2",
+                "action": {
+                  "payload": "0xeadbdf7625c651e484a4bb3579738bda9e3d8d0a96d54b966760204e2772d935",
+                  "type": "copyToClipboard"
+                },
+                "type": "smallButton"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Transaktion",
+              "detail": {
+                "text": "0.181564 ETH 279.15 €",
+                "action": {
+                  "payload": {
+                    "id": "fffdf6a4-d825-4e82-abc9-9de6388e22a5",
+                    "sections": [
+                      {
+                        "title": "Transaction",
+                        "type": "title"
+                      },
+                      {
+                        "data": [
+                          {
+                            "title": "Asset",
+                            "detail": {
+                              "text": "Ethereum",
+                              "displayValue": {
+                                "text": "Ethereum",
+                                "textDataSensitivity": "PUBLIC"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          },
+                          {
+                            "title": "Coins",
+                            "detail": {
+                              "text": "0.181564 ETH",
+                              "displayValue": {
+                                "text": "0.181564 ETH",
+                                "textDataSensitivity": "PUBLIC"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          },
+                          {
+                            "title": "Exchange Rate",
+                            "detail": {
+                              "text": "1 ETH 1537.48 €",
+                              "displayValue": {
+                                "text": "1537.48 €",
+                                "prefix": "1 ETH",
+                                "textDataSensitivity": "PUBLIC"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          },
+                          {
+                            "title": "Amount",
+                            "detail": {
+                              "text": "279.15 €",
+                              "displayValue": {
+                                "text": "279.15 €",
+                                "textDataSensitivity": "PUBLIC"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          }
+                        ],
+                        "type": "table"
+                      },
+                      {
+                        "text": "Erfahre mehr zu übertragenen Coins.",
+                        "action": {
+                          "payload": {
+                            "id": "76f82d19-0244-4131-8417-e4fd67850c6e",
+                            "sections": []
+                          },
+                          "displayMode": "bottomSheet",
+                          "type": "infoPage"
+                        },
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "displayMode": "bottomSheet",
+                  "type": "infoPage"
+                },
+                "displayValue": {
+                  "text": "279.15 €",
+                  "prefix": "0.181564 ETH",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Kaufpreis",
+              "detail": {
+                "text": "Unbekannt",
+                "action": {
+                  "payload": {
+                    "link": "traderepublic://crypto/buyInPrice/46bfcfb1-453e-48c5-9fee-cdaf6cf229d2"
+                  },
+                  "type": "deeplink"
+                },
+                "displayValue": {
+                  "text": "Unbekannt",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Gebühr",
+              "detail": {
+                "text": "Kostenlos",
+                "displayValue": {
+                  "text": "Kostenlos",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Gesamt",
+              "detail": {
+                "text": "0.181564 ETH 279.15 €",
+                "displayValue": {
+                  "text": "279.15 €",
+                  "prefix": "0.181564 ETH",
+                  "textDataSensitivity": "PUBLIC"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "title": "Status",
+          "steps": [
+            {
+              "leading": {
+                "avatar": {
+                  "status": "completed",
+                  "type": "bullet"
+                },
+                "connection": {
+                  "order": "first"
+                }
+              },
+              "content": {
+                "title": "Erkannt",
+                "subtitle": "22. Jun · 12:12 PM"
+              }
+            },
+            {
+              "leading": {
+                "avatar": {
+                  "status": "inProgress",
+                  "type": "bullet"
+                },
+                "connection": {
+                  "order": "first"
+                }
+              },
+              "content": {
+                "title": "Verifizierung",
+                "subtitle": "Pending",
+                "cta": {
+                  "title": "Mehr Informationen werden benötigt",
+                  "action": {
+                    "payload": {
+                      "link": "traderepublic://crypto_wallet_regulations?transactionId=fffdf6a4-d825-4e82-abc9-9de6388e22a5"
+                    },
+                    "type": "deeplink"
+                  }
+                }
+              }
+            },
+            {
+              "leading": {
+                "avatar": {
+                  "status": "todo",
+                  "type": "bullet"
+                },
+                "connection": {
+                  "order": "first"
+                }
+              },
+              "content": {
+                "title": "Erhalten",
+                "subtitle": ""
+              }
+            }
+          ],
+          "type": "steps"
+        },
+        {
+          "title": "",
+          "data": {
+            "title": "Report an issue",
+            "action": {
+              "payload": {
+                "contextCategory": "NHC",
+                "contextParams": {
+                  "timelineEventId": "fffdf6a4-d825-4e82-abc9-9de6388e22a5",
+                  "chat_flow_key": "NHC_0029_wealth_crypto_incoming_transfer_report_an_issue"
+                }
+              },
+              "type": "customerSupportChat"
+            }
+          },
+          "type": "actionButtons"
+        }
+      ]
+    }
+  },
+  {
+    "id": "37133a1c-22df-4eed-b1d0-c4ae20d8ff61",
+    "timestamp": "2026-06-23T12:10:17.995+0000",
+    "title": "Apple",
+    "icon": "logos/US0378331005/v2",
+    "avatar": {
+      "asset": "logos/US0378331005/v2",
+      "badge": null
+    },
+    "badge": null,
+    "subtitle": "Kauforder",
+    "amount": {
+      "currency": "EUR",
+      "value": -101.0,
+      "fractionDigits": 2
+    },
+    "subAmount": null,
+    "status": "EXECUTED",
+    "action": {
+      "type": "timelineDetail",
+      "payload": "37133a1c-22df-4eed-b1d0-c4ae20d8ff61"
+    },
+    "cashAccountNumber": "4047536911",
+    "hidden": false,
+    "deleted": false,
+    "eventType": "TRADING_TRADE_EXECUTED",
+    "source": "timelineTransaction",
+    "details": {
+      "id": "37133a1c-22df-4eed-b1d0-c4ae20d8ff61",
+      "sections": [
+        {
+          "title": "Du hast 101,00 € investiert",
+          "data": {
+            "icon": {
+              "asset": "logos/US0378331005/v2",
+              "badge": null
+            },
+            "timestamp": "2026-06-23T12:10:17.9958Z",
+            "status": "executed"
+          },
+          "action": {
+            "payload": "US0378331005",
+            "type": "instrumentDetail"
+          },
+          "type": "header"
+        },
+        {
+          "title": "Übersicht",
+          "data": [
+            {
+              "title": "Kauf",
+              "detail": {
+                "text": "Ausgeführt",
+                "functionalStyle": "EXECUTED",
+                "type": "status"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Asset",
+              "detail": {
+                "text": "Apple",
+                "displayValue": {
+                  "text": "Apple"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Transaktion",
+              "detail": {
+                "text": "0,386772 ×  258,55 €",
+                "action": {
+                  "payload": {
+                    "id": "00000000-0000-0000-0000-000000000000",
+                    "sections": [
+                      {
+                        "title": "Transaktion",
+                        "type": "title"
+                      },
+                      {
+                        "data": [
+                          {
+                            "title": "Aktienkurs",
+                            "detail": {
+                              "text": "258,55 €",
+                              "displayValue": {
+                                "text": "258,55 €"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          },
+                          {
+                            "title": "Aktien",
+                            "detail": {
+                              "text": "0,386772",
+                              "displayValue": {
+                                "text": "0,386772"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          },
+                          {
+                            "title": "Summe",
+                            "detail": {
+                              "text": "100,00 €",
+                              "displayValue": {
+                                "text": "100,00 €"
+                              },
+                              "type": "text"
+                            },
+                            "style": "plain"
+                          }
+                        ],
+                        "type": "table"
+                      }
+                    ]
+                  },
+                  "displayMode": "bottomSheet",
+                  "type": "infoPage"
+                },
+                "displayValue": {
+                  "text": "258,55 €",
+                  "prefix": "0,386772 × "
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Gebühr",
+              "detail": {
+                "text": "1,00 €",
+                "displayValue": {
+                  "text": "1,00 €"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            },
+            {
+              "title": "Summe",
+              "detail": {
+                "text": "101,00 €",
+                "displayValue": {
+                  "text": "101,00 €"
+                },
+                "type": "text"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "title": "Dokumente",
+          "data": [
+            {
+              "title": "Kosteninformation",
+              "action": {
+                "payload": "https://traderepublic-postbox-platform-production.s3.eu-central-1.amazonaws.com/timeline/postbox/2026/6/23/15eea863/pb17822166181132212559785012.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEFUaDGV1LWNlbnRyYWwtMSJHMEUCIGhC%2ByI03CG2WHI6v0gcGMqSinL0MHT%2BCia%2FyxhBuyWlAiEAz0slw1aWx0EbSxWMPhk7WnrHT847vgD%2FgTUIssH8sgEqlQUIHhAEGgw4MzAwMDY0NDIyNjAiDHEDhSX1ZA2cgPb5uyryBJigX1MYR5BQ2grdAU66Up%2FI%2BuXu9cNUz6eH9uvxEfWWBle24BqbMwVyiuaUBmnhpRGQoW36pjp964beN2DRkUYp%2FMUhxzUUsXJWv%2BlN0wjTDcUN%2FExFddHfhoQjxq4sRAxJUJR5TKfPfMsuIi%2BMQ3aO0cY0dip4Y0%2Bn7J%2F8bf1TKLvgyJ2rjZnfZX1WjM762fzXSQKoW2fByzTEqu%2B%2F3GTYkNDX92S9U0MxIkHiLawAjhhIsjC5%2Fah75Db5%2F0JY%2FI2C756WWGp50oeMospJ3no0LbwQECG0TTXYNQ%2F62%2B%2FQceNmCMrilBHVW%2FkZwJuniyhHHFMauN0fmWys6fx%2BTOHOcEOTzicQrodjPXT54LQtEkAh1V8V2r65RQ5bY1t2NeKGmZ8b2KUcjQeYDVy%2F%2F32f%2BHuuImW6QqEuMg7hsi%2F2Dimgj2xHboprjY03%2BfRfuAm73ZKYmmHcQRdEfNkzpUNyRKumzpjRFTKw7YmAYcqNQr0ax6GWp6o2xETVOhz%2FCepfLHrpBRsi9UEil0hnmB2L%2BpZMqXKF66SkBVDLfiJs60Xo%2BwtPYaIohVrD5X46OkZ29nIeHKSDKPQTK3%2BLR7V8Dd6tB3oK6Ma2yIYcHuS73RtM4E83vDS8riuTJ%2FyxHtgf8BYos0GglBu1iFwflv9zjwTUcurZIbVzwOFGBsblNLfXw0xhtr5hwdN8lzy3PPMddK2oF0UgnLOmwhoaY1%2B6J%2F2pVPxms4JlGjRio1Z%2BK17S6Vu04lyGDUdM317Fhk0zvPXDiy4sOmaK246PbN2dR925zGAJuzZApKkDm9uRvwstV4B3HoXSFoa%2FMgMmrkUKMPyA6tEGOpkBGQpywZNejQd2ooAcy2aQ%2F9a3QGR7V7YXp12x7zBXU4N2qdqdpi5K9xVuMmEtcL0wi7SU037mLCjJLkdATL9YbaY2%2BWhzZJ5mnRzxqCAbz08NPkScB3fEOomrde0lxqnq1E7b4sN9leXKynWFCjF4Rt2UUNETOvl4ep0qNzgez8InfUO%2FCCPCYRUolLC8fSVAxLqWaQpA3Atx&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260623T132111Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Credential=ASIA4CQB5HEKNYMUT6C6%2F20260623%2Feu-central-1%2Fs3%2Faws4_request&X-Amz-Signature=b5a30c4d1eff1d6747e3adf8433ad23f4c45c1e75aa79f5edfd57c5e5b838eb2",
+                "type": "browserModal"
+              },
+              "id": "a597e83d-b1dc-4cf3-8f7e-c8d19d0b2932",
+              "postboxType": "EQUITIES_BUY_EX_ANTE"
+            }
+          ],
+          "type": "documents"
+        },
+        {
+          "title": "",
+          "data": [
+            {
+              "title": "",
+              "detail": {
+                "icon": "",
+                "action": {
+                  "payload": {
+                    "contextCategory": "NHC",
+                    "contextParams": {
+                      "chat_flow_key": "NHC_0029_wealth_buying_selling_past_trade_execution",
+                      "customerSupportChatVisible": "false",
+                      "timelineEventId": "37133a1c-22df-4eed-b1d0-c4ae20d8ff61",
+                      "instrumentType": "stock",
+                      "instrumentId": "US0378331005",
+                      "tradeId": "36d24116-703c-47e9-874e-b67de4a2612b",
+                      "groupId": "37133a1c-22df-4eed-b1d0-c4ae20d8ff61"
+                    }
+                  },
+                  "type": "customerSupportChat"
+                },
+                "style": "highlighted",
+                "type": "listItemAvatarDefault"
+              },
+              "style": "plain"
+            }
+          ],
+          "type": "table"
+        }
+      ]
+    }
+  }
+]

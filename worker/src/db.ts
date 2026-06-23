@@ -26,6 +26,10 @@ export interface MergeInput {
   // Links an itemized credit-card purchase to the lump-sum Giro "Kreditkarte"
   // booking it was billed under (see scripts/ and Settings.tsx import flow).
   parentId?: string
+  // Trade Republic buy/sell events only — ISIN + signed share count (positive
+  // = bought, negative = sold), used to reconstruct depot holdings over time.
+  isin?: string
+  shares?: number
 }
 
 // Row shape returned to the client (camelCase). The client enriches these with
@@ -45,6 +49,8 @@ export interface StoredTx {
   customIcon: string | null
   source: string | null
   parentId: string | null
+  isin: string | null
+  shares: number | null
 }
 
 interface DbRow {
@@ -62,6 +68,8 @@ interface DbRow {
   custom_icon: string | null
   source: string | null
   parent_id: string | null
+  isin: string | null
+  shares: number | null
 }
 
 // ─── Dedup key ─────────────────────────────────────────────────────────────
@@ -89,7 +97,7 @@ function counterpartyIbanOf(r: MergeInput): string {
 // lump Giro settlement booking via matchKey), so their rank mostly just needs
 // to be higher than a re-pulled CSV/EB row of the same purchase.
 const DEDUP_TOL_DAYS = 2
-const SOURCE_RANK: Record<string, number> = { csv: 1, eb: 2, creditcard: 3 }
+const SOURCE_RANK: Record<string, number> = { csv: 1, eb: 2, creditcard: 3, traderepublic: 4 }
 function rankOf(source?: string | null): number {
   return SOURCE_RANK[source ?? ''] ?? 0
 }
@@ -123,12 +131,23 @@ function rowToStored(r: DbRow): StoredTx {
     customIcon: r.custom_icon,
     source: r.source,
     parentId: r.parent_id,
+    isin: r.isin,
+    shares: r.shares,
   }
 }
 
 async function countRows(db: D1Database): Promise<number> {
   const r = await db.prepare('SELECT COUNT(*) AS c FROM transactions').first<{ c: number }>()
   return r?.c ?? 0
+}
+
+// Every trade (buy/sell) with a known ISIN + share count, for reconstructing
+// depot holdings over time — see traderepublic/depotHistory.ts.
+export async function getTradeRows(db: D1Database): Promise<{ date: string; isin: string; shares: number }[]> {
+  const { results } = await db
+    .prepare('SELECT date, isin, shares FROM transactions WHERE isin IS NOT NULL AND shares IS NOT NULL ORDER BY date ASC')
+    .all<{ date: string; isin: string; shares: number }>()
+  return results ?? []
 }
 
 export async function getTransactions(db: D1Database): Promise<StoredTx[]> {
@@ -161,6 +180,8 @@ export function toStored(rows: MergeInput[], source: string): StoredTx[] {
       customIcon: r.customIcon ?? null,
       source,
       parentId: r.parentId ?? null,
+      isin: r.isin ?? null,
+      shares: r.shares ?? null,
     }))
 }
 
@@ -270,11 +291,12 @@ export async function mergeTransactions(
     stmts.push(
       db.prepare(
         `INSERT INTO transactions
-           (id, date, amount, type, description, counterparty, iban, account_iban, reference, category_id, custom_label, custom_icon, source, parent_id, created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           (id, date, amount, type, description, counterparty, iban, account_iban, reference, category_id, custom_label, custom_icon, source, parent_id, isin, shares, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       ).bind(
         t.id, t.date, t.amount, t.type, t.description, t.counterparty,
-        t.iban, t.accountIban, t.reference, t.categoryId, t.customLabel, t.customIcon, t.source, t.parentId, now,
+        t.iban, t.accountIban, t.reference, t.categoryId, t.customLabel, t.customIcon, t.source, t.parentId,
+        t.isin, t.shares, now,
       ),
     )
   }

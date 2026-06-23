@@ -1,9 +1,14 @@
 import { ebStartAuth, ebExchangeAndSync, ebGetAspsps } from './enablebanking'
 import {
   mergeTransactions, getTransactions, updateTransaction, deleteTransaction, clearTransactions, toStored,
-  insertError, getErrors, clearErrors,
+  insertError, getErrors, clearErrors, getTradeRows,
   type MergeInput, type StoredTx,
 } from './db'
+import { solveTradeRepublicWaf } from './traderepublic/waf'
+import { startTrLogin, pollTrLogin, type TrLoginSession } from './traderepublic/auth'
+import { fetchTradeRepublicTransactions } from './traderepublic/timeline'
+import { fetchTradeRepublicPortfolioValue } from './traderepublic/portfolio'
+import { computeDepotHistory } from './traderepublic/depotHistory'
 
 export interface Env {
   ALLOWED_ORIGIN: string
@@ -12,6 +17,8 @@ export interface Env {
   EB_APPLICATION_ID?: string
   EB_PRIVATE_KEY?: string
   API_KEY?: string
+  TR_PHONE_NO?: string
+  TR_PIN?: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -212,6 +219,102 @@ export default {
       try {
         const result = await ebExchangeAndSync(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, body.code, fromDate, toDate)
         return jsonResponse(await buildSyncResponse(env, result, 'eb', fromDate, toDate), 200, cors)
+      } catch (e) {
+        return jsonResponse({ error: String(e) }, 502, cors)
+      }
+    }
+
+    // ── POST /tr/login/start — solve WAF challenge, submit phone+PIN, trigger
+    // the TR mobile-app push notification. Returns an opaque session object
+    // the frontend round-trips to /tr/login/poll (Workers have no implicit
+    // cookie jar across requests). Phone/PIN come from wrangler secrets
+    // (TR_PHONE_NO/TR_PIN) when set — same trust model as API_KEY/
+    // EB_PRIVATE_KEY — falling back to the request body otherwise, so the
+    // Settings UI doesn't need to ask for them on every sync. ─────────────
+    if (request.method === 'POST' && path === '/tr/login/start') {
+      let body: { phoneNo?: string; pin?: string } = {}
+      try { body = await request.json() as typeof body } catch { /* empty body is fine when using secrets */ }
+      const phoneNo = env.TR_PHONE_NO ?? body.phoneNo
+      const pin = env.TR_PIN ?? body.pin
+      if (!phoneNo || !pin) return jsonResponse({ error: 'phoneNo und pin erforderlich (oder TR_PHONE_NO/TR_PIN als Secret setzen)' }, 400, cors)
+
+      try {
+        const wafToken = await solveTradeRepublicWaf()
+        const session = await startTrLogin(phoneNo, pin, wafToken)
+        return jsonResponse({ session }, 200, cors)
+      } catch (e) {
+        return jsonResponse({ error: String(e) }, 502, cors)
+      }
+    }
+
+    // ── POST /tr/login/poll — call repeatedly until the push is approved ──
+    if (request.method === 'POST' && path === '/tr/login/poll') {
+      let body: { session?: TrLoginSession }
+      try { body = await request.json() as typeof body } catch { return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors) }
+      if (!body.session) return jsonResponse({ error: 'session erforderlich' }, 400, cors)
+
+      try {
+        const result = await pollTrLogin(body.session)
+        return jsonResponse(result, 200, cors)
+      } catch (e) {
+        return jsonResponse({ error: String(e) }, 502, cors)
+      }
+    }
+
+    // ── POST /tr/sync — fetch the timeline over WebSocket using an approved
+    // session, map events to transactions, merge into D1, and separately
+    // fetch the *live* portfolio value (cash + current market value of
+    // holdings) — never derived from summing transaction amounts, since that
+    // would just be net cash flow and drift away from reality the moment a
+    // holding's price moves. Must match src/utils/tradeRepublicParser.ts's
+    // TRADE_REPUBLIC_IBAN exactly.
+    if (request.method === 'POST' && path === '/tr/sync') {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      let body: { session?: TrLoginSession }
+      try { body = await request.json() as typeof body } catch { return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors) }
+      if (!body.session?.cookies?.length) return jsonResponse({ error: 'session erforderlich (aus dem Login-Schritt)' }, 400, cors)
+
+      const TRADE_REPUBLIC_IBAN = 'DE62100123454047536911'
+      try {
+        const [events, portfolioValue] = await Promise.all([
+          fetchTradeRepublicTransactions(body.session.cookies),
+          fetchTradeRepublicPortfolioValue(body.session).catch(e => {
+            // Don't fail the whole sync if the valuation step breaks —
+            // transactions are still worth importing either way.
+            console.error('TR portfolio valuation failed:', e)
+            return null
+          }),
+        ])
+        const rows: MergeInput[] = events.map(e => ({
+          date: e.date,
+          amount: e.amount,
+          description: e.description,
+          counterparty: e.counterparty,
+          reference: e.reference,
+          categoryId: e.categoryId,
+          accountIban: TRADE_REPUBLIC_IBAN,
+          isin: e.isin,
+          shares: e.shares,
+        }))
+        const meta = await mergeTransactions(env.DB, rows, 'traderepublic')
+        const transactions = await getTransactions(env.DB)
+        return jsonResponse({ transactions, meta, portfolioValue }, 200, cors)
+      } catch (e) {
+        return jsonResponse({ error: String(e) }, 502, cors)
+      }
+    }
+
+    // ── GET /tr/depot-history?days=180 — depot value over time, reconstructed
+    // from stored buy/sell trades (isin + signed shares) combined with Yahoo
+    // Finance historical prices. No TR session needed — purely from D1 +
+    // public market data, so it works any time, not just right after a sync.
+    if (request.method === 'GET' && path === '/tr/depot-history') {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      const days = Math.max(1, Number(url.searchParams.get('days')) || 180)
+      try {
+        const trades = await getTradeRows(env.DB)
+        const history = await computeDepotHistory(trades, days)
+        return jsonResponse(history, 200, cors)
       } catch (e) {
         return jsonResponse({ error: String(e) }, 502, cors)
       }

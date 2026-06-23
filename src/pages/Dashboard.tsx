@@ -8,7 +8,6 @@ import {
 import type { TimeFilter, Transaction } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useFilteredTransactions, useBalanceSummary } from '@/hooks/useFilteredTransactions'
-import { useAccounts } from '@/hooks/useAccounts'
 import { useManualBalance } from '@/hooks/useManualBalance'
 import { useAllCategories } from '@/hooks/useAllCategories'
 import { isExcluded } from '@/data/categories'
@@ -19,6 +18,7 @@ import {
   computeCategoryTrends, computeTopMerchants, computeMerchantBreakdown, filterByTimeFilter,
   computeAvailablePeriods,
 } from '@/utils/chartCompute'
+import { filterTransactionsByAccounts } from '@/utils/accountFilter'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
 import { ChartHeader } from '@/components/ui/ChartHeader'
@@ -32,6 +32,9 @@ import { CategoryBreakdownModal } from '@/components/ui/CategoryBreakdownModal'
 import { MerchantBreakdownModal } from '@/components/ui/MerchantBreakdownModal'
 import { RecurringModal } from '@/components/ui/RecurringModal'
 import { AccountCard } from '@/components/ui/AccountCard'
+import { AccountViewSelector } from '@/components/ui/AccountViewSelector'
+import { DepotChart } from '@/components/charts/DepotChart'
+import { TRADE_REPUBLIC_IBAN } from '@/utils/tradeRepublicParser'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 
 function formatEur(v: number, maximumFractionDigits = 0) {
@@ -68,20 +71,31 @@ export function Dashboard() {
   const [selectedTx,      setSelectedTx]      = useState<Transaction | null>(null)
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const { transactions, recurringGroups, updateTransaction, excludedMerchants } = useTransactionsCtx()
-  const { accounts, toggleIncluded, totalWealth } = useAccounts()
+  const {
+    transactions, recurringGroups, updateTransaction, excludedMerchants,
+    accounts, toggleIncluded, totalWealth, selectedAccountIbans, isAccountSelected, toggleAccount,
+  } = useTransactionsCtx()
   const { baseBalance, savedAt: balanceSavedAt, updatedAt: balanceUpdatedAt } = useManualBalance()
   const { allMap } = useAllCategories()
 
-  const filtered = useFilteredTransactions(transactions, timeFilter)
+  // Everything below derives from this, not the raw context `transactions`,
+  // so the whole page reflects whichever account(s) are toggled on in the
+  // new Kontostand-replacement card — "all" by default (selectedAccountIbans
+  // === null), same as before this feature existed.
+  const accountTransactions = useMemo(
+    () => filterTransactionsByAccounts(transactions, accounts, selectedAccountIbans),
+    [transactions, accounts, selectedAccountIbans],
+  )
+
+  const filtered = useFilteredTransactions(accountTransactions, timeFilter)
   const summary  = useBalanceSummary(filtered)
-  const analytics = useAnalytics(transactions)
+  const analytics = useAnalytics(accountTransactions)
 
   // Adjust manual balance by all booked transactions since the save date
   const manualBalance = (() => {
     if (baseBalance === null || balanceSavedAt === null) return null
     const savedTs = new Date(balanceSavedAt).getTime()
-    const delta = transactions
+    const delta = accountTransactions
       .filter(t => !t.isPending && !isExcluded(t) && t.date.getTime() >= savedTs)
       .reduce((s, t) => s + t.amount, 0)
     return baseBalance + delta
@@ -96,41 +110,41 @@ export function Dashboard() {
 
   // ── Per-chart data ────────────────────────────────────────────────────────
   const pieFiltered = useMemo(
-    () => filterByTimeFilter(transactions, pieChart.effectiveFilter),
-    [transactions, pieChart.effectiveFilter],
+    () => filterByTimeFilter(accountTransactions, pieChart.effectiveFilter),
+    [accountTransactions, pieChart.effectiveFilter],
   )
   const pieSummary = useBalanceSummary(pieFiltered)
 
   const monthlyBarData = useMemo(
-    () => computeMonthlyData(transactions, mbChart.effectiveFilter),
-    [transactions, mbChart.effectiveFilter],
+    () => computeMonthlyData(accountTransactions, mbChart.effectiveFilter),
+    [accountTransactions, mbChart.effectiveFilter],
   )
 
   const spendingData = useMemo(
-    () => computeSpendingData(transactions, saChart.effectiveFilter),
-    [transactions, saChart.effectiveFilter],
+    () => computeSpendingData(accountTransactions, saChart.effectiveFilter),
+    [accountTransactions, saChart.effectiveFilter],
   )
 
   const { points: catTrendPoints, topCats } = useMemo(
-    () => computeCategoryTrends(transactions, catChart.effectiveFilter),
-    [transactions, catChart.effectiveFilter],
+    () => computeCategoryTrends(accountTransactions, catChart.effectiveFilter),
+    [accountTransactions, catChart.effectiveFilter],
   )
 
   const excludedMerchantSet = useMemo(() => new Set(excludedMerchants), [excludedMerchants])
   const topMerchants = useMemo(
-    () => computeTopMerchants(transactions, topChart.effectiveFilter, excludedMerchantSet),
-    [transactions, topChart.effectiveFilter, excludedMerchantSet],
+    () => computeTopMerchants(accountTransactions, topChart.effectiveFilter, excludedMerchantSet),
+    [accountTransactions, topChart.effectiveFilter, excludedMerchantSet],
   )
   const merchantCount = useMemo(
-    () => computeMerchantBreakdown(transactions, topChart.effectiveFilter).filter(e => !excludedMerchantSet.has(e.name)).length,
-    [transactions, topChart.effectiveFilter, excludedMerchantSet],
+    () => computeMerchantBreakdown(accountTransactions, topChart.effectiveFilter).filter(e => !excludedMerchantSet.has(e.name)).length,
+    [accountTransactions, topChart.effectiveFilter, excludedMerchantSet],
   )
 
-  // Available periods for time pickers (derived from all transactions)
-  const periods = useMemo(() => computeAvailablePeriods(transactions), [transactions])
+  // Available periods for time pickers (derived from the selected accounts' transactions)
+  const periods = useMemo(() => computeAvailablePeriods(accountTransactions), [accountTransactions])
 
   // Summary stats (always last 12 months, unaffected by chart filters)
-  const summaryMonthly = useMemo(() => computeMonthlyData(transactions, 'year'), [transactions])
+  const summaryMonthly = useMemo(() => computeMonthlyData(accountTransactions, 'year'), [accountTransactions])
   const filledMonths = summaryMonthly.filter(m => m.expenses > 0 || m.income > 0)
   const bestMonth = filledMonths.length
     ? filledMonths.reduce((b, m) => m.balance > b.balance ? m : b)
@@ -138,13 +152,13 @@ export function Dashboard() {
 
   // ── Account-balance cards layout ────────────────────────────────────────────
   // Gesamtvermögen (the aggregate) is only meaningful with more than one
-  // connected account, so it's hidden for a single account. The expandable
-  // accounts list ("dropdown") then lives in the Kontostand card when a manual
-  // balance is shown, otherwise it falls back into the Gesamtvermögen card so
-  // the accounts stay reachable.
+  // connected account, so it's hidden for a single account. Once real accounts
+  // are connected, AccountViewSelector replaces the old manual-balance
+  // Kontostand card entirely — its own dropdown (Account.included, for
+  // Gesamtvermögen) stays separate from AccountViewSelector's selection
+  // (which account(s) the whole page displays).
   const hasMultipleAccounts = accounts.length > 1
-  const dropdownInKontostand = hasMultipleAccounts && manualBalance !== null
-  const dropdownInWealth     = hasMultipleAccounts && manualBalance === null
+  const dropdownInWealth = hasMultipleAccounts
 
   const accountsToggle = (
     <motion.button
@@ -222,8 +236,17 @@ export function Dashboard() {
         </GlassCard>
       )}
 
-      {/* ── Kontostand (manuell) ──────────────────────────────────────────── */}
-      {manualBalance !== null && (
+      {/* ── Konten-Auswahl (ersetzt "Kontostand" sobald Konten verbunden sind) ── */}
+      {accounts.length > 0 ? (
+        <>
+          <AccountViewSelector
+            accounts={accounts}
+            isAccountSelected={isAccountSelected}
+            toggleAccount={toggleAccount}
+          />
+          {accounts.some(a => a.iban === TRADE_REPUBLIC_IBAN) && isAccountSelected(TRADE_REPUBLIC_IBAN) && <DepotChart />}
+        </>
+      ) : manualBalance !== null && (
         <GlassCard id="card-manual-balance" glow="purple" className="mx-4">
           <div className="flex items-center gap-2 mb-1">
             <Landmark size={14} className="text-purple-400" />
@@ -231,18 +254,16 @@ export function Dashboard() {
             {balanceUpdatedAt && (
               <p className="ml-auto text-[10px] text-white/25">Stand: {balanceUpdatedAt}</p>
             )}
-            {dropdownInKontostand && accountsToggle}
           </div>
           <motion.p
             key={manualBalance}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className={`text-3xl font-bold ${dropdownInKontostand ? 'mb-3' : ''} ${manualBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+            className={`text-3xl font-bold ${manualBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
           >
             {formatEur(manualBalance, 2)}
           </motion.p>
-          {dropdownInKontostand && accountsList}
         </GlassCard>
       )}
 
@@ -303,7 +324,7 @@ export function Dashboard() {
           onClick={() => setCatBreakdownOpen(true)}
           className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-1 border-t border-white/6"
         >
-          {`Alle anzeigen (${new Set(transactions.map(t => t.categoryId)).size})`}
+          {`Alle anzeigen (${new Set(accountTransactions.map(t => t.categoryId)).size})`}
         </button>
       </GlassCard>
 

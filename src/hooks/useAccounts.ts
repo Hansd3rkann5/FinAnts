@@ -30,6 +30,17 @@ export function useAccounts() {
     })
   }, [])
 
+  const upsertAccount = useCallback((account: Omit<Account, 'included'>) => {
+    setAccountsState(prev => {
+      const existing = prev.find(p => p.iban === account.iban)
+      const updated = existing
+        ? prev.map(a => a.iban === account.iban ? { ...account, included: a.included } : a)
+        : [...prev, { ...account, included: true }]
+      saveAccounts(updated)
+      return updated
+    })
+  }, [])
+
   const toggleIncluded = useCallback((iban: string) => {
     setAccountsState(prev => {
       const updated = prev.map(a =>
@@ -44,5 +55,5 @@ export function useAccounts() {
     .filter(a => a.included)
     .reduce((sum, a) => sum + a.balance, 0)
 
-  return { accounts, setAccounts, toggleIncluded, totalWealth }
+  return { accounts, setAccounts, upsertAccount, toggleIncluded, totalWealth }
 }

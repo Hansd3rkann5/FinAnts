@@ -36,3 +36,9 @@ PayPal_*.html
 paypal*.csv
 mockup.csv
 /transactions/
+
+# pytr (Trade Republic) exports — personal financial data, never commit
+/account_transactions.csv
+/all_events.json
+/other_events.json
+/events_with_documents.json
