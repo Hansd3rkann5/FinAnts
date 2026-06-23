@@ -32,7 +32,7 @@ import { CategoryBreakdownModal } from '@/components/ui/CategoryBreakdownModal'
 import { MerchantBreakdownModal } from '@/components/ui/MerchantBreakdownModal'
 import { RecurringModal } from '@/components/ui/RecurringModal'
 import { AccountCard } from '@/components/ui/AccountCard'
-import { AccountViewSelector } from '@/components/ui/AccountViewSelector'
+
 import { DepotChart } from '@/components/charts/DepotChart'
 import { TRADE_REPUBLIC_IBAN } from '@/utils/tradeRepublicParser'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
@@ -73,7 +73,7 @@ export function Dashboard() {
   // ── Data ──────────────────────────────────────────────────────────────────
   const {
     transactions, recurringGroups, updateTransaction, excludedMerchants,
-    accounts, toggleIncluded, totalWealth, selectedAccountIbans, isAccountSelected, toggleAccount,
+    accounts, totalWealth, selectedAccountIbans, isAccountSelected, toggleAccount,
   } = useTransactionsCtx()
   const { baseBalance, savedAt: balanceSavedAt, updatedAt: balanceUpdatedAt } = useManualBalance()
   const { allMap } = useAllCategories()
@@ -157,8 +157,7 @@ export function Dashboard() {
   // Kontostand card entirely — its own dropdown (Account.included, for
   // Gesamtvermögen) stays separate from AccountViewSelector's selection
   // (which account(s) the whole page displays).
-  const hasMultipleAccounts = accounts.length > 1
-  const dropdownInWealth = hasMultipleAccounts
+  const hasAccounts = accounts.length > 0
 
   const accountsToggle = (
     <motion.button
@@ -167,7 +166,7 @@ export function Dashboard() {
       className="ml-auto text-white/30 hover:text-white/60 flex items-center gap-1 text-[10px]"
       whileTap={{ scale: 0.95 }}
     >
-      {accounts.length} Konten
+      {accounts.length} {accounts.length === 1 ? 'Konto' : 'Konten'}
       {showAccounts ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
     </motion.button>
   )
@@ -184,13 +183,13 @@ export function Dashboard() {
         >
           <div id="accounts-list" className="flex flex-col gap-2 pt-1">
             {accounts.map(a => (
-              <AccountCard key={a.iban} account={a} onToggle={toggleIncluded} showToggle />
+              <AccountCard
+                key={a.iban}
+                account={{ ...a, included: isAccountSelected(a.iban) }}
+                onToggle={toggleAccount}
+                showToggle
+              />
             ))}
-            {accounts.some(a => !a.included) && (
-              <p className="text-[10px] text-white/25 text-center pt-1">
-                Ausgeblendete Konten fließen nicht ins Gesamtvermögen ein
-              </p>
-            )}
           </div>
         </motion.div>
       )}
@@ -213,37 +212,28 @@ export function Dashboard() {
         <TimeFilterBar value={timeFilter} onChange={handleTimeFilter} id="dash" periods={periods} />
       </div>
 
-      {/* ── Gesamtvermögen (only meaningful with >1 account) ────────────────── */}
-      {hasMultipleAccounts && (
-        <GlassCard id="card-wealth" glow="purple" className="mx-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Landmark size={14} className="text-purple-400" />
-            <p className="text-xs text-white/40">Gesamtvermögen</p>
-            {dropdownInWealth && accountsToggle}
-          </div>
-
-          <motion.p
-            key={totalWealth}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className={`text-3xl font-bold ${dropdownInWealth ? 'mb-3' : ''} ${totalWealth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
-          >
-            {formatEur(totalWealth, 2)}
-          </motion.p>
-
-          {dropdownInWealth && accountsList}
-        </GlassCard>
-      )}
-
-      {/* ── Konten-Auswahl (ersetzt "Kontostand" sobald Konten verbunden sind) ── */}
-      {accounts.length > 0 ? (
+      {/* ── Gesamtvermögen ───────────────────────────────────────────────────── */}
+      {hasAccounts ? (
         <>
-          <AccountViewSelector
-            accounts={accounts}
-            isAccountSelected={isAccountSelected}
-            toggleAccount={toggleAccount}
-          />
+          <GlassCard id="card-wealth" glow="purple" className="mx-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Landmark size={14} className="text-purple-400" />
+              <p className="text-xs text-white/40">Gesamtvermögen</p>
+              {accountsToggle}
+            </div>
+
+            <motion.p
+              key={totalWealth}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className={`text-3xl font-bold mb-3 ${totalWealth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+            >
+              {formatEur(totalWealth, 2)}
+            </motion.p>
+
+            {accountsList}
+          </GlassCard>
           {accounts.some(a => a.iban === TRADE_REPUBLIC_IBAN) && isAccountSelected(TRADE_REPUBLIC_IBAN) && <DepotChart />}
         </>
       ) : manualBalance !== null && (
