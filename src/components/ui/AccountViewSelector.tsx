@@ -45,7 +45,7 @@ export function AccountViewSelector({ accounts, isAccountSelected, toggleAccount
   const label =
     selected.length === 0 ? 'Keine Konten ausgewählt'
     : selected.length === 1 ? (selected[0].description || TYPE_LABELS[selected[0].type])
-    : selected.length === accounts.length ? 'Alle Konten'
+    : selected.length === accounts.length ? 'Kontostand'
     : `${selected.length} Konten`
 
   return (
