@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import type { Transaction } from '@/types'
+import type { Transaction, Account } from '@/types'
 import { DEV_VERSION } from 'virtual:dev-version'
 import {
   Upload, Trash2, FileText, AlertCircle, CheckCircle, RefreshCw,
@@ -189,7 +189,7 @@ function SettingsGroup({
 export function Settings() {
   const {
     transactions, importTransactions, importLocalOnly, applyServerTransactions, clearAll, refreshAll,
-    setSplit, markNew, accounts, setAccounts, upsertAccount, toggleIncluded,
+    setSplit, markNew, accounts, upsertAccount, toggleIncluded,
   } = useTransactionsCtx()
   const { allList: allCategories } = useAllCategories()
   const { baseBalance: manualBalance, updatedAt: balanceUpdatedAt, save: saveBalance } = useManualBalance()
@@ -281,8 +281,12 @@ export function Settings() {
   const [ebBank,    setEbBank]    = useState('Commerzbank')
   const [ebCountry, setEbCountry] = useState('DE')
   const [ebDays,    setEbDays]    = useState(30)
+  const onEbAccounts = useCallback(
+    (incoming: Omit<Account, 'included'>[]) => { for (const a of incoming) upsertAccount(a) },
+    [upsertAccount],
+  )
   const { start: ebStart, status: ebStatus, message: ebMessage, lastSync: ebLastSync } =
-    useEnableBanking(applyServerTransactions, setAccounts, markNew)
+    useEnableBanking(applyServerTransactions, onEbAccounts, markNew)
 
   async function handleFile(file: File) {
     setImportStatus('parsing')
