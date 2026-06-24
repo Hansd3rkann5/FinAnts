@@ -51,7 +51,9 @@ export function AccountCard({ account, onToggle, showToggle = false }: Props) {
 
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-white/80 truncate">
-          {account.description || TYPE_LABELS[account.type]}
+          {(account.description && account.description !== account.owner)
+            ? account.description
+            : TYPE_LABELS[account.type]}
         </p>
         <p className="text-[10px] text-white/30 truncate">
           {/^[A-Z]{2}\d{2}/.test(account.iban)

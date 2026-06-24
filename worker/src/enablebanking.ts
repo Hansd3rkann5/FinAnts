@@ -259,7 +259,7 @@ export async function ebExchangeAndSync(
       blz:           isRealIban ? iban.slice(4, 12) : '',
       accountNumber: isRealIban ? iban.slice(12)    : iban,
       owner:         acct.owner_name ?? '',
-      description:   acct.name ?? 'Konto',
+      description:   (acct.name && acct.name !== acct.owner_name) ? acct.name : 'Girokonto',
       type:          'giro',
       currency:      acct.currency,
       balance:       closingBal ? parseFloat(closingBal.balance_amount.amount) : 0,

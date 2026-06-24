@@ -8,6 +8,10 @@ import { reportError } from './utils/notify'
 window.addEventListener('error', e => reportError('window', e.error ?? e.message))
 window.addEventListener('unhandledrejection', e => reportError('promise', e.reason))
 
+// One-time cleanup: remove stale account-view selection (stored UUIDs from EB
+// that no longer match real IBANs after the IBAN remap fix).
+localStorage.removeItem('finants_account_view')
+
 // Polyfill crypto.randomUUID for iOS < 15.4
 if (!('randomUUID' in crypto)) {
   (crypto as { randomUUID?: () => string }).randomUUID = function () {
