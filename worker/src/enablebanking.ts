@@ -180,8 +180,37 @@ export async function ebExchangeAndSync(
   }
 
   await Promise.all(accounts.map(async acct => {
-    const iban = acct.identification?.iban ?? acct.uid
-    console.log('[EB] fetching transactions for account:', iban)
+    console.log('[EB] account raw:', JSON.stringify(acct))
+
+    // Fetch full account details — the session response sometimes omits IBAN
+    // and balances for certain banks (e.g. Commerzbank via XS2A).
+    let detailIban = acct.identification?.iban
+    let balances = acct.balances ?? []
+
+    const detailRes = await ebFetch(`/accounts/${acct.uid}`, appId, privKey)
+    if (detailRes.ok) {
+      const detail = await detailRes.json() as EbAccountResource
+      console.log('[EB] account detail:', JSON.stringify(detail))
+      detailIban ??= detail.identification?.iban
+      if (detail.balances?.length) balances = detail.balances
+    } else {
+      console.warn('[EB] account detail fetch failed:', detailRes.status)
+    }
+
+    // Fetch balances separately if still missing
+    if (!balances.length) {
+      const balRes = await ebFetch(`/accounts/${acct.uid}/balances`, appId, privKey)
+      if (balRes.ok) {
+        const balData = await balRes.json() as { balances?: EbAccountResource['balances'] }
+        balances = balData.balances ?? []
+        console.log('[EB] balances fetched separately:', JSON.stringify(balances))
+      } else {
+        console.warn('[EB] balance fetch failed:', balRes.status)
+      }
+    }
+
+    const iban = detailIban ?? acct.uid
+    console.log('[EB] resolved iban:', iban)
 
     const txRes = await ebFetch(
       `/accounts/${acct.uid}/transactions?date_from=${dateFrom}&date_to=${dateTo}`,
@@ -222,12 +251,13 @@ export async function ebExchangeAndSync(
 
     console.log('[EB] account:', iban, '| total transactions:', allTxs.length)
 
-    const closingBal = acct.balances?.find(b => b.balance_type === 'closingBooked') ?? acct.balances?.[0]
+    const closingBal = balances.find(b => b.balance_type === 'closingBooked') ?? balances[0]
+    const isRealIban = /^[A-Z]{2}\d{2}/.test(iban)
 
     mappedAccounts.push({
       iban,
-      blz:           iban.slice(4, 12),
-      accountNumber: iban.slice(12),
+      blz:           isRealIban ? iban.slice(4, 12) : '',
+      accountNumber: isRealIban ? iban.slice(12)    : iban,
       owner:         acct.owner_name ?? '',
       description:   acct.name ?? 'Konto',
       type:          'giro',

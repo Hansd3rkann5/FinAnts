@@ -101,6 +101,15 @@ export function Dashboard() {
     return baseBalance + delta
   })()
 
+  // When bank sync returns 0 balance (EnableBanking didn't provide one yet),
+  // substitute the manually saved balance so the total doesn't show as zero.
+  const effectiveWealth = useMemo(() => {
+    if (manualBalance === null) return totalWealth
+    const giro = accounts.find(a => a.type === 'giro')
+    if (!giro || giro.balance !== 0) return totalWealth
+    return totalWealth - 0 + manualBalance
+  }, [totalWealth, accounts, manualBalance])
+
   // ── Per-chart filters ─────────────────────────────────────────────────────
   const pieChart = useChartFilter(timeFilter)
   const mbChart  = useChartFilter(timeFilter)
@@ -223,13 +232,13 @@ export function Dashboard() {
             </div>
 
             <motion.p
-              key={totalWealth}
+              key={effectiveWealth}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className={`text-3xl font-bold mb-3 ${totalWealth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+              className={`text-3xl font-bold mb-3 ${effectiveWealth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
             >
-              {formatEur(totalWealth, 2)}
+              {formatEur(effectiveWealth, 2)}
             </motion.p>
 
             {accountsList}

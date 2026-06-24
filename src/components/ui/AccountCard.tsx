@@ -54,7 +54,9 @@ export function AccountCard({ account, onToggle, showToggle = false }: Props) {
           {account.description || TYPE_LABELS[account.type]}
         </p>
         <p className="text-[10px] text-white/30 truncate">
-          {account.iban.replace(/(.{4})/g, '$1 ').trim()}
+          {/^[A-Z]{2}\d{2}/.test(account.iban)
+            ? account.iban.replace(/(.{4})/g, '$1 ').trim()
+            : account.accountNumber || account.iban}
         </p>
       </div>
 
