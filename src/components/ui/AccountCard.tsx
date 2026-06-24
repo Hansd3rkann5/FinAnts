@@ -80,7 +80,7 @@ export function AccountCard({ account, onToggle, showToggle = false }: Props) {
           aria-label={account.included ? 'Konto ausschließen' : 'Konto einschließen'}
         >
           <motion.div
-            animate={{ x: account.included ? 16 : 2 }}
+            animate={{ x: account.included ? 22 : 2 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
           />
