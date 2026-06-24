@@ -25,11 +25,13 @@ const H = 150
 const MARGIN_TOP = 8
 const X_AXIS_H = 20
 
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null
+  const pt = payload[0].payload
+  const dateStr = new Date(pt.date + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: '2-digit' })
   return (
     <div className="bg-[#12122a]/95 backdrop-blur border border-white/10 rounded-xl px-3 py-2 text-xs shadow-xl">
-      <p className="text-white/40 mb-1">{label}</p>
+      <p className="text-white/40 mb-1">{dateStr}</p>
       <p className="text-purple-300 font-medium">{fmtEur(payload[0].value, 2)}</p>
     </div>
   )
@@ -49,7 +51,8 @@ export function DepotChart() {
 
   const selectedStock = data?.perStock.find(s => s.isin === selectedIsin)
   const points = (selectedStock?.points ?? data?.cumulative ?? []).map(p => ({
-    label: p.date.slice(5).replace('-', '.'),
+    date: p.date,
+    label: new Date(p.date + 'T00:00:00').toLocaleDateString('de-DE', { month: 'short' }).replace('.', ''),
     value: p.value,
   }))
 
