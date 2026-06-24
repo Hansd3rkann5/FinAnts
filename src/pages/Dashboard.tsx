@@ -194,7 +194,12 @@ export function Dashboard() {
             {accounts.map(a => (
               <AccountCard
                 key={a.iban}
-                account={{ ...a, included: isAccountSelected(a.iban) }}
+                account={{
+                  ...a,
+                  included: isAccountSelected(a.iban),
+                  balance: a.type === 'giro' && a.balance === 0 && manualBalance !== null ? manualBalance : a.balance,
+                  balanceDate: a.type === 'giro' && a.balance === 0 && balanceSavedAt ? balanceSavedAt : a.balanceDate,
+                }}
                 onToggle={toggleAccount}
                 showToggle
               />

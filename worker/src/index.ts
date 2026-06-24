@@ -218,6 +218,32 @@ export default {
 
       try {
         const result = await ebExchangeAndSync(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, body.code, fromDate, toDate)
+
+        // EB sometimes returns a UUID as the account "IBAN" when the bank doesn't
+        // expose it via PSD2. Patch any UUID accounts by looking up the real
+        // account_iban from previously stored transactions (e.g. CSV imports).
+        if (env.DB) {
+          const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-/i
+          for (const acct of result.accounts as { iban: string; blz: string; accountNumber: string }[]) {
+            if (!uuidRe.test(acct.iban)) continue
+            const row = await env.DB
+              .prepare(`SELECT account_iban FROM transactions
+                        WHERE account_iban IS NOT NULL AND account_iban NOT LIKE '________-____-%'
+                        GROUP BY account_iban ORDER BY COUNT(*) DESC LIMIT 1`)
+              .first<{ account_iban: string }>()
+            if (!row?.account_iban) continue
+            const real = row.account_iban
+            // Patch transactions in the result that reference the UUID
+            for (const t of result.transactions) {
+              if ((t as { accountIban?: string }).accountIban === acct.iban)
+                (t as { accountIban?: string }).accountIban = real
+            }
+            acct.blz = real.slice(4, 12)
+            acct.accountNumber = real.slice(12)
+            acct.iban = real
+          }
+        }
+
         return jsonResponse(await buildSyncResponse(env, result, 'eb', fromDate, toDate), 200, cors)
       } catch (e) {
         return jsonResponse({ error: String(e) }, 502, cors)
