@@ -30,6 +30,15 @@ export function useAccounts() {
     })
   }, [])
 
+  const remapAccountIban = useCallback((oldIban: string, newIban: string) => {
+    setAccountsState(prev => {
+      if (!prev.some(a => a.iban === oldIban)) return prev
+      const updated = prev.map(a => a.iban === oldIban ? { ...a, iban: newIban, blz: /^[A-Z]{2}\d{2}/.test(newIban) ? newIban.slice(4, 12) : a.blz, accountNumber: /^[A-Z]{2}\d{2}/.test(newIban) ? newIban.slice(12) : a.accountNumber } : a)
+      saveAccounts(updated)
+      return updated
+    })
+  }, [])
+
   const upsertAccount = useCallback((account: Omit<Account, 'included'>) => {
     setAccountsState(prev => {
       const existing = prev.find(p => p.iban === account.iban)
@@ -55,5 +64,5 @@ export function useAccounts() {
     .filter(a => a.included)
     .reduce((sum, a) => sum + a.balance, 0)
 
-  return { accounts, setAccounts, upsertAccount, toggleIncluded, totalWealth }
+  return { accounts, setAccounts, upsertAccount, remapAccountIban, toggleIncluded, totalWealth }
 }

@@ -151,6 +151,25 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     excludedMerchants.applyCloudExcludedMerchants,
   )
 
+  // Reconcile any UUID account IBANs with real IBANs found in the loaded
+  // transactions (e.g. old CSV imports that predate the EB UUID issue).
+  useEffect(() => {
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-/i
+    const realIbanRe = /^[A-Z]{2}\d{2}/
+    for (const acct of accountsState.accounts) {
+      if (!uuidRe.test(acct.iban)) continue
+      const counts = new Map<string, number>()
+      for (const t of transactions.transactions) {
+        const iban = t.accountIban
+        if (!iban || uuidRe.test(iban) || !realIbanRe.test(iban)) continue
+        counts.set(iban, (counts.get(iban) ?? 0) + 1)
+      }
+      if (!counts.size) continue
+      const realIban = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
+      accountsState.remapAccountIban(acct.iban, realIban)
+    }
+  }, [transactions.transactions, accountsState.accounts]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Full cloud download: categories + patterns + splits (R2) then transactions (D1).
   const refreshAll = useCallback(async () => {
     await pullPatterns().catch(err => reportError('Sync fehlgeschlagen', err))
