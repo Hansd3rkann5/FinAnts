@@ -2,10 +2,8 @@ import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import type { TopMerchant } from '@/utils/chartCompute'
 import type { Category } from '@/types'
+import { formatEur } from '@/utils/format'
 
-function formatEur(v: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
-}
 
 interface Props {
   merchants: TopMerchant[]
@@ -37,7 +35,7 @@ export function TopMerchantsBar({ merchants, allMap }: Props) {
               />
             </div>
             <div className="text-right shrink-0 w-14">
-              <p className="text-xs font-medium text-white/80">{formatEur(m.total)}</p>
+              <p className="text-xs font-medium text-white/80">{formatEur(m.total, 0)}</p>
               {/* {m.count > 1 && <p className="text-[9px] text-white/25">{m.count}×</p>} */}
             </div>
           </div>

@@ -8,12 +8,10 @@ import type { SpendingPoint } from '@/utils/chartCompute'
 import { getFilterMode } from '@/utils/chartCompute'
 import type { TimeFilter } from '@/types'
 import { getNiceTicks, StickyYAxis } from './chartUtils'
+import { formatEur } from '@/utils/format'
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
-function fmtEur(v: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
-}
 
 function isIsoMonth(s: string) { return /^\d{4}-\d{2}$/.test(s) }
 function isoToMonth(s: string) { return MONTHS[parseInt(s.slice(5, 7), 10) - 1] ?? s }
@@ -47,8 +45,8 @@ function ChartTooltip({ active, payload, label, monthly }: any) {
   return (
     <div className="bg-[#12122a]/95 backdrop-blur border border-white/10 rounded-xl px-3 py-2 text-xs shadow-xl">
       <p className="text-white/40 mb-1">{displayLabel}</p>
-      {inc?.value > 0 && <p className="text-emerald-400">↑ {fmtEur(inc.value)}</p>}
-      {exp?.value > 0 && <p className="text-red-400">↓ {fmtEur(exp.value)}</p>}
+      {inc?.value > 0 && <p className="text-emerald-400">↑ {formatEur(inc.value, 0)}</p>}
+      {exp?.value > 0 && <p className="text-red-400">↓ {formatEur(exp.value, 0)}</p>}
     </div>
   )
 }

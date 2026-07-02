@@ -6,10 +6,8 @@ import {
 } from 'recharts'
 import type { MonthPoint } from '@/utils/chartCompute'
 import { getNiceTicks, fmtY, StickyYAxis } from './chartUtils'
+import { formatEur } from '@/utils/format'
 
-function fmtEur(v: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
-}
 
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
@@ -19,11 +17,11 @@ function ChartTooltip({ active, payload, label }: any) {
   return (
     <div className="bg-[#12122a]/95 backdrop-blur border border-white/10 rounded-xl px-3 py-2 text-xs shadow-xl">
       <p className="text-white/40 mb-1.5 font-medium">{label}</p>
-      {income   && <p className="text-emerald-400">↑ {fmtEur(income.value)}</p>}
-      {expenses && <p className="text-red-400">↓ {fmtEur(expenses.value)}</p>}
+      {income   && <p className="text-emerald-400">↑ {formatEur(income.value, 0)}</p>}
+      {expenses && <p className="text-red-400">↓ {formatEur(expenses.value, 0)}</p>}
       {balance  && (
         <p className={`mt-1 font-semibold ${balance.value >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-          = {balance.value >= 0 ? '+' : ''}{fmtEur(balance.value)}
+          = {balance.value >= 0 ? '+' : ''}{formatEur(balance.value, 0)}
         </p>
       )}
     </div>

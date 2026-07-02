@@ -3,14 +3,12 @@ import { useInView } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import type { CategorySummary } from '@/types'
 import { useAllCategories } from '@/hooks/useAllCategories'
+import { formatEur } from '@/utils/format'
 
 interface Props {
   categories: CategorySummary[]
 }
 
-function formatEur(v: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
-}
 
 
 export function CategoryPieChart({ categories }: Props) {
@@ -72,7 +70,7 @@ export function CategoryPieChart({ categories }: Props) {
             {data[activeIndex]?.name ?? ''}
           </span>
           <span className="text-xs text-white/50 mt-0.5">
-            {data[activeIndex] ? formatEur(data[activeIndex].total) : ''}
+            {data[activeIndex] ? formatEur(data[activeIndex].total, 0) : ''}
           </span>
           <span className="text-[10px] text-white/30 mt-0.5">
             {data[activeIndex] ? `${data[activeIndex].percentage.toFixed(0)}%` : ''}
@@ -98,7 +96,7 @@ export function CategoryPieChart({ categories }: Props) {
             <span className={`text-xs flex-1 truncate transition-colors duration-150 ${i === activeIndex ? 'text-white/90 font-medium' : 'text-white/60'}`}>
               {item.name}
             </span>
-            <span className="text-xs font-medium text-white/80">{formatEur(item.total)}</span>
+            <span className="text-xs font-medium text-white/80">{formatEur(item.total, 0)}</span>
             <span className="text-xs text-white/40 w-10 text-right">{item.percentage.toFixed(0)}%</span>
           </button>
         ))}

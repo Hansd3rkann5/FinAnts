@@ -3,6 +3,7 @@ import type { Account } from '@/types'
 import type { StoredTx } from '@/utils/transactionsApi'
 import type { WorkerConfig } from '@/utils/workerConfig'
 import { cfHeaders } from '@/utils/cfAuth'
+import { reportError } from '@/utils/notify'
 
 const EB_PENDING_KEY  = 'finants_eb_pending'
 const EB_LAST_SYNC_KEY = 'finants_eb_last_sync'
@@ -67,6 +68,7 @@ export function useEnableBanking(
       setStatus('success')
       setMessage(`${data.meta.added} neu · ${data.meta.count} gesamt · ${data.meta.accountCount} Konten`)
     } catch (e) {
+      reportError('EnableBanking-Sync fehlgeschlagen', e)
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Verbindungsfehler')
     }
@@ -119,6 +121,7 @@ export function useEnableBanking(
       setStatus('awaiting_auth')
       window.location.href = data.auth_url
     } catch (e) {
+      reportError('EnableBanking-Start fehlgeschlagen', e)
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Verbindungsfehler')
     }

@@ -7,10 +7,8 @@ import {
 import type { CategoryTrendPoint } from '@/utils/chartCompute'
 import type { Category } from '@/types'
 import { getNiceTicks, StickyYAxis } from './chartUtils'
+import { formatEur } from '@/utils/format'
 
-function fmtEur(v: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
-}
 
 function ChartTooltip({ active, payload, label, allMap }: any) {
   if (!active || !payload?.length) return null
@@ -21,7 +19,7 @@ function ChartTooltip({ active, payload, label, allMap }: any) {
       {sorted.map((p: any) => (
         <div key={p.dataKey} className="flex justify-between gap-4">
           <span style={{ color: p.color }}>{allMap[p.dataKey]?.label ?? p.dataKey}</span>
-          <span className="text-white/70 font-medium">{fmtEur(p.value)}</span>
+          <span className="text-white/70 font-medium">{formatEur(p.value, 0)}</span>
         </div>
       ))}
     </div>

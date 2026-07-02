@@ -4,10 +4,8 @@ import { X } from 'lucide-react'
 import type { Transaction } from '@/types'
 import { TransactionCard } from './TransactionCard'
 import { CATEGORIES } from '@/data/categories'
+import { formatEur } from '@/utils/format'
 
-function formatEur(v: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v)
-}
 
 interface Props {
   parent: Transaction | null

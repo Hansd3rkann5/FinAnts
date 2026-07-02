@@ -36,10 +36,8 @@ import { AccountCard } from '@/components/ui/AccountCard'
 import { DepotChart } from '@/components/charts/DepotChart'
 import { TRADE_REPUBLIC_IBAN } from '@/utils/tradeRepublicParser'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
+import { formatEur } from '@/utils/format'
 
-function formatEur(v: number, maximumFractionDigits = 0) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
-}
 
 function StatPill({ label, value, sub, color = 'text-white/80' }: {
   label: string; value: string; sub?: string; color?: string
@@ -160,12 +158,8 @@ export function Dashboard() {
     : null
 
   // ── Account-balance cards layout ────────────────────────────────────────────
-  // Gesamtvermögen (the aggregate) is only meaningful with more than one
-  // connected account, so it's hidden for a single account. Once real accounts
-  // are connected, AccountViewSelector replaces the old manual-balance
-  // Kontostand card entirely — its own dropdown (Account.included, for
-  // Gesamtvermögen) stays separate from AccountViewSelector's selection
-  // (which account(s) the whole page displays).
+  // Once real accounts are connected, the Gesamtvermögen card (with its
+  // account toggle list) replaces the manual-balance Kontostand card.
   const hasAccounts = accounts.length > 0
 
   const accountsToggle = (
@@ -279,7 +273,7 @@ export function Dashboard() {
           </div>
           <div>
             <p className="text-[10px] text-white/40">Einnahmen</p>
-            <p className="text-sm font-semibold text-emerald-400">{formatEur(summary.totalIncome)}</p>
+            <p className="text-sm font-semibold text-emerald-400">{formatEur(summary.totalIncome, 0)}</p>
           </div>
         </GlassCard>
         <GlassCard id="card-expense-stat" padding="sm" className="flex items-center gap-3">
@@ -288,7 +282,7 @@ export function Dashboard() {
           </div>
           <div>
             <p className="text-[10px] text-white/40">Ausgaben</p>
-            <p className="text-sm font-semibold text-white/80">{formatEur(summary.totalExpenses)}</p>
+            <p className="text-sm font-semibold text-white/80">{formatEur(summary.totalExpenses, 0)}</p>
           </div>
         </GlassCard>
       </div>
@@ -370,7 +364,7 @@ export function Dashboard() {
               <div className="flex-1 px-3 py-1">
                 <StatPill
                   label="Ø Monatsausgaben"
-                  value={formatEur(analytics.avgMonthlyExpenses)}
+                  value={formatEur(analytics.avgMonthlyExpenses, 0)}
                   color="text-white/80"
                 />
               </div>
@@ -391,7 +385,7 @@ export function Dashboard() {
                   <StatPill
                     label="Bester Monat"
                     value={bestMonth.month}
-                    sub={`+${formatEur(bestMonth.balance)}`}
+                    sub={`+${formatEur(bestMonth.balance, 0)}`}
                     color="text-emerald-400"
                   />
                 </div>
@@ -481,7 +475,7 @@ export function Dashboard() {
                   }</p>
                 </div>
                 <p className={`text-sm font-semibold ${g.approximateAmount < 0 ? 'text-white/70' : 'text-emerald-400'}`}>
-                  {g.approximateAmount < 0 ? '' : '+'}{formatEur(g.approximateAmount)}
+                  {g.approximateAmount < 0 ? '' : '+'}{formatEur(g.approximateAmount, 0)}
                 </p>
               </div>
             ))}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useCallback } from 'react'
+import { createContext, useContext, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useMerchantProfiles } from '@/hooks/useMerchantProfiles'
 import { useCustomCategories } from '@/hooks/useCustomCategories'
@@ -176,11 +176,15 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     await transactions.refresh()
   }, [pullPatterns, transactions])
 
+  // Memoized so consumers only re-render when one of the hook results
+  // actually changed, not on every provider render.
+  const value = useMemo(() => ({
+    ...transactions, ...profiles, ...categories, ...splits, ...excludedMerchants, ...newMarkers,
+    ...accountsState, ...accountView, refreshAll,
+  }), [transactions, profiles, categories, splits, excludedMerchants, newMarkers, accountsState, accountView, refreshAll])
+
   return (
-    <Ctx.Provider value={{
-      ...transactions, ...profiles, ...categories, ...splits, ...excludedMerchants, ...newMarkers,
-      ...accountsState, ...accountView, refreshAll,
-    }}>
+    <Ctx.Provider value={value}>
       {children}
     </Ctx.Provider>
   )

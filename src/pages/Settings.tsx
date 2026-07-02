@@ -26,15 +26,13 @@ import {
   isLockEnabled, hasBiometric, webauthnSupported, enableLock, disableLock,
   lockTimeoutMinutes, setLockTimeoutMinutes,
 } from '@/utils/appLock'
+import { formatEur } from '@/utils/format'
 
 const WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
 // Settlement-row date vs the Giro booking date can differ by a few days.
 const CC_DATE_TOL_DAYS = 6
 
-function formatEur(v: number, maximumFractionDigits = 2) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
-}
 
 type ImportStatus = 'idle' | 'parsing' | 'success' | 'error'
 
@@ -461,10 +459,10 @@ export function Settings() {
     if (file) handleCcFile(file)
   }
 
-  // Creates/updates the depot's entry in the accounts list (and therefore the
-  // AccountViewSelector toggle list) with the *live* portfolio value the
-  // worker just fetched (cash + current market value of holdings) — never
-  // derived from transaction history, which would just be net cash flow.
+  // Creates/updates the depot's entry in the accounts list with the *live*
+  // portfolio value the worker just fetched (cash + current market value of
+  // holdings) — never derived from transaction history, which would just be
+  // net cash flow.
   function handleTrPortfolioValue(value: number) {
     upsertAccount({
       iban: TRADE_REPUBLIC_IBAN, blz: '', accountNumber: '', owner: '',

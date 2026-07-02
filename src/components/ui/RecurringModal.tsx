@@ -9,6 +9,7 @@ import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { MerchantLogo } from '@/components/transactions/MerchantLogo'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import type { Transaction } from '@/types'
+import { formatEur } from '@/utils/format'
 
 const FREQ_LABEL: Record<string, string> = {
   weekly: 'Wöchentlich',
@@ -17,9 +18,6 @@ const FREQ_LABEL: Record<string, string> = {
   yearly: 'Jährlich',
 }
 
-function formatEur(v: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(v)
-}
 
 interface Props {
   open: boolean

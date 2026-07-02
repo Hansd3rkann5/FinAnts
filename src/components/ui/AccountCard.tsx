@@ -1,13 +1,6 @@
 import { motion } from 'framer-motion'
 import type { Account } from '@/types'
-
-const TYPE_LABELS: Record<Account['type'], string> = {
-  giro: 'Girokonto',
-  savings: 'Sparkonto',
-  depot: 'Depot',
-  loan: 'Kredit',
-  other: 'Konto',
-}
+import { formatEur, formatDate, ACCOUNT_TYPE_LABELS } from '@/utils/format'
 
 const TYPE_ICON: Record<Account['type'], string> = {
   giro: '💳',
@@ -21,14 +14,6 @@ interface Props {
   account: Account
   onToggle?: (iban: string) => void
   showToggle?: boolean
-}
-
-function formatEur(v: number, currency = 'EUR') {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency, maximumFractionDigits: 2 }).format(v)
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
 export function AccountCard({ account, onToggle, showToggle = false }: Props) {
@@ -53,7 +38,7 @@ export function AccountCard({ account, onToggle, showToggle = false }: Props) {
         <p className="text-xs font-medium text-white/80 truncate">
           {(account.description && account.description !== account.owner)
             ? account.description
-            : TYPE_LABELS[account.type]}
+            : ACCOUNT_TYPE_LABELS[account.type]}
         </p>
         <p className="text-[10px] text-white/30 truncate">
           {/^[A-Z]{2}\d{2}/.test(account.iban)
@@ -64,7 +49,7 @@ export function AccountCard({ account, onToggle, showToggle = false }: Props) {
 
       <div className="text-right shrink-0">
         <p className={`text-sm font-semibold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-          {isPositive ? '' : ''}{formatEur(account.balance, account.currency)}
+          {formatEur(account.balance, 2, account.currency)}
         </p>
         <p className="text-[10px] text-white/25">Stand {formatDate(account.balanceDate)}</p>
       </div>

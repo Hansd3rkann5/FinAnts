@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { fetchDepotHistory, type DepotHistoryResult } from '@/utils/depotHistory'
+import { reportError } from '@/utils/notify'
 
 export function useDepotHistory(days: number) {
   const [data, setData] = useState<DepotHistoryResult | null>(null)
@@ -12,6 +13,7 @@ export function useDepotHistory(days: number) {
     try {
       setData(await fetchDepotHistory(days))
     } catch (e) {
+      reportError('Depot-Verlauf laden fehlgeschlagen', e)
       setError(e instanceof Error ? e.message : 'Fehler beim Laden')
     } finally {
       setLoading(false)

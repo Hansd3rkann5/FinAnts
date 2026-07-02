@@ -9,10 +9,8 @@ import { useModalRegistration } from '@/hooks/useModalRegistration'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useAllCategories } from '@/hooks/useAllCategories'
 import type { Transaction, TimeFilter } from '@/types'
+import { formatEur } from '@/utils/format'
 
-function formatEur(v: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(v)
-}
 
 interface Props {
   open: boolean

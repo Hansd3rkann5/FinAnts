@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import type { WorkerConfig } from '@/utils/workerConfig'
 import { cfHeaders } from '@/utils/cfAuth'
 import type { StoredTx } from '@/utils/transactionsApi'
+import { reportError } from '@/utils/notify'
 
 export interface TrLoginSession {
   deviceId: string
@@ -48,6 +49,7 @@ export function useTradeRepublic(
       setStatus('success')
       setMessage(`${data.meta?.added ?? 0} neu · ${data.meta?.total ?? 0} gesamt`)
     } catch (e) {
+      reportError('Trade-Republic-Sync fehlgeschlagen', e)
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Verbindungsfehler')
     }
@@ -76,7 +78,11 @@ export function useTradeRepublic(
 
       const deadline = Date.now() + POLL_TIMEOUT_MS
       const poll = async () => {
-        if (Date.now() > deadline) { setStatus('error'); setMessage('Zeitüberschreitung — Push nicht bestätigt.'); return }
+        if (Date.now() > deadline) {
+          reportError('Trade-Republic-Login', 'Zeitüberschreitung — Push nicht bestätigt')
+          setStatus('error'); setMessage('Zeitüberschreitung — Push nicht bestätigt.')
+          return
+        }
         try {
           const pollRes = await fetch(`${cfg.workerUrl.replace(/\/$/, '')}/tr/login/poll`, {
             method: 'POST',
@@ -98,12 +104,14 @@ export function useTradeRepublic(
           }
           pollTimer.current = window.setTimeout(poll, POLL_INTERVAL_MS)
         } catch (e) {
+          reportError('Trade-Republic-Login-Poll fehlgeschlagen', e)
           setStatus('error')
           setMessage(e instanceof Error ? e.message : 'Verbindungsfehler')
         }
       }
       pollTimer.current = window.setTimeout(poll, POLL_INTERVAL_MS)
     } catch (e) {
+      reportError('Trade-Republic-Login fehlgeschlagen', e)
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Verbindungsfehler')
     }

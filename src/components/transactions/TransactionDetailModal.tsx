@@ -17,10 +17,8 @@ import { getApiKey } from '@/utils/cfAuth'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { resolveProfile } from '@/hooks/useMerchantProfiles'
 import { reportError } from '@/utils/notify'
+import { formatEur } from '@/utils/format'
 
-function formatEur(v: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(v)
-}
 
 // 17 presets = 2 rows of 9, last slot is the + button
 const EMOJI_PRESETS = [

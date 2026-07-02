@@ -8,10 +8,8 @@ import { LineChart as LineChartIcon } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { useDepotHistory } from '@/hooks/useDepotHistory'
 import { getNiceTicks, StickyYAxis } from './chartUtils'
+import { formatEur } from '@/utils/format'
 
-function fmtEur(v: number, maximumFractionDigits = 0) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits }).format(v)
-}
 
 const RANGE_OPTIONS = [
   { label: '1M', days: 30 },
@@ -32,7 +30,7 @@ function ChartTooltip({ active, payload }: any) {
   return (
     <div className="bg-[#12122a]/95 backdrop-blur border border-white/10 rounded-xl px-3 py-2 text-xs shadow-xl">
       <p className="text-white/40 mb-1">{dateStr}</p>
-      <p className="text-purple-300 font-medium">{fmtEur(payload[0].value, 2)}</p>
+      <p className="text-purple-300 font-medium">{formatEur(payload[0].value, 2)}</p>
     </div>
   )
 }
