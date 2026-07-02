@@ -86,6 +86,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
           className="relative flex items-center justify-center gap-3 h-8"
           animate={phase === 'failure' ? { x: [-8, 8, -6, 6, 0] } : { x: 0 }}
           transition={{ duration: 0.4 }}
+          style={{ willChange: 'transform' }}
         >
           {Array.from({ length: len }).map((_, i) => (
             <motion.span
@@ -100,6 +101,10 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
               style={{
                 borderColor: 'rgba(255,255,255,0.3)',
                 backgroundColor: i < pin.length ? 'rgba(167,139,250,0.9)' : 'transparent',
+                // Own compositing layer — without this, WebKit leaves stale
+                // pixel trails when transforming inside the backdrop-blurred
+                // lock overlay.
+                willChange: 'transform, opacity',
               }}
             />
           ))}
@@ -117,6 +122,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
                 className="absolute w-8 h-8 rounded-full flex items-center justify-center"
                 style={{
                   backgroundColor: phase === 'success' ? 'rgba(52,211,153,0.9)' : 'rgba(248,113,113,0.9)',
+                  willChange: 'transform, opacity',
                 }}
               >
                 {phase === 'success'
