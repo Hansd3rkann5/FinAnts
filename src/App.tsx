@@ -14,7 +14,15 @@ export default function App() {
   // switch-away-and-back within that window doesn't re-prompt. The LockScreen
   // is an opaque overlay so the app stays mounted underneath — no reload/
   // re-fetch on every return.
-  const [locked, setLocked] = useState(isLockEnabled)
+  const [locked, setLocked] = useState(() => {
+    if (!isLockEnabled()) return false
+    // Skip the lock when returning from an EnableBanking OAuth redirect —
+    // the user just authenticated with their bank, which is equivalent to
+    // unlocking the app.
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('code') && localStorage.getItem('finants_eb_pending')) return false
+    return true
+  })
 
   useEffect(() => {
     let hiddenAt: number | null = null
