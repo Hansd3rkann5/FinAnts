@@ -16,6 +16,7 @@ import { resolveWorkerUrl } from '@/utils/workerConfig'
 import { getApiKey } from '@/utils/cfAuth'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { resolveProfile } from '@/hooks/useMerchantProfiles'
+import { extractPaypalMerchant } from '@/utils/transactionsApi'
 import { reportError } from '@/utils/notify'
 import { formatEur } from '@/utils/format'
 
@@ -168,7 +169,12 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
     setLabel(p?.label ?? tx.customLabel ?? tx.counterparty ?? '')
     setCategory(tx.categoryId)
     setIcon(p?.customIcon ?? tx.customIcon)
-    setMatchStrings(p?.matchStrings ?? [tx.counterparty ?? ''].filter(Boolean))
+    // For PayPal rows the raw counterparty is the same boilerplate on every
+    // payment ("PayPal Europe S.a.r.l. …") — seeding the pattern with it made
+    // a rename of ONE PayPal payment relabel ALL of them. Use the extracted
+    // real merchant instead.
+    const defaultMatch = extractPaypalMerchant(tx.counterparty, tx.description) ?? tx.counterparty ?? ''
+    setMatchStrings(p?.matchStrings ?? [defaultMatch].filter(Boolean))
     setMatchMode(p?.matchMode ?? 'exact')
     setExistingProfileId(p?.id ?? null)
     setEditing(true)
