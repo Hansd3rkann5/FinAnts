@@ -1,12 +1,18 @@
 import type { Transaction } from '@/types'
 
-// Extracts the real statement closing date from a Giro "Kreditkarte" booking's
-// label, e.g. "Karte Nr. 523224xxxxxx2972 ... Abrechnung vom 28.05.2026
+// Extracts the real statement closing date from a Giro "Kreditkarte" booking,
+// e.g. "Karte Nr. 523224xxxxxx2972 ... Abrechnung vom 28.05.2026
 // Card-ID: ...". This is the bank's own record of the period boundary —
 // more reliable than inferring it from a settlement row in a Mastercard CSV,
 // which might not even be available yet (see computeCreditCardBucket).
-export function extractAbrechnungDate(label: string | undefined): Date | null {
-  const m = (label ?? '').match(/Abrechnung vom (\d{2})\.(\d{2})\.(\d{4})/)
+// Depending on the import path the text sits in a different field: customLabel
+// (manually labeled), description (EB/PSD2 remittance info) or reference
+// (CSV Verwendungszweck) — so check all of them.
+export function extractAbrechnungDate(
+  t: Pick<Transaction, 'customLabel' | 'description' | 'reference'>,
+): Date | null {
+  const haystack = `${t.customLabel ?? ''} ${t.description ?? ''} ${t.reference ?? ''}`
+  const m = haystack.match(/Abrechnung vom (\d{2})\.(\d{2})\.(\d{4})/i)
   if (!m) return null
   return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]))
 }
@@ -29,7 +35,7 @@ export function computeCreditCardBucket(
   allTransactions: Transaction[],
   kreditkarteCategoryId: string,
 ): CreditCardBucket | null {
-  const closing = extractAbrechnungDate(giroBooking.customLabel)
+  const closing = extractAbrechnungDate(giroBooking)
   if (!closing) return null
 
   // Previous period's closing date: the latest *other* Kreditkarte booking's
@@ -37,7 +43,7 @@ export function computeCreditCardBucket(
   // days, same as the initial-import edge case in Settings.tsx.
   const earlierClosings = allTransactions
     .filter(t => t.id !== giroBooking.id && t.categoryId === kreditkarteCategoryId)
-    .map(t => extractAbrechnungDate(t.customLabel))
+    .map(t => extractAbrechnungDate(t))
     .filter((d): d is Date => !!d && d < closing)
   const periodStart = earlierClosings.length
     ? new Date(Math.max(...earlierClosings.map(d => d.getTime())))
