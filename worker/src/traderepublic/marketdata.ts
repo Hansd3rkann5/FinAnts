@@ -12,12 +12,26 @@ export interface ResolvedInstrument {
   name: string
 }
 
-// Module-level cache: only lives as long as this Worker isolate, but still
-// saves a lookup when the same ISIN appears across multiple trades in one request.
+// Two cache layers: a module-level Map for repeat lookups within one isolate,
+// and the D1 `instruments` table as the permanent store (resolutions basically
+// never change), so Yahoo's search endpoint is hit at most once per ISIN ever.
 const isinCache = new Map<string, ResolvedInstrument | null>()
 
-export async function resolveInstrument(isin: string): Promise<ResolvedInstrument | null> {
+export async function resolveInstrument(isin: string, db?: D1Database): Promise<ResolvedInstrument | null> {
   if (isinCache.has(isin)) return isinCache.get(isin) ?? null
+
+  if (db) {
+    const row = await db
+      .prepare('SELECT symbol, name FROM instruments WHERE isin = ?')
+      .bind(isin)
+      .first<{ symbol: string; name: string }>()
+      .catch(() => null)
+    if (row) {
+      isinCache.set(isin, row)
+      return row
+    }
+  }
+
   const res = await fetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(isin)}`, {
     headers: { 'user-agent': UA },
   })
@@ -26,6 +40,14 @@ export async function resolveInstrument(isin: string): Promise<ResolvedInstrumen
   const quote = data.quotes?.[0]
   const resolved = quote?.symbol ? { symbol: quote.symbol, name: quote.shortname ?? quote.longname ?? quote.symbol } : null
   isinCache.set(isin, resolved)
+
+  if (resolved && db) {
+    await db
+      .prepare('INSERT OR REPLACE INTO instruments (isin, symbol, name, resolved_at) VALUES (?, ?, ?, ?)')
+      .bind(isin, resolved.symbol, resolved.name, new Date().toISOString())
+      .run()
+      .catch(() => { /* cache write is best-effort */ })
+  }
   return resolved
 }
 
@@ -55,7 +77,17 @@ export function rangeForDays(days: number): string {
   return RANGE_PRESETS.find(p => days <= p.days)?.range ?? 'max'
 }
 
+// 1 h edge cache per ticker+range — the chart uses daily closes, so anything
+// fresher than an hour is indistinguishable, and repeated dashboard loads
+// stop hammering Yahoo. Cache API keys must be plausible request URLs on our
+// own zone; the actual Yahoo URL goes in the fetch only.
 export async function fetchHistoricalPrices(ticker: string, range: string): Promise<PricePoint[]> {
+  const cache = (globalThis as { caches?: CacheStorage & { default?: Cache } }).caches?.default
+  const cacheKey = new Request(`https://finants-cache.internal/yahoo/${encodeURIComponent(ticker)}/${range}`)
+
+  const cached = await cache?.match(cacheKey)
+  if (cached) return cached.json() as Promise<PricePoint[]>
+
   const res = await fetch(
     `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=1d`,
     { headers: { 'user-agent': UA } },
@@ -71,6 +103,11 @@ export async function fetchHistoricalPrices(ticker: string, range: string): Prom
     if (close === null || close === undefined) continue
     points.push({ date: new Date(result.timestamp[i] * 1000).toISOString().slice(0, 10), close })
   }
+
+  await cache?.put(cacheKey, new Response(JSON.stringify(points), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+  })).catch(() => { /* cache write is best-effort */ })
+
   return points
 }
 

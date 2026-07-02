@@ -304,7 +304,7 @@ export default {
       try {
         const [events, portfolioValue] = await Promise.all([
           fetchTradeRepublicTransactions(body.session.cookies),
-          fetchTradeRepublicPortfolioValue(body.session).catch(e => {
+          fetchTradeRepublicPortfolioValue(body.session, env.DB).catch(e => {
             // Don't fail the whole sync if the valuation step breaks —
             // transactions are still worth importing either way.
             console.error('TR portfolio valuation failed:', e)
@@ -339,7 +339,7 @@ export default {
       const days = Math.max(1, Number(url.searchParams.get('days')) || 180)
       try {
         const trades = await getTradeRows(env.DB)
-        const history = await computeDepotHistory(trades, days)
+        const history = await computeDepotHistory(trades, days, env.DB)
         return jsonResponse(history, 200, cors)
       } catch (e) {
         return jsonResponse({ error: String(e) }, 502, cors)

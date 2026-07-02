@@ -22,7 +22,7 @@ export interface DepotHistoryResult {
   perStock: { isin: string; name: string; points: DepotHistoryPoint[] }[]
 }
 
-export async function computeDepotHistory(trades: TradeRow[], days: number): Promise<DepotHistoryResult> {
+export async function computeDepotHistory(trades: TradeRow[], days: number, db?: D1Database): Promise<DepotHistoryResult> {
   const byIsin = new Map<string, TradeRow[]>()
   for (const t of trades) {
     const arr = byIsin.get(t.isin) ?? []
@@ -36,7 +36,7 @@ export async function computeDepotHistory(trades: TradeRow[], days: number): Pro
   const cumulativeByDate = new Map<string, number>()
 
   for (const [isin, isinTrades] of byIsin) {
-    const instrument = await resolveInstrument(isin)
+    const instrument = await resolveInstrument(isin, db)
     if (!instrument) continue
     const prices = await fetchHistoricalPrices(instrument.symbol, range)
     if (prices.length === 0) continue

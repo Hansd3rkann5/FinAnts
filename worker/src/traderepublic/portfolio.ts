@@ -55,7 +55,7 @@ function flattenPositions(res: CompactPortfolioByType): { isin: string; netSize:
   return out
 }
 
-export async function fetchTradeRepublicPortfolioValue(session: TrSession): Promise<number> {
+export async function fetchTradeRepublicPortfolioValue(session: TrSession, db?: D1Database): Promise<number> {
   const secAccNo = await fetchSecAccNo(session)
   const socket = await connectTrWebSocket(session.cookies)
   try {
@@ -68,7 +68,7 @@ export async function fetchTradeRepublicPortfolioValue(session: TrSession): Prom
     const positions = flattenPositions(portfolioRes)
 
     const values = await Promise.all(positions.map(async pos => {
-      const instrument = await resolveInstrument(pos.isin)
+      const instrument = await resolveInstrument(pos.isin, db)
       if (!instrument) return 0
       const price = await fetchCurrentPrice(instrument.symbol)
       if (price === null) return 0
