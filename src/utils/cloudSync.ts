@@ -4,7 +4,7 @@
 // without a circular dependency.
 import { cfHeaders } from './cfAuth'
 import { loadWorkerConfig } from '@/utils/workerConfig'
-import type { Category, MerchantProfile } from '@/types'
+import type { Category, MerchantProfile, Account } from '@/types'
 
 const DEFAULT_WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
@@ -21,6 +21,9 @@ export interface CloudState {
   txSplits?: Record<string, { categoryId: string; amount: number }[]>
   // Merchant names excluded from the Top-Händler chart/breakdown.
   excludedMerchants?: string[]
+  // Connected bank/depot accounts incl. balances — synced so phone and
+  // desktop stop diverging (they only ever lived in localStorage before).
+  accounts?: Account[]
   // Retired: per-tx edits live in D1. Optional only so older backups still parse.
   txOverrides?: Record<string, { categoryId: string; customLabel?: string; customIcon?: string }>
 }

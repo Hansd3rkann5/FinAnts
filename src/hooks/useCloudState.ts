@@ -19,11 +19,16 @@ export function useCloudSync() {
     setStatus('pushing')
     setMessage('')
     try {
+      // PUT replaces the whole blob — include every synced field, otherwise a
+      // manual push silently drops whatever it omits (splits, accounts, …).
       const state: CloudState = {
         version: 1,
         updatedAt: new Date().toISOString(),
         customCategories: ctx.customCategories,
         merchantProfiles: ctx.merchantProfiles,
+        txSplits: ctx.txSplits,
+        excludedMerchants: ctx.excludedMerchants,
+        accounts: ctx.accounts,
       }
       await pushCloudState(state)
       const time = new Date().toLocaleString('de-DE')
@@ -45,6 +50,9 @@ export function useCloudSync() {
       if (!state) throw new Error('Kein Backup vorhanden')
       ctx.applyCloudCategories(state.customCategories ?? [])
       ctx.applyCloudProfiles(state.merchantProfiles ?? [])
+      ctx.applyCloudSplits(state.txSplits ?? {})
+      ctx.applyCloudExcludedMerchants(state.excludedMerchants ?? [])
+      ctx.applyCloudAccounts(state.accounts)
       const time = new Date().toLocaleString('de-DE')
       localStorage.setItem(LAST_CLOUD_SYNC_KEY, time)
       setLastSync(time)

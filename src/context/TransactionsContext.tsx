@@ -34,10 +34,12 @@ function useAutoSyncPatterns(
   merchantProfiles: ReturnType<typeof useMerchantProfiles>['merchantProfiles'],
   txSplits: ReturnType<typeof useTxSplits>['txSplits'],
   excludedMerchants: ReturnType<typeof useExcludedMerchants>['excludedMerchants'],
+  accounts: ReturnType<typeof useAccounts>['accounts'],
   applyCloudCategories: ReturnType<typeof useCustomCategories>['applyCloudCategories'],
   applyCloudProfiles: ReturnType<typeof useMerchantProfiles>['applyCloudProfiles'],
   applyCloudSplits: ReturnType<typeof useTxSplits>['applyCloudSplits'],
   applyCloudExcludedMerchants: ReturnType<typeof useExcludedMerchants>['applyCloudExcludedMerchants'],
+  applyCloudAccounts: ReturnType<typeof useAccounts>['applyCloudAccounts'],
 ) {
   const hydrated = useRef(false)
   const lastSyncedJson = useRef<string | null>(null)
@@ -49,13 +51,16 @@ function useAutoSyncPatterns(
     applyCloudProfiles(state.merchantProfiles ?? [])
     applyCloudSplits(state.txSplits ?? {})
     applyCloudExcludedMerchants(state.excludedMerchants ?? [])
+    // undefined = blob predates account sync → keep local, next push migrates it
+    applyCloudAccounts(state.accounts)
     lastSyncedJson.current = JSON.stringify({
       customCategories: state.customCategories ?? [],
       merchantProfiles: state.merchantProfiles ?? [],
       txSplits: state.txSplits ?? {},
       excludedMerchants: state.excludedMerchants ?? [],
+      accounts: state.accounts ?? [],
     })
-  }, [applyCloudCategories, applyCloudProfiles, applyCloudSplits, applyCloudExcludedMerchants])
+  }, [applyCloudCategories, applyCloudProfiles, applyCloudSplits, applyCloudExcludedMerchants, applyCloudAccounts])
 
   // Pull once on mount (best-effort — may 401 before the API key is set).
   useEffect(() => {
@@ -69,15 +74,15 @@ function useAutoSyncPatterns(
   // Debounced push on change (only after the initial pull, and only if changed).
   useEffect(() => {
     if (!hydrated.current) return
-    const snapshot = JSON.stringify({ customCategories, merchantProfiles, txSplits, excludedMerchants })
+    const snapshot = JSON.stringify({ customCategories, merchantProfiles, txSplits, excludedMerchants, accounts })
     if (snapshot === lastSyncedJson.current) return
     const t = setTimeout(() => {
-      pushCloudState({ version: 1, updatedAt: new Date().toISOString(), customCategories, merchantProfiles, txSplits, excludedMerchants })
+      pushCloudState({ version: 1, updatedAt: new Date().toISOString(), customCategories, merchantProfiles, txSplits, excludedMerchants, accounts })
         .then(() => { lastSyncedJson.current = snapshot })
         .catch(err => reportError('Sync fehlgeschlagen', err))
     }, 1200)
     return () => clearTimeout(t)
-  }, [customCategories, merchantProfiles, txSplits, excludedMerchants])
+  }, [customCategories, merchantProfiles, txSplits, excludedMerchants, accounts])
 
   return { pull }
 }
@@ -145,10 +150,12 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     profiles.merchantProfiles,
     splits.txSplits,
     excludedMerchants.excludedMerchants,
+    accountsState.accounts,
     categories.applyCloudCategories,
     profiles.applyCloudProfiles,
     splits.applyCloudSplits,
     excludedMerchants.applyCloudExcludedMerchants,
+    accountsState.applyCloudAccounts,
   )
 
   // Reconcile any UUID account IBANs with real IBANs found in the loaded

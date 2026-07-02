@@ -42,6 +42,18 @@ export function useAccounts() {
     })
   }, [])
 
+  // Cloud pull: replace local state with the synced list. `undefined` means
+  // the blob predates account sync — keep local (never wipe on old backups).
+  const applyCloudAccounts = useCallback((incoming: Account[] | undefined) => {
+    if (!incoming) return
+    setAccountsState(prev => {
+      const updated = dedupe(incoming)
+      if (JSON.stringify(updated) === JSON.stringify(prev)) return prev
+      saveAccounts(updated)
+      return updated
+    })
+  }, [])
+
   const remapAccountIban = useCallback((oldIban: string, newIban: string) => {
     setAccountsState(prev => {
       if (!prev.some(a => a.iban === oldIban)) return prev
@@ -79,5 +91,5 @@ export function useAccounts() {
     .filter(a => a.included)
     .reduce((sum, a) => sum + a.balance, 0)
 
-  return { accounts, setAccounts, upsertAccount, remapAccountIban, toggleIncluded, totalWealth }
+  return { accounts, setAccounts, upsertAccount, applyCloudAccounts, remapAccountIban, toggleIncluded, totalWealth }
 }
