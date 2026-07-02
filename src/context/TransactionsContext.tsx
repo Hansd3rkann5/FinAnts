@@ -12,18 +12,25 @@ import { computeCreditCardBucket } from '@/utils/creditCardBilling'
 import { reportError } from '@/utils/notify'
 import type { Transaction, Category } from '@/types'
 
-type TransactionsCtx =
+// Two contexts under one provider: high-frequency transaction-shaped data
+// vs. low-frequency user preferences. Components that only need one side can
+// subscribe via useDataCtx()/usePrefsCtx() and skip the other's re-renders;
+// useTransactionsCtx() merges both for existing call sites.
+type DataCtxType =
   ReturnType<typeof useTransactions> &
-  ReturnType<typeof useMerchantProfiles> &
-  ReturnType<typeof useCustomCategories> &
-  ReturnType<typeof useTxSplits> &
-  ReturnType<typeof useExcludedMerchants> &
-  ReturnType<typeof useNewTransactionMarkers> &
   ReturnType<typeof useAccounts> &
   ReturnType<typeof useAccountView> &
   { refreshAll: () => Promise<void> }
 
-const Ctx = createContext<TransactionsCtx | null>(null)
+type PrefsCtxType =
+  ReturnType<typeof useMerchantProfiles> &
+  ReturnType<typeof useCustomCategories> &
+  ReturnType<typeof useTxSplits> &
+  ReturnType<typeof useExcludedMerchants> &
+  ReturnType<typeof useNewTransactionMarkers>
+
+const DataCtx = createContext<DataCtxType | null>(null)
+const PrefsCtx = createContext<PrefsCtxType | null>(null)
 
 // Auto-sync custom categories + merchant patterns + chart splits to the cloud
 // settings blob — pull once on mount, then push (debounced) on change. Returns a
@@ -185,20 +192,38 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
 
   // Memoized so consumers only re-render when one of the hook results
   // actually changed, not on every provider render.
-  const value = useMemo(() => ({
-    ...transactions, ...profiles, ...categories, ...splits, ...excludedMerchants, ...newMarkers,
-    ...accountsState, ...accountView, refreshAll,
-  }), [transactions, profiles, categories, splits, excludedMerchants, newMarkers, accountsState, accountView, refreshAll])
+  const dataValue = useMemo(() => ({
+    ...transactions, ...accountsState, ...accountView, refreshAll,
+  }), [transactions, accountsState, accountView, refreshAll])
+
+  const prefsValue = useMemo(() => ({
+    ...profiles, ...categories, ...splits, ...excludedMerchants, ...newMarkers,
+  }), [profiles, categories, splits, excludedMerchants, newMarkers])
 
   return (
-    <Ctx.Provider value={value}>
-      {children}
-    </Ctx.Provider>
+    <DataCtx.Provider value={dataValue}>
+      <PrefsCtx.Provider value={prefsValue}>
+        {children}
+      </PrefsCtx.Provider>
+    </DataCtx.Provider>
   )
 }
 
-export function useTransactionsCtx() {
-  const ctx = useContext(Ctx)
-  if (!ctx) throw new Error('useTransactionsCtx must be used within TransactionsProvider')
+export function useDataCtx(): DataCtxType {
+  const ctx = useContext(DataCtx)
+  if (!ctx) throw new Error('useDataCtx must be used within TransactionsProvider')
   return ctx
+}
+
+export function usePrefsCtx(): PrefsCtxType {
+  const ctx = useContext(PrefsCtx)
+  if (!ctx) throw new Error('usePrefsCtx must be used within TransactionsProvider')
+  return ctx
+}
+
+// Compatibility: existing call sites destructure across both contexts.
+export function useTransactionsCtx(): DataCtxType & PrefsCtxType {
+  const data = useDataCtx()
+  const prefs = usePrefsCtx()
+  return useMemo(() => ({ ...data, ...prefs }), [data, prefs])
 }
