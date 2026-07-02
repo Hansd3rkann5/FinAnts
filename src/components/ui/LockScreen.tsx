@@ -36,34 +36,34 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Full PIN entered: let the last dot render, merge the dots, then show the
-  // verify result — never unlock before the animation has played.
-  useEffect(() => {
-    if (phase !== 'input' || len === 0 || pin.length !== len) return
-    const mergeTimer = setTimeout(() => setPhase('merge'), 180)
-    let resultTimer: ReturnType<typeof setTimeout>
-    verifyPin(pin).then(ok => {
-      resultTimer = setTimeout(() => setPhase(ok ? 'success' : 'failure'), 480)
-    })
-    return () => { clearTimeout(mergeTimer); clearTimeout(resultTimer) }
-  }, [pin, len, phase])
-
-  useEffect(() => {
-    if (phase === 'success') {
-      const t = setTimeout(onUnlock, 600)
-      return () => clearTimeout(t)
+  // Full PIN entered: let the last dot render, merge the dots, show the
+  // verify result, then unlock (or reset). One linear sequence — effects
+  // keyed on `phase` proved racy (their cleanup cancelled pending timers
+  // whenever the phase they themselves set triggered a re-run).
+  async function runVerify(fullPin: string) {
+    const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
+    await wait(180)               // let the 4th dot visibly fill
+    setPhase('merge')
+    const ok = await verifyPin(fullPin)
+    await wait(300)               // merge animation
+    setPhase(ok ? 'success' : 'failure')
+    if (ok) {
+      await wait(600)             // green check moment
+      onUnlock()
+    } else {
+      await wait(900)             // red X + shake
+      setPin('')
+      setPhase('input')
     }
-    if (phase === 'failure') {
-      const t = setTimeout(() => { setPin(''); setPhase('input') }, 900)
-      return () => clearTimeout(t)
-    }
-  }, [phase, onUnlock])
+  }
 
   function press(k: string) {
     if (phase !== 'input') return
     if (k === 'del') { setPin(p => p.slice(0, -1)); return }
-    if (!k) return
-    setPin(p => (p.length >= len ? p : p + k))
+    if (!k || pin.length >= len) return
+    const next = pin + k
+    setPin(next)
+    if (len > 0 && next.length === len) void runVerify(next)
   }
 
   const merged = phase !== 'input'
