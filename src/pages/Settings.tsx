@@ -14,6 +14,7 @@ import { CreditCardImportSection } from '@/components/settings/CreditCardImportS
 import { TradeRepublicSection } from '@/components/settings/TradeRepublicSection'
 import { CsvImportSection } from '@/components/settings/CsvImportSection'
 import { AppLockSection } from '@/components/settings/AppLockSection'
+import { ThemeSection } from '@/components/settings/ThemeSection'
 import { DataSection } from '@/components/settings/DataSection'
 import { ErrorLogSection } from '@/components/settings/ErrorLogSection'
 
@@ -88,9 +89,10 @@ export function Settings() {
         <SettingsGroup
           icon={<Lock size={15} className="text-white/50" />}
           title="Sicherheit & Daten"
-          subtitle="App-Sperre, Datenlöschung, Fehlerprotokoll"
+          subtitle="App-Sperre, Darstellung, Datenlöschung, Fehlerprotokoll"
         >
           <AppLockSection />
+          <ThemeSection />
           <DataSection />
           <ErrorLogSection />
         </SettingsGroup>

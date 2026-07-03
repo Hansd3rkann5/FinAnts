@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { reportError } from './utils/notify'
+import { initTheme } from './utils/theme'
+
+// Apply the persisted color/mono theme before first paint.
+initTheme()
 
 // Backstop: log + toast any error that escapes a try/catch or a rejected promise.
 window.addEventListener('error', e => reportError('window', e.error ?? e.message))

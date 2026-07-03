@@ -92,6 +92,16 @@
   }
 
   /*
+   * Black/white theme (Settings → Darstellung): one grayscale filter on the
+   * root desaturates every accent color, inline style, and portal at once.
+   * Safe because html/body never scroll — the filter's containing block
+   * can't detach fixed-position overlays from the viewport.
+   */
+  html.theme-mono {
+    filter: grayscale(1);
+  }
+
+  /*
    * body inherits html's explicit height via height:100%.
    * display:flex + flex-direction:column lets #root stretch to fill it.
    * NO position:fixed — that clips body to the "small viewport" on iOS.
