@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { useInView } from 'framer-motion'
+import { useAppUnlocked } from '@/hooks/useAppUnlocked'
 import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -39,7 +40,11 @@ interface Props {
 export function CategoryTrendChart({ points, topCats, allMap }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const inView = useInView(containerRef, { once: true, amount: 0.3 })
+  const unlocked = useAppUnlocked()
+  const inViewRaw = useInView(containerRef, { once: true, amount: 0.3 })
+  // Hold the entry animation while the lock screen is up — Recharts animates
+  // on the main thread and starves the PIN keypad of input events.
+  const inView = inViewRaw && unlocked
 
   useEffect(() => {
     const el = scrollRef.current

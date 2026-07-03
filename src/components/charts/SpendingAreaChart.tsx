@@ -1,5 +1,6 @@
 import { useRef, useEffect, useMemo } from 'react'
 import { useInView } from 'framer-motion'
+import { useAppUnlocked } from '@/hooks/useAppUnlocked'
 import {
   ResponsiveContainer, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
@@ -61,7 +62,11 @@ const X_AXIS_H = 20
 export function SpendingAreaChart({ data, timeFilter }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const inView = useInView(containerRef, { once: true, amount: 0.3 })
+  const unlocked = useAppUnlocked()
+  const inViewRaw = useInView(containerRef, { once: true, amount: 0.3 })
+  // Hold the entry animation while the lock screen is up — Recharts animates
+  // on the main thread and starves the PIN keypad of input events.
+  const inView = inViewRaw && unlocked
   const mode = getFilterMode(timeFilter)
   const isMonthly = mode === 'year' || mode === 'all'
   const hasIncome = data.some(d => d.income > 0)

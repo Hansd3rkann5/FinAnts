@@ -6,7 +6,7 @@ import { AppShell } from './components/layout/AppShell'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { ToastHost } from './components/ui/ToastHost'
 import { LockScreen } from './components/ui/LockScreen'
-import { isLockEnabled, lockTimeoutMinutes } from './utils/appLock'
+import { isLockEnabled, lockTimeoutMinutes, setAppLocked } from './utils/appLock'
 
 export default function App() {
   // Locked on first open, and re-locked once the app has been backgrounded
@@ -15,14 +15,25 @@ export default function App() {
   // is an opaque overlay so the app stays mounted underneath — no reload/
   // re-fetch on every return.
   const [locked, setLocked] = useState(() => {
-    if (!isLockEnabled()) return false
-    // Skip the lock when returning from an EnableBanking OAuth redirect —
-    // the user just authenticated with their bank, which is equivalent to
-    // unlocking the app.
-    const params = new URLSearchParams(window.location.search)
-    if (params.has('code') && localStorage.getItem('finants_eb_pending')) return false
-    return true
+    const initial = (() => {
+      if (!isLockEnabled()) return false
+      // Skip the lock when returning from an EnableBanking OAuth redirect —
+      // the user just authenticated with their bank, which is equivalent to
+      // unlocking the app.
+      const params = new URLSearchParams(window.location.search)
+      if (params.has('code') && localStorage.getItem('finants_eb_pending')) return false
+      return true
+    })()
+    // Seed the module store synchronously so charts rendering in this same
+    // pass already see the locked state (the sync effect below only fires
+    // after the first frame).
+    setAppLocked(initial)
+    return initial
   })
+
+  // Publish lock state so charts can defer their entry animations while the
+  // keypad is up (see useAppUnlocked).
+  useEffect(() => { setAppLocked(locked) }, [locked])
 
   useEffect(() => {
     let hiddenAt: number | null = null
@@ -47,22 +58,15 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ToastHost />
-      {/* While locked, the app stays mounted (no reload/re-fetch on unlock)
-          but is display:none + inert: nothing paints or animates behind the
-          overlay, so the PIN keypad isn't fighting chart animations for the
-          main thread. The charts' useInView gates also defer their entry
-          animations until the page is actually visible again. */}
-      <div style={locked ? { display: 'none' } : undefined} inert={locked}>
-        <HashRouter>
-          <ModalProvider>
-            <TransactionsProvider>
-              <Routes>
-                <Route path="/*" element={<AppShell />} />
-              </Routes>
-            </TransactionsProvider>
-          </ModalProvider>
-        </HashRouter>
-      </div>
+      <HashRouter>
+        <ModalProvider>
+          <TransactionsProvider>
+            <Routes>
+              <Route path="/*" element={<AppShell />} />
+            </Routes>
+          </TransactionsProvider>
+        </ModalProvider>
+      </HashRouter>
       {locked && <LockScreen onUnlock={() => setLocked(false)} />}
     </ErrorBoundary>
   )

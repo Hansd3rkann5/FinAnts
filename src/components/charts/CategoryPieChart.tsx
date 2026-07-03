@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { useInView } from 'framer-motion'
+import { useAppUnlocked } from '@/hooks/useAppUnlocked'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import type { CategorySummary } from '@/types'
 import { useAllCategories } from '@/hooks/useAllCategories'
@@ -15,7 +16,11 @@ export function CategoryPieChart({ categories }: Props) {
   const [activeIndex, setActiveIndex] = useState(0)
   const { allMap } = useAllCategories()
   const containerRef = useRef<HTMLDivElement>(null)
-  const inView = useInView(containerRef, { once: true, amount: 0.3 })
+  const unlocked = useAppUnlocked()
+  const inViewRaw = useInView(containerRef, { once: true, amount: 0.3 })
+  // Hold the entry animation while the lock screen is up — Recharts animates
+  // on the main thread and starves the PIN keypad of input events.
+  const inView = inViewRaw && unlocked
 
   const data = categories
     .filter(c => allMap[c.categoryId])

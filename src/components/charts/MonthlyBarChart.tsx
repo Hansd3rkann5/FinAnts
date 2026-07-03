@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { useInView } from 'framer-motion'
+import { useAppUnlocked } from '@/hooks/useAppUnlocked'
 import {
   ResponsiveContainer, ComposedChart, Bar, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -37,7 +38,11 @@ interface Props { data: MonthPoint[] }
 export function MonthlyBarChart({ data }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const inView = useInView(containerRef, { once: true, amount: 0.3 })
+  const unlocked = useAppUnlocked()
+  const inViewRaw = useInView(containerRef, { once: true, amount: 0.3 })
+  // Hold the entry animation while the lock screen is up — Recharts animates
+  // on the main thread and starves the PIN keypad of input events.
+  const inView = inViewRaw && unlocked
 
   // Start scrolled to most recent (right edge)
   useEffect(() => {

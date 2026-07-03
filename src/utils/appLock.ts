@@ -145,3 +145,26 @@ export async function verifyPin(pin: string): Promise<boolean> {
   if (!c) return false
   return (await hashPin(pin, c.salt)) === c.pinHash
 }
+
+// ── Live lock state ─────────────────────────────────────────────────────────
+// Tiny module-level store so components (charts) can defer their JS-driven
+// entry animations while the LockScreen overlay is up — Recharts re-renders
+// every animation frame on the main thread and starves the PIN keypad of
+// input events. Purely behavioral: no layout or DOM structure involved.
+let appLocked = false
+const lockListeners = new Set<() => void>()
+
+export function setAppLocked(locked: boolean) {
+  if (appLocked === locked) return
+  appLocked = locked
+  lockListeners.forEach(l => l())
+}
+
+export function subscribeAppLocked(cb: () => void): () => void {
+  lockListeners.add(cb)
+  return () => { lockListeners.delete(cb) }
+}
+
+export function isAppLocked(): boolean {
+  return appLocked
+}

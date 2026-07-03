@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
 import { useInView } from 'framer-motion'
+import { useAppUnlocked } from '@/hooks/useAppUnlocked'
 import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -45,7 +46,11 @@ export function DepotChart() {
   const { data, loading, error } = useDepotHistory(days)
 
   const containerRef = useRef<HTMLDivElement>(null)
-  const inView = useInView(containerRef, { once: true, amount: 0.3 })
+  const unlocked = useAppUnlocked()
+  const inViewRaw = useInView(containerRef, { once: true, amount: 0.3 })
+  // Hold the entry animation while the lock screen is up — Recharts animates
+  // on the main thread and starves the PIN keypad of input events.
+  const inView = inViewRaw && unlocked
 
   const selectedStock = data?.perStock.find(s => s.isin === selectedIsin)
   const points = (selectedStock?.points ?? data?.cumulative ?? []).map(p => ({
