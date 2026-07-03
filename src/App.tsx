@@ -47,15 +47,22 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ToastHost />
-      <HashRouter>
-        <ModalProvider>
-          <TransactionsProvider>
-            <Routes>
-              <Route path="/*" element={<AppShell />} />
-            </Routes>
-          </TransactionsProvider>
-        </ModalProvider>
-      </HashRouter>
+      {/* While locked, the app stays mounted (no reload/re-fetch on unlock)
+          but is display:none + inert: nothing paints or animates behind the
+          overlay, so the PIN keypad isn't fighting chart animations for the
+          main thread. The charts' useInView gates also defer their entry
+          animations until the page is actually visible again. */}
+      <div style={locked ? { display: 'none' } : undefined} inert={locked}>
+        <HashRouter>
+          <ModalProvider>
+            <TransactionsProvider>
+              <Routes>
+                <Route path="/*" element={<AppShell />} />
+              </Routes>
+            </TransactionsProvider>
+          </ModalProvider>
+        </HashRouter>
+      </div>
       {locked && <LockScreen onUnlock={() => setLocked(false)} />}
     </ErrorBoundary>
   )

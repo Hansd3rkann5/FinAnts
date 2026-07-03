@@ -83,7 +83,7 @@ export function CategoryTrendChart({ points, topCats, allMap }: Props) {
                     dot={{ r: 2.5, fill: allMap[catId]?.color ?? '#888', strokeWidth: 0 }}
                     activeDot={{ r: 4, strokeWidth: 0 }}
                     isAnimationActive={inView}
-                    animationDuration={500}
+                    animationDuration={300}
                     animationEasing="ease-out"
                   />
                 ))}

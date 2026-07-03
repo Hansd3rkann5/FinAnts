@@ -133,10 +133,10 @@ export function SpendingAreaChart({ data, timeFilter }: Props) {
 
               {hasIncome && (
                 <Area dataKey="income" stroke="#34d399" strokeWidth={1.5} fill="url(#incomeGrad)"
-                  dot={false} activeDot={{ r: 3, fill: '#34d399', strokeWidth: 0 }} isAnimationActive={inView} animationDuration={500} />
+                  dot={false} activeDot={{ r: 3, fill: '#34d399', strokeWidth: 0 }} isAnimationActive={inView} animationDuration={300} />
               )}
               <Area dataKey="expenses" stroke="#f87171" strokeWidth={2} fill="url(#spendGrad)"
-                dot={false} activeDot={{ r: 3, fill: '#f87171', strokeWidth: 0 }} isAnimationActive={inView} animationDuration={500} />
+                dot={false} activeDot={{ r: 3, fill: '#f87171', strokeWidth: 0 }} isAnimationActive={inView} animationDuration={300} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

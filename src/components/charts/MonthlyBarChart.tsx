@@ -82,8 +82,8 @@ export function MonthlyBarChart({ data }: Props) {
               />
               <YAxis domain={[0, yMax]} hide tickFormatter={fmtY} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-              <Bar dataKey="income"   fill="url(#incGrad)" radius={[3,3,0,0]} maxBarSize={22} isAnimationActive={inView} animationDuration={400} animationEasing="ease-out" />
-              <Bar dataKey="expenses" fill="url(#expGrad)" radius={[3,3,0,0]} maxBarSize={22} isAnimationActive={inView} animationDuration={400} animationEasing="ease-out" />
+              <Bar dataKey="income"   fill="url(#incGrad)" radius={[3,3,0,0]} maxBarSize={22} isAnimationActive={inView} animationDuration={300} animationEasing="ease-out" />
+              <Bar dataKey="expenses" fill="url(#expGrad)" radius={[3,3,0,0]} maxBarSize={22} isAnimationActive={inView} animationDuration={300} animationEasing="ease-out" />
               <Line
                 dataKey="balance"
                 stroke="rgba(255,255,255,0.35)"
@@ -91,7 +91,7 @@ export function MonthlyBarChart({ data }: Props) {
                 dot={{ r: 2, fill: 'rgba(255,255,255,0.4)', strokeWidth: 0 }}
                 activeDot={{ r: 4, fill: '#fff', strokeWidth: 0 }}
                 isAnimationActive={inView}
-                animationDuration={600}
+                animationDuration={300}
               />
             </ComposedChart>
           </ResponsiveContainer>

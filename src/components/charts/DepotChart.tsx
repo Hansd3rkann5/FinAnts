@@ -137,7 +137,7 @@ export function DepotChart() {
                 <Line
                   dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
                   activeDot={{ r: 3, fill: '#c084fc', strokeWidth: 0 }}
-                  isAnimationActive={inView} animationDuration={500}
+                  isAnimationActive={inView} animationDuration={300}
                 />
               </LineChart>
             </ResponsiveContainer>

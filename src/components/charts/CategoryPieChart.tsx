@@ -50,7 +50,7 @@ export function CategoryPieChart({ categories }: Props) {
               paddingAngle={2}
               strokeWidth={0}
               isAnimationActive={inView}
-              animationDuration={400}
+              animationDuration={300}
               animationEasing="ease-out"
             >
               {data.map((entry, i) => (
