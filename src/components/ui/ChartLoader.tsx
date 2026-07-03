@@ -2,10 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, type Transition, type TargetAndTransition } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+import { loadTheme } from '@/utils/theme'
 
 // Brand palette from the app logo — the line fades from its current colour
-// into the next one in this list every time it morphs.
-const COLORS = ['#7c5cff', '#a78bfa', '#6366f1', '#3b82f6', '#2563eb', '#8b5cf6']
+// into the next one in this list every time it morphs. The mono theme swaps
+// it for a white/gray ramp (the loader line is UI chrome, not a data chart).
+const COLORS_BRAND = ['#7c5cff', '#a78bfa', '#6366f1', '#3b82f6', '#2563eb', '#8b5cf6']
+const COLORS_MONO = ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.6)', 'rgba(255,255,255,0.75)', 'rgba(255,255,255,0.45)', 'rgba(255,255,255,0.8)', 'rgba(255,255,255,0.55)']
+// Read lazily so a theme switch takes effect the next time the loader opens.
+const palette = () => loadTheme() === 'mono' ? COLORS_MONO : COLORS_BRAND
 
 // Drawing surface (user units), scaled uniformly to fit the window.
 const VB_W = 100
@@ -43,16 +48,17 @@ function ChartAnimation() {
   // genuinely changes it via setTarget.
   const [target, setTarget] = useState<Target>(() => ({
     d: pathFromYs(Array(POINTS).fill(VB_H / 2)),
-    stroke: COLORS[0],
+    stroke: palette()[0],
   }))
   const colorRef = useRef(0)
 
   useEffect(() => {
     const iv = setInterval(() => {
-      colorRef.current = (colorRef.current + 1) % COLORS.length
+      const colors = palette()
+      colorRef.current = (colorRef.current + 1) % colors.length
       setTarget({
         d: pathFromYs(XS.map(() => rand(PAD_Y, VB_H - PAD_Y))),
-        stroke: COLORS[colorRef.current],
+        stroke: colors[colorRef.current],
       })
     }, TICK_MS)
     return () => clearInterval(iv)

@@ -75,8 +75,8 @@ export function DepotChart() {
               onClick={() => setDays(opt.days)}
               className="px-1.5 py-0.5 rounded-pill text-[10px] font-medium transition-colors"
               style={{
-                backgroundColor: days === opt.days ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
-                color: days === opt.days ? '#d8b4fe' : 'rgba(255,255,255,0.4)',
+                backgroundColor: days === opt.days ? 'rgba(var(--acc-rgb),0.2)' : 'rgba(255,255,255,0.04)',
+                color: days === opt.days ? 'var(--acc-soft)' : 'rgba(255,255,255,0.4)',
               }}
             >
               {opt.label}
@@ -91,9 +91,9 @@ export function DepotChart() {
             onClick={() => setSelectedIsin(null)}
             className="px-2.5 py-1 rounded-pill text-xs font-medium border transition-all"
             style={{
-              backgroundColor: selectedIsin === null ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
-              borderColor: selectedIsin === null ? 'rgba(168,85,247,0.4)' : 'rgba(255,255,255,0.08)',
-              color: selectedIsin === null ? '#d8b4fe' : 'rgba(255,255,255,0.5)',
+              backgroundColor: selectedIsin === null ? 'rgba(var(--acc-rgb),0.2)' : 'rgba(255,255,255,0.04)',
+              borderColor: selectedIsin === null ? 'rgba(var(--acc-rgb),0.4)' : 'rgba(255,255,255,0.08)',
+              color: selectedIsin === null ? 'var(--acc-soft)' : 'rgba(255,255,255,0.5)',
             }}
           >
             Gesamt
@@ -104,9 +104,9 @@ export function DepotChart() {
               onClick={() => setSelectedIsin(s.isin)}
               className="px-2.5 py-1 rounded-pill text-xs font-medium border transition-all"
               style={{
-                backgroundColor: selectedIsin === s.isin ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
-                borderColor: selectedIsin === s.isin ? 'rgba(168,85,247,0.4)' : 'rgba(255,255,255,0.08)',
-                color: selectedIsin === s.isin ? '#d8b4fe' : 'rgba(255,255,255,0.5)',
+                backgroundColor: selectedIsin === s.isin ? 'rgba(var(--acc-rgb),0.2)' : 'rgba(255,255,255,0.04)',
+                borderColor: selectedIsin === s.isin ? 'rgba(var(--acc-rgb),0.4)' : 'rgba(255,255,255,0.08)',
+                color: selectedIsin === s.isin ? 'var(--acc-soft)' : 'rgba(255,255,255,0.5)',
               }}
             >
               {s.name}

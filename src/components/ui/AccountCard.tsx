@@ -27,7 +27,7 @@ export function AccountCard({ account, onToggle, showToggle = false }: Props) {
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className="rounded-card border border-white/8 bg-white/[0.04] backdrop-blur-glass p-3 flex items-center gap-3"
       style={{
-        borderColor: account.included ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.06)',
+        borderColor: account.included ? 'rgba(var(--acc2-rgb),0.25)' : 'rgba(255,255,255,0.06)',
       }}
     >
       <div className="w-9 h-9 rounded-card_sm bg-white/6 flex items-center justify-center text-base shrink-0">
@@ -60,7 +60,7 @@ export function AccountCard({ account, onToggle, showToggle = false }: Props) {
           onClick={() => onToggle(account.iban)}
           className="shrink-0 w-10 h-6 rounded-pill relative transition-colors duration-200"
           style={{
-            backgroundColor: account.included ? 'rgba(139,92,246,0.6)' : 'rgba(255,255,255,0.1)',
+            backgroundColor: account.included ? 'rgba(var(--acc2-rgb),0.6)' : 'rgba(255,255,255,0.1)',
           }}
           aria-label={account.included ? 'Konto ausschließen' : 'Konto einschließen'}
         >

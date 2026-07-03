@@ -23,7 +23,8 @@ export function ThemeSection() {
       statusText={theme === 'mono' ? 'Schwarz-Weiß' : 'Farbig'}
     >
       <p className="text-xs text-white/40 mb-3">
-        Farbschema der App. Schwarz-Weiß reduziert alle Akzentfarben auf Graustufen.
+        Farbschema der App. Schwarz-Weiß färbt die Bedienelemente neutral ein —
+        Kategorien, Charts und Symbole bleiben farbig.
       </p>
       <div className="flex gap-2">
         {OPTIONS.map(o => (
@@ -32,9 +33,9 @@ export function ThemeSection() {
             onClick={() => change(o.value)}
             className="flex-1 py-1.5 rounded-pill text-xs border transition-all duration-150"
             style={{
-              backgroundColor: theme === o.value ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
-              borderColor:     theme === o.value ? 'rgba(168,85,247,0.4)' : 'rgba(255,255,255,0.08)',
-              color:           theme === o.value ? '#d8b4fe' : 'rgba(255,255,255,0.4)',
+              backgroundColor: theme === o.value ? 'rgba(var(--acc-rgb),0.2)' : 'rgba(255,255,255,0.04)',
+              borderColor:     theme === o.value ? 'rgba(var(--acc-rgb),0.4)' : 'rgba(255,255,255,0.08)',
+              color:           theme === o.value ? 'var(--acc-soft)' : 'rgba(255,255,255,0.4)',
             }}
           >
             {o.label}

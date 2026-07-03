@@ -92,13 +92,63 @@
   }
 
   /*
-   * Black/white theme (Settings → Darstellung): one grayscale filter on the
-   * root desaturates every accent color, inline style, and portal at once.
-   * Safe because html/body never scroll — the filter's containing block
-   * can't detach fixed-position overlays from the viewport.
+   * Accent color variables for inline styles (pill buttons, toggles, glows).
+   * Components reference these instead of hardcoded purple/blue values so the
+   * black/white theme can swap them centrally.
+   */
+  :root {
+    --acc-rgb: 168,85,247;      /* purple-500 alpha composites */
+    --acc2-rgb: 139,92,246;     /* violet-500 alpha composites */
+    --acc-dot-rgb: 167,139,250; /* lock-screen PIN dots */
+    --acc-blue-rgb: 59,130,246; /* blue-500 alpha composites */
+    --acc-soft: #d8b4fe;        /* purple-300 text */
+    --acc-blue-soft: #93c5fd;   /* blue-300 text */
+  }
+
+  /*
+   * Black/white theme (Settings → Darstellung): remap the accent palette —
+   * both the Tailwind color variables (utility classes) and the inline-style
+   * variables above — to a neutral white/gray ramp. Category colors (per-
+   * category hex from data), red/green semantic colors, icons and chart
+   * graphics are untouched: the svg override below restores the real palette
+   * for everything rendered inside an <svg> (lucide icons, Recharts).
    */
   html.theme-mono {
-    filter: grayscale(1);
+    --color-purple-300: rgba(255,255,255,0.88);
+    --color-purple-400: rgba(255,255,255,0.78);
+    --color-purple-500: rgba(255,255,255,0.60);
+    --color-purple-600: rgba(255,255,255,0.42);
+    --color-purple-700: rgba(255,255,255,0.32);
+    --color-blue-300: rgba(255,255,255,0.88);
+    --color-blue-400: rgba(255,255,255,0.78);
+    --color-blue-500: rgba(255,255,255,0.60);
+    --color-blue-600: rgba(255,255,255,0.42);
+
+    --acc-rgb: 255,255,255;
+    --acc2-rgb: 255,255,255;
+    --acc-dot-rgb: 255,255,255;
+    --acc-blue-rgb: 255,255,255;
+    --acc-soft: rgba(255,255,255,0.9);
+    --acc-blue-soft: rgba(255,255,255,0.9);
+  }
+
+  html.theme-mono :is(svg, svg *) {
+    --color-purple-300: #d8b4fe;
+    --color-purple-400: #a78bfa;
+    --color-purple-500: #8b5cf6;
+    --color-purple-600: #7c3aed;
+    --color-purple-700: #6d28d9;
+    --color-blue-300: #93c5fd;
+    --color-blue-400: #60a5fa;
+    --color-blue-500: #3b82f6;
+    --color-blue-600: #2563eb;
+
+    --acc-rgb: 168,85,247;
+    --acc2-rgb: 139,92,246;
+    --acc-dot-rgb: 167,139,250;
+    --acc-blue-rgb: 59,130,246;
+    --acc-soft: #d8b4fe;
+    --acc-blue-soft: #93c5fd;
   }
 
   /*

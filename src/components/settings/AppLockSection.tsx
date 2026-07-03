@@ -83,9 +83,9 @@ export function AppLockSection() {
                   onClick={() => changeLockTimeout(m)}
                   className="flex-1 py-1.5 rounded-pill text-xs border transition-all duration-150"
                   style={{
-                    backgroundColor: lockTimeout === m ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
-                    borderColor:     lockTimeout === m ? 'rgba(168,85,247,0.4)' : 'rgba(255,255,255,0.08)',
-                    color:           lockTimeout === m ? '#d8b4fe' : 'rgba(255,255,255,0.4)',
+                    backgroundColor: lockTimeout === m ? 'rgba(var(--acc-rgb),0.2)' : 'rgba(255,255,255,0.04)',
+                    borderColor:     lockTimeout === m ? 'rgba(var(--acc-rgb),0.4)' : 'rgba(255,255,255,0.08)',
+                    color:           lockTimeout === m ? 'var(--acc-soft)' : 'rgba(255,255,255,0.4)',
                   }}
                 >
                   {m}m

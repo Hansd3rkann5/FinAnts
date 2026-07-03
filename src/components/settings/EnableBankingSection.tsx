@@ -76,9 +76,9 @@ export function EnableBankingSection({ isAuth, onLoader }: { isAuth: boolean; on
                 onClick={() => setEbDays(d)}
                 className="flex-1 py-1.5 rounded-pill text-xs border transition-all duration-150"
                 style={{
-                  backgroundColor: ebDays === d ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)',
-                  borderColor:     ebDays === d ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)',
-                  color:           ebDays === d ? '#93c5fd' : 'rgba(255,255,255,0.4)',
+                  backgroundColor: ebDays === d ? 'rgba(var(--acc-blue-rgb),0.2)' : 'rgba(255,255,255,0.04)',
+                  borderColor:     ebDays === d ? 'rgba(var(--acc-blue-rgb),0.4)' : 'rgba(255,255,255,0.08)',
+                  color:           ebDays === d ? 'var(--acc-blue-soft)' : 'rgba(255,255,255,0.4)',
                 }}
               >
                 {d === 365 ? '1J' : `${d}T`}

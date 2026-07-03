@@ -100,7 +100,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               style={{
                 borderColor: 'rgba(255,255,255,0.3)',
-                backgroundColor: i < pin.length ? 'rgba(167,139,250,0.9)' : 'transparent',
+                backgroundColor: i < pin.length ? 'rgba(var(--acc-dot-rgb),0.9)' : 'transparent',
                 // Own compositing layer — without this, WebKit leaves stale
                 // pixel trails when transforming inside the backdrop-blurred
                 // lock overlay.
