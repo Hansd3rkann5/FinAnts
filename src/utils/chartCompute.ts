@@ -106,6 +106,13 @@ export function computeAvailablePeriods(transactions: Transaction[]): AvailableP
     weekMap.set(`${isoYr}-${isoWk}`, { year: isoYr, week: isoWk })
   }
 
+  // The running period is always selectable, even before its first booking
+  // has been synced (e.g. at the start of a new month).
+  const now = new Date()
+  yearSet.add(now.getFullYear())
+  monthMap.set(`${now.getFullYear()}-${now.getMonth() + 1}`, { year: now.getFullYear(), month: now.getMonth() + 1 })
+  weekMap.set(`${getISOWeekYear(now)}-${getISOWeek(now)}`, { year: getISOWeekYear(now), week: getISOWeek(now) })
+
   return {
     years:  [...yearSet].sort(),
     months: [...monthMap.values()].sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month),
