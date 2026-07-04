@@ -23,7 +23,7 @@ export function CategoryPicker({ open, current, onSelect, onClose }: Props) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-60 bg-black/60 backdrop-blur-md"
             onClick={onClose}
           />
           <motion.div
@@ -32,7 +32,7 @@ export function CategoryPicker({ open, current, onSelect, onClose }: Props) {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed mx-3 bottom-0 left-0 right-0 z-50 rounded-t-[28px] bg-[#1a1a288c] border-t border-white/10"
+            className="fixed mx-3 bottom-0 left-0 right-0 z-61 rounded-t-[28px] bg-[#1a1a288c] border-t border-white/10"
             style={{
               borderRadius: '28px 28px 0 0',
               backdropFilter: 'blur(var(--blur-modal))',

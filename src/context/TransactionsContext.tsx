@@ -6,6 +6,7 @@ import { useTxSplits, type Split } from '@/hooks/useTxSplits'
 import { useExcludedMerchants } from '@/hooks/useExcludedMerchants'
 import { useNewTransactionMarkers } from '@/hooks/useNewTransactionMarkers'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useBudgets } from '@/hooks/useBudgets'
 import { useAccountView } from '@/hooks/useAccountView'
 import { pushCloudState, pullCloudState } from '@/utils/cloudSync'
 import { computeCreditCardBucket } from '@/utils/creditCardBilling'
@@ -27,7 +28,8 @@ type PrefsCtxType =
   ReturnType<typeof useCustomCategories> &
   ReturnType<typeof useTxSplits> &
   ReturnType<typeof useExcludedMerchants> &
-  ReturnType<typeof useNewTransactionMarkers>
+  ReturnType<typeof useNewTransactionMarkers> &
+  ReturnType<typeof useBudgets>
 
 const DataCtx = createContext<DataCtxType | null>(null)
 const PrefsCtx = createContext<PrefsCtxType | null>(null)
@@ -42,11 +44,13 @@ function useAutoSyncPatterns(
   txSplits: ReturnType<typeof useTxSplits>['txSplits'],
   excludedMerchants: ReturnType<typeof useExcludedMerchants>['excludedMerchants'],
   accounts: ReturnType<typeof useAccounts>['accounts'],
+  budgets: ReturnType<typeof useBudgets>['budgets'],
   applyCloudCategories: ReturnType<typeof useCustomCategories>['applyCloudCategories'],
   applyCloudProfiles: ReturnType<typeof useMerchantProfiles>['applyCloudProfiles'],
   applyCloudSplits: ReturnType<typeof useTxSplits>['applyCloudSplits'],
   applyCloudExcludedMerchants: ReturnType<typeof useExcludedMerchants>['applyCloudExcludedMerchants'],
   applyCloudAccounts: ReturnType<typeof useAccounts>['applyCloudAccounts'],
+  applyCloudBudgets: ReturnType<typeof useBudgets>['applyCloudBudgets'],
 ) {
   const hydrated = useRef(false)
   const lastSyncedJson = useRef<string | null>(null)
@@ -60,14 +64,16 @@ function useAutoSyncPatterns(
     applyCloudExcludedMerchants(state.excludedMerchants ?? [])
     // undefined = blob predates account sync → keep local, next push migrates it
     applyCloudAccounts(state.accounts)
+    applyCloudBudgets(state.budgets)
     lastSyncedJson.current = JSON.stringify({
       customCategories: state.customCategories ?? [],
       merchantProfiles: state.merchantProfiles ?? [],
       txSplits: state.txSplits ?? {},
       excludedMerchants: state.excludedMerchants ?? [],
       accounts: state.accounts ?? [],
+      budgets: state.budgets ?? [],
     })
-  }, [applyCloudCategories, applyCloudProfiles, applyCloudSplits, applyCloudExcludedMerchants, applyCloudAccounts])
+  }, [applyCloudCategories, applyCloudProfiles, applyCloudSplits, applyCloudExcludedMerchants, applyCloudAccounts, applyCloudBudgets])
 
   // Pull once on mount (best-effort — may 401 before the API key is set).
   useEffect(() => {
@@ -81,15 +87,15 @@ function useAutoSyncPatterns(
   // Debounced push on change (only after the initial pull, and only if changed).
   useEffect(() => {
     if (!hydrated.current) return
-    const snapshot = JSON.stringify({ customCategories, merchantProfiles, txSplits, excludedMerchants, accounts })
+    const snapshot = JSON.stringify({ customCategories, merchantProfiles, txSplits, excludedMerchants, accounts, budgets })
     if (snapshot === lastSyncedJson.current) return
     const t = setTimeout(() => {
-      pushCloudState({ version: 1, updatedAt: new Date().toISOString(), customCategories, merchantProfiles, txSplits, excludedMerchants, accounts })
+      pushCloudState({ version: 1, updatedAt: new Date().toISOString(), customCategories, merchantProfiles, txSplits, excludedMerchants, accounts, budgets })
         .then(() => { lastSyncedJson.current = snapshot })
         .catch(err => reportError('Sync fehlgeschlagen', err))
     }, 1200)
     return () => clearTimeout(t)
-  }, [customCategories, merchantProfiles, txSplits, excludedMerchants, accounts])
+  }, [customCategories, merchantProfiles, txSplits, excludedMerchants, accounts, budgets])
 
   return { pull }
 }
@@ -140,6 +146,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   const splits = useTxSplits()
   const excludedMerchants = useExcludedMerchants()
   const newMarkers = useNewTransactionMarkers()
+  const budgetsState = useBudgets()
   const accountsState = useAccounts()
   const accountView = useAccountView(accountsState.accounts)
   // Transactions enrich against the current patterns + splits, so build those first.
@@ -158,11 +165,13 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     splits.txSplits,
     excludedMerchants.excludedMerchants,
     accountsState.accounts,
+    budgetsState.budgets,
     categories.applyCloudCategories,
     profiles.applyCloudProfiles,
     splits.applyCloudSplits,
     excludedMerchants.applyCloudExcludedMerchants,
     accountsState.applyCloudAccounts,
+    budgetsState.applyCloudBudgets,
   )
 
   // Reconcile any UUID account IBANs with real IBANs found in the loaded
@@ -197,8 +206,8 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   }), [transactions, accountsState, accountView, refreshAll])
 
   const prefsValue = useMemo(() => ({
-    ...profiles, ...categories, ...splits, ...excludedMerchants, ...newMarkers,
-  }), [profiles, categories, splits, excludedMerchants, newMarkers])
+    ...profiles, ...categories, ...splits, ...excludedMerchants, ...newMarkers, ...budgetsState,
+  }), [profiles, categories, splits, excludedMerchants, newMarkers, budgetsState])
 
   return (
     <DataCtx.Provider value={dataValue}>

@@ -29,6 +29,7 @@ export function useCloudSync() {
         txSplits: ctx.txSplits,
         excludedMerchants: ctx.excludedMerchants,
         accounts: ctx.accounts,
+        budgets: ctx.budgets,
       }
       await pushCloudState(state)
       const time = new Date().toLocaleString('de-DE')
@@ -53,6 +54,7 @@ export function useCloudSync() {
       ctx.applyCloudSplits(state.txSplits ?? {})
       ctx.applyCloudExcludedMerchants(state.excludedMerchants ?? [])
       ctx.applyCloudAccounts(state.accounts)
+      ctx.applyCloudBudgets(state.budgets)
       const time = new Date().toLocaleString('de-DE')
       localStorage.setItem(LAST_CLOUD_SYNC_KEY, time)
       setLastSync(time)

@@ -5,6 +5,7 @@
 import { cfHeaders } from './cfAuth'
 import { loadWorkerConfig } from '@/utils/workerConfig'
 import type { Category, MerchantProfile, Account } from '@/types'
+import type { Budget } from '@/hooks/useBudgets'
 
 const DEFAULT_WORKER_URL = (import.meta.env.VITE_WORKER_URL ?? 'https://finants-proxy.simon-bader.workers.dev').replace(/\/$/, '')
 
@@ -24,6 +25,8 @@ export interface CloudState {
   // Connected bank/depot accounts incl. balances — synced so phone and
   // desktop stop diverging (they only ever lived in localStorage before).
   accounts?: Account[]
+  // Per-category monthly spending limits (Dashboard budget panel).
+  budgets?: Budget[]
   // Retired: per-tx edits live in D1. Optional only so older backups still parse.
   txOverrides?: Record<string, { categoryId: string; customLabel?: string; customIcon?: string }>
 }

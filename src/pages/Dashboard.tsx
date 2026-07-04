@@ -33,6 +33,7 @@ import { MerchantBreakdownModal } from '@/components/ui/MerchantBreakdownModal'
 import { RecurringModal } from '@/components/ui/RecurringModal'
 import { AccountCard } from '@/components/ui/AccountCard'
 
+import { BudgetsPanel } from '@/components/ui/BudgetsPanel'
 import { DepotChart } from '@/components/charts/DepotChart'
 import { TRADE_REPUBLIC_IBAN } from '@/utils/tradeRepublicParser'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
@@ -325,6 +326,9 @@ export function Dashboard() {
           {`Alle anzeigen (${new Set(accountTransactions.map(t => t.categoryId)).size})`}
         </button>
       </GlassCard>
+
+      {/* ── Budgets (per-category monthly limits) ───────────────────────── */}
+      <BudgetsPanel transactions={accountTransactions} />
 
       {/* ── Analytics (only when enough data) ───────────────────────────── */}
       {analytics.hasEnoughData && (
