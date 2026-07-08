@@ -7,6 +7,11 @@ interface ManualBalanceData {
   value: number
   savedAt: string
   updatedAt: string
+  /** Ids of the (booked) transactions already imported when the balance was
+   *  saved, limited to the save day and later. Booking dates carry no time of
+   *  day, so this is what lets a later same-day sync apply only the genuinely
+   *  new transactions on top of the saved balance. Absent on old saves. */
+  knownIds?: string[]
 }
 
 function readFromStorage(): ManualBalanceData | null {
@@ -29,12 +34,13 @@ export function useManualBalance() {
     return () => window.removeEventListener(SYNC_EVENT, handler)
   }, [])
 
-  const save = useCallback((value: number) => {
+  const save = useCallback((value: number, knownIds: string[]) => {
     const now = new Date()
     const entry: ManualBalanceData = {
       value,
       savedAt: now.toISOString(),
       updatedAt: now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      knownIds,
     }
     localStorage.setItem(KEY, JSON.stringify(entry))
     setData(entry)
@@ -51,6 +57,7 @@ export function useManualBalance() {
     baseBalance: data?.value ?? null,
     savedAt: data?.savedAt ?? null,
     updatedAt: data?.updatedAt ?? null,
+    knownIds: data?.knownIds ?? null,
     save,
     clear,
   }

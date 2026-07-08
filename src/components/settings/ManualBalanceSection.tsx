@@ -1,21 +1,41 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Wallet } from 'lucide-react'
 import { PillButton } from '@/components/ui/PillButton'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
 import { useManualBalance } from '@/hooks/useManualBalance'
 import { formatEur } from '@/utils/format'
-import { CollapsibleCard } from './shared'
+import { CollapsibleCard, StatusBanner, type ImportStatus } from './shared'
 
 export function ManualBalanceSection() {
-  const { accounts } = useTransactionsCtx()
+  const { accounts, transactions } = useTransactionsCtx()
   const { baseBalance: manualBalance, updatedAt: balanceUpdatedAt, save: saveBalance } = useManualBalance()
   const [balanceInput, setBalanceInput] = useState(
     manualBalance !== null ? String(manualBalance).replace('.', ',') : ''
   )
+  const [status, setStatus] = useState<ImportStatus>('idle')
+  const [statusMessage, setStatusMessage] = useState('')
+  const statusTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(statusTimer.current), [])
 
   function handleSaveBalance() {
     const parsed = parseFloat(balanceInput.replace(',', '.'))
-    if (!isNaN(parsed)) saveBalance(parsed)
+    clearTimeout(statusTimer.current)
+    if (isNaN(parsed)) {
+      setStatus('error')
+      setStatusMessage('Ungültiger Betrag – bitte eine Zahl wie 1234,56 eingeben.')
+      return
+    }
+    // Booking dates have no time of day, so remember which of today's (and
+    // later-dated) booked transactions are already reflected in this balance —
+    // a later sync the same day then only applies the genuinely new ones.
+    const dayStart = new Date().setHours(0, 0, 0, 0)
+    const knownIds = transactions
+      .filter(t => !t.isPending && t.date.getTime() >= dayStart)
+      .map(t => t.id)
+    saveBalance(parsed, knownIds)
+    setStatus('success')
+    setStatusMessage(`Kontostand ${formatEur(parsed)} gespeichert.`)
+    statusTimer.current = setTimeout(() => setStatus('idle'), 4000)
   }
 
   return (
@@ -28,7 +48,7 @@ export function ManualBalanceSection() {
       defaultOpen={manualBalance === null && accounts.length === 0}
     >
       <p className="text-xs text-white/40 mb-3">
-        Aktueller Kontostand aus deiner Banking-App. Wird angezeigt bis der automatische Sync aktiv ist.
+        Aktueller Kontostand aus deiner Banking-App. Überschreibt den Giro-Kontostand, bis der nächste automatische Sync einen neueren Stand liefert.
       </p>
       <div className="flex gap-2">
         <div className="relative flex-1">
@@ -47,6 +67,11 @@ export function ManualBalanceSection() {
           Speichern
         </PillButton>
       </div>
+      {status !== 'idle' && (
+        <div className="mt-3">
+          <StatusBanner status={status} message={statusMessage} />
+        </div>
+      )}
       {balanceUpdatedAt && (
         <p className="text-[10px] text-white/25 mt-2">Zuletzt aktualisiert: {balanceUpdatedAt}</p>
       )}

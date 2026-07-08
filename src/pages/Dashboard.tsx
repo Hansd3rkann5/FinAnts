@@ -74,7 +74,7 @@ export function Dashboard() {
     transactions, recurringGroups, updateTransaction, excludedMerchants,
     accounts, totalWealth, selectedAccountIbans, isAccountSelected, toggleAccount,
   } = useTransactionsCtx()
-  const { baseBalance, savedAt: balanceSavedAt, updatedAt: balanceUpdatedAt } = useManualBalance()
+  const { baseBalance, savedAt: balanceSavedAt, updatedAt: balanceUpdatedAt, knownIds: balanceKnownIds } = useManualBalance()
   const { allMap } = useAllCategories()
 
   // Everything below derives from this, not the raw context `transactions`,
@@ -90,24 +90,41 @@ export function Dashboard() {
   const summary  = useBalanceSummary(filtered)
   const analytics = useAnalytics(accountTransactions)
 
-  // Adjust manual balance by all booked transactions since the save date
+  // Adjust the manual balance by the booked transactions that happened after
+  // it was saved. Booking dates have no time of day, so a plain timestamp
+  // cutoff would miss same-day transactions synced *after* the save — when the
+  // save recorded which transactions were already known (knownIds), count
+  // everything from the save day onward that wasn't known yet instead. Old
+  // saves without a snapshot keep the previous timestamp-cutoff behavior.
   const manualBalance = (() => {
     if (baseBalance === null || balanceSavedAt === null) return null
     const savedTs = new Date(balanceSavedAt).getTime()
+    const known = balanceKnownIds !== null ? new Set(balanceKnownIds) : null
+    const cutoff = known ? new Date(savedTs).setHours(0, 0, 0, 0) : savedTs
     const delta = accountTransactions
-      .filter(t => !t.isPending && !isExcluded(t) && t.date.getTime() >= savedTs)
+      .filter(t => !t.isPending && !isExcluded(t) && t.date.getTime() >= cutoff && !known?.has(t.id))
       .reduce((s, t) => s + t.amount, 0)
     return baseBalance + delta
   })()
 
-  // When bank sync returns 0 balance (EnableBanking didn't provide one yet),
-  // substitute the manually saved balance so the total doesn't show as zero.
-  const effectiveWealth = useMemo(() => {
-    if (manualBalance === null) return totalWealth
+  // The manual Kontostand replaces the giro balance whenever it is fresher
+  // than the bank sync: either the sync never delivered a balance (0 / no
+  // date) or the user saved the manual value after the last sync. A newer
+  // sync takes over again automatically.
+  const giroOverride = useMemo(() => {
+    if (manualBalance === null || balanceSavedAt === null) return null
     const giro = accounts.find(a => a.type === 'giro')
-    if (!giro || giro.balance !== 0) return totalWealth
-    return totalWealth - 0 + manualBalance
-  }, [totalWealth, accounts, manualBalance])
+    if (!giro) return null
+    const manualTs = new Date(balanceSavedAt).getTime()
+    const syncTs = giro.balanceDate ? new Date(giro.balanceDate).getTime() : 0
+    if (giro.balance !== 0 && syncTs >= manualTs) return null
+    return { iban: giro.iban, prevBalance: giro.balance, included: giro.included, balance: manualBalance }
+  }, [accounts, manualBalance, balanceSavedAt])
+
+  const effectiveWealth = useMemo(() => {
+    if (!giroOverride || !giroOverride.included) return totalWealth
+    return totalWealth - giroOverride.prevBalance + giroOverride.balance
+  }, [totalWealth, giroOverride])
 
   // ── Per-chart filters ─────────────────────────────────────────────────────
   const pieChart = useChartFilter(timeFilter)
@@ -192,8 +209,8 @@ export function Dashboard() {
                 account={{
                   ...a,
                   included: isAccountSelected(a.iban),
-                  balance: a.type === 'giro' && a.balance === 0 && manualBalance !== null ? manualBalance : a.balance,
-                  balanceDate: a.type === 'giro' && a.balance === 0 && balanceSavedAt ? balanceSavedAt : a.balanceDate,
+                  balance: giroOverride?.iban === a.iban ? giroOverride.balance : a.balance,
+                  balanceDate: giroOverride?.iban === a.iban && balanceSavedAt ? balanceSavedAt : a.balanceDate,
                 }}
                 onToggle={toggleAccount}
                 showToggle
