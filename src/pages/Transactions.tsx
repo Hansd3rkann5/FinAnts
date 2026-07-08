@@ -1,8 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Search, X, SlidersHorizontal } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { TimeFilter, Transaction } from '@/types'
+import type { TimeFilter, Transaction, Account } from '@/types'
 import { useTransactionsCtx } from '@/context/TransactionsContext'
+import { useEnableBanking } from '@/hooks/useEnableBanking'
+import { workerCfg } from '@/components/settings/shared'
+import { notify } from '@/utils/notify'
 import { useFilteredTransactions } from '@/hooks/useFilteredTransactions'
 import { useAllCategories } from '@/hooks/useAllCategories'
 import { computeAvailablePeriods } from '@/utils/chartCompute'
@@ -27,8 +30,16 @@ export function Transactions() {
   const {
     transactions, updateTransaction, refreshAll,
     accounts, selectedAccountIbans,
+    applyServerTransactions, upsertAccount, markNew,
   } = useTransactionsCtx()
   const [refreshing, setRefreshing] = useState(false)
+  const [refreshMessage, setRefreshMessage] = useState('')
+
+  const onEbAccounts = useCallback(
+    (incoming: Omit<Account, 'included'>[]) => { for (const a of incoming) upsertAccount(a) },
+    [upsertAccount],
+  )
+  const { refresh: ebRefresh } = useEnableBanking(applyServerTransactions, onEbAccounts, markNew)
 
   // Same account-selection state as the Dashboard's Kontostand-replacement
   // card (shared via TransactionsContext) — everything below derives from
@@ -48,12 +59,25 @@ export function Transactions() {
     setSelected(tx)
   }
 
-  // Pull-to-refresh: download everything from the cloud — categories + merchant
-  // patterns (R2) and the transactions (D1). This is how a new device pulls the
-  // data after its API key is entered. Loading overlay until it resolves.
+  // Pull-to-refresh, two stages under the full-screen loader:
+  // 1. Bank sync via the EnableBanking session stored on the worker — fetches
+  //    fresh transactions without a new TAN. If the session is gone (expired /
+  //    never connected), a toast points to Settings and the pull continues.
+  // 2. Cloud download — categories + merchant patterns (R2) and the merged
+  //    transactions (D1). This is also how a new device pulls its data.
   async function handleRefresh() {
     setRefreshing(true)
-    try { await refreshAll() } finally { setRefreshing(false) }
+    try {
+      setRefreshMessage('Bank wird abgefragt…')
+      const bank = await ebRefresh(workerCfg, 30)
+      if (bank === 'needs_auth') {
+        notify('Bank-Verbindung abgelaufen', 'In den Einstellungen neu mit der Bank verbinden (TAN nötig).')
+      }
+      setRefreshMessage('Buchungen werden aktualisiert…')
+      await refreshAll()
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   const timeFiltered = useFilteredTransactions(accountTransactions, timeFilter)
@@ -82,10 +106,10 @@ export function Transactions() {
   }, [timeFiltered, filterCategory, search, amountSearch])
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
+    <PullToRefresh scrollId="page-scroll-transactions" onRefresh={handleRefresh}>
     <ChartLoader
       show={refreshing}
-      message="Buchungen werden aktualisiert…"
+      message={refreshMessage}
       onClose={() => setRefreshing(false)}
     />
     <div id="page-transactions" className="flex flex-col gap-4">

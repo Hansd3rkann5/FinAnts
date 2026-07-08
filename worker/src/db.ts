@@ -375,3 +375,41 @@ export async function getErrors(db: D1Database): Promise<StoredError[]> {
 export async function clearErrors(db: D1Database): Promise<void> {
   await db.prepare('DELETE FROM errors').run()
 }
+
+// ─── EnableBanking session store ─────────────────────────────────────────────
+//
+// One row: the session created by the last successful TAN authorization.
+// While it's valid, /eb/sync can fetch fresh transactions without sending the
+// user through the bank's SCA flow again.
+
+export interface EbSessionRow {
+  session_id: string
+  accounts: string   // JSON: account resources from the code exchange
+  valid_until: string
+  created_at: string
+}
+
+export async function saveEbSession(
+  db: D1Database,
+  entry: { sessionId: string; accountsJson: string; validUntil: string },
+): Promise<void> {
+  await db.prepare(
+    `INSERT INTO eb_session (id, session_id, accounts, valid_until, created_at)
+     VALUES (1, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       session_id = excluded.session_id,
+       accounts = excluded.accounts,
+       valid_until = excluded.valid_until,
+       created_at = excluded.created_at`,
+  ).bind(entry.sessionId, entry.accountsJson, entry.validUntil, new Date().toISOString()).run()
+}
+
+export async function getEbSession(db: D1Database): Promise<EbSessionRow | null> {
+  return await db
+    .prepare('SELECT session_id, accounts, valid_until, created_at FROM eb_session WHERE id = 1')
+    .first<EbSessionRow>()
+}
+
+export async function clearEbSession(db: D1Database): Promise<void> {
+  await db.prepare('DELETE FROM eb_session WHERE id = 1').run()
+}

@@ -36,6 +36,25 @@ export function useEnableBanking(
   const [message,  setMessage]  = useState('')
   const [lastSync, setLastSync] = useState<string | null>(() => localStorage.getItem(EB_LAST_SYNC_KEY))
 
+  const applySync = useCallback((data: EbSyncResponse) => {
+    if (onAccounts && data.accounts?.length) {
+      const validTypes = new Set(['giro', 'savings', 'depot', 'loan', 'other'])
+      onAccounts(data.accounts.map(a => ({
+        ...a,
+        type: validTypes.has(a.type) ? (a.type as 'giro' | 'savings' | 'depot' | 'loan' | 'other') : 'other',
+      })))
+    }
+
+    onImport(data.transactions ?? [])
+    if (data.meta.newlyAddedIds?.length) onNewIds?.(data.meta.newlyAddedIds)
+
+    const syncTime = new Date().toLocaleString('de-DE')
+    localStorage.setItem(EB_LAST_SYNC_KEY, syncTime)
+    setLastSync(syncTime)
+    setStatus('success')
+    setMessage(`${data.meta.added} neu · ${data.meta.count} gesamt · ${data.meta.accountCount} Konten`)
+  }, [onImport, onAccounts, onNewIds])
+
   const doSync = useCallback(async (cfg: WorkerConfig, code: string, days: number) => {
     setStatus('syncing')
     setMessage('')
@@ -50,29 +69,43 @@ export function useEnableBanking(
       console.log('[EB] sync response:', JSON.stringify(data))
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
 
-      if (onAccounts && data.accounts?.length) {
-        const validTypes = new Set(['giro', 'savings', 'depot', 'loan', 'other'])
-        onAccounts(data.accounts.map(a => ({
-          ...a,
-          type: validTypes.has(a.type) ? (a.type as 'giro' | 'savings' | 'depot' | 'loan' | 'other') : 'other',
-        })))
-      }
-
-      onImport(data.transactions ?? [])
-      if (data.meta.newlyAddedIds?.length) onNewIds?.(data.meta.newlyAddedIds)
-
       localStorage.removeItem(EB_PENDING_KEY)
-      const syncTime = new Date().toLocaleString('de-DE')
-      localStorage.setItem(EB_LAST_SYNC_KEY, syncTime)
-      setLastSync(syncTime)
-      setStatus('success')
-      setMessage(`${data.meta.added} neu · ${data.meta.count} gesamt · ${data.meta.accountCount} Konten`)
+      applySync(data)
     } catch (e) {
       reportError('EnableBanking-Sync fehlgeschlagen', e)
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Verbindungsfehler')
     }
-  }, [onImport, onAccounts, onNewIds])
+  }, [applySync])
+
+  // Sync via the session stored on the worker — no TAN, no redirect. Returns
+  // 'needs_auth' when there is no usable session (never connected, expired,
+  // or revoked by the bank) so the caller can point the user to Settings.
+  const refresh = useCallback(async (cfg: WorkerConfig, days = 30): Promise<'ok' | 'needs_auth' | 'error'> => {
+    setStatus('syncing')
+    setMessage('')
+    try {
+      const res  = await fetch(`${cfg.workerUrl.replace(/\/$/, '')}/eb/sync`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: cfHeaders(),
+        body: JSON.stringify({ days }),
+      })
+      const data = await res.json() as EbSyncResponse & { needsAuth?: boolean }
+      if (data.needsAuth) {
+        setStatus('idle')
+        return 'needs_auth'
+      }
+      if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
+      applySync(data)
+      return 'ok'
+    } catch (e) {
+      reportError('EnableBanking-Sync fehlgeschlagen', e)
+      setStatus('error')
+      setMessage(e instanceof Error ? e.message : 'Verbindungsfehler')
+      return 'error'
+    }
+  }, [applySync])
 
   // Detect redirect-back from EnableBanking (code in URL)
   useEffect(() => {
@@ -127,5 +160,5 @@ export function useEnableBanking(
     }
   }, [])
 
-  return { start, status, message, lastSync }
+  return { start, refresh, status, message, lastSync }
 }

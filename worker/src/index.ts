@@ -1,7 +1,11 @@
-import { ebStartAuth, ebExchangeAndSync, ebGetAspsps } from './enablebanking'
+import {
+  ebStartAuth, ebExchangeCode, ebFetchData, ebGetAspsps, EbSessionExpiredError,
+  type EbAccountResource,
+} from './enablebanking'
 import {
   mergeTransactions, getTransactions, updateTransaction, deleteTransaction, clearTransactions, toStored,
   insertError, getErrors, clearErrors, getTradeRows,
+  saveEbSession, getEbSession, clearEbSession,
   type MergeInput, type StoredTx,
 } from './db'
 import { solveTradeRepublicWaf } from './traderepublic/waf'
@@ -205,11 +209,14 @@ export default {
     }
 
     // ── POST /eb/sync ─────────────────────────────────────────────────────
+    // With `code`: exchange the fresh authorization for a session, persist it,
+    // then fetch. Without `code`: reuse the stored session — no TAN needed —
+    // and answer { needsAuth: true } when there is none or it stopped working.
     if (request.method === 'POST' && path === '/eb/sync') {
       if (!env.EB_APPLICATION_ID || !env.EB_PRIVATE_KEY) {
         return jsonResponse({ error: 'EnableBanking nicht konfiguriert' }, 503, cors)
       }
-      let body: { code: string; days?: number }
+      let body: { code?: string; days?: number }
       try { body = await request.json() as typeof body } catch { return jsonResponse({ error: 'Ungültiger JSON-Body' }, 400, cors) }
 
       const daysBack = Math.min(body.days ?? 90, 365)
@@ -217,7 +224,27 @@ export default {
       const fromDate = new Date(toDate.getTime() - daysBack * 86_400_000)
 
       try {
-        const result = await ebExchangeAndSync(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, body.code, fromDate, toDate)
+        let ebAccounts: EbAccountResource[]
+        if (body.code) {
+          const session = await ebExchangeCode(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, body.code)
+          ebAccounts = session.accounts
+          if (env.DB) {
+            await saveEbSession(env.DB, {
+              sessionId: session.sessionId,
+              accountsJson: JSON.stringify(session.accounts),
+              validUntil: session.validUntil ?? new Date(Date.now() + 180 * 86_400_000).toISOString(),
+            })
+          }
+        } else {
+          const stored = env.DB ? await getEbSession(env.DB) : null
+          if (!stored || new Date(stored.valid_until).getTime() <= Date.now()) {
+            if (stored && env.DB) await clearEbSession(env.DB)
+            return jsonResponse({ error: 'Keine gültige Bank-Session', needsAuth: true }, 401, cors)
+          }
+          ebAccounts = JSON.parse(stored.accounts) as EbAccountResource[]
+        }
+
+        const result = await ebFetchData(env.EB_APPLICATION_ID, env.EB_PRIVATE_KEY, ebAccounts, fromDate, toDate)
 
         // EB sometimes returns a UUID as the account "IBAN" when the bank doesn't
         // expose it via PSD2. Patch any UUID accounts by looking up the real
@@ -246,6 +273,10 @@ export default {
 
         return jsonResponse(await buildSyncResponse(env, result, 'eb', fromDate, toDate), 200, cors)
       } catch (e) {
+        if (e instanceof EbSessionExpiredError) {
+          if (env.DB) await clearEbSession(env.DB)
+          return jsonResponse({ error: 'Bank-Session abgelaufen', needsAuth: true }, 401, cors)
+        }
         return jsonResponse({ error: String(e) }, 502, cors)
       }
     }

@@ -2,7 +2,7 @@ const EB_API = 'https://api.enablebanking.com'
 
 // ─── Internal EB types ─────────────────────────────────────────────────────
 
-interface EbAccountResource {
+export interface EbAccountResource {
   uid: string
   identification?: { iban?: string }
   name?: string
@@ -107,7 +107,10 @@ export async function ebStartAuth(
 ): Promise<{ authorization_id: string; auth_url: string }> {
   console.log('[EB] ebStartAuth: aspsp=', aspspName, aspspCountry, 'redirect=', redirectUrl)
 
-  const validUntil = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+  // 180 days is the PSD2 maximum consent validity since the 2023 RTS
+  // amendment — the whole point of storing the session is to not TAN again
+  // until this runs out, so ask for the maximum.
+  const validUntil = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString()
 
   const res = await ebFetch('/auth', appId, privKey, {
     method: 'POST',
@@ -131,17 +134,22 @@ export async function ebStartAuth(
   return { authorization_id: data.authorization_id, auth_url: data.url }
 }
 
-// Step 2: Exchange authorization code for session + fetch transactions
-export async function ebExchangeAndSync(
+// Thrown when the stored session no longer authorizes data access — the
+// caller clears it and asks the user to re-authorize (TAN).
+export class EbSessionExpiredError extends Error {
+  constructor() { super('EnableBanking-Session abgelaufen') }
+}
+
+// Step 2a: Exchange the one-time authorization code for a session. The
+// session outlives this request (up to the consent's valid_until) — the
+// caller persists it so later syncs skip the SCA flow entirely.
+export async function ebExchangeCode(
   appId: string,
   privKey: string,
   code: string,
-  fromDate: Date,
-  toDate: Date,
-): Promise<{ accounts: MappedAccount[]; transactions: MappedTransaction[] }> {
-  console.log('[EB] ebExchangeAndSync: exchanging code for session')
+): Promise<{ sessionId: string; accounts: EbAccountResource[]; validUntil: string | null }> {
+  console.log('[EB] ebExchangeCode: exchanging code for session')
 
-  // Exchange code → session
   const sessRes = await ebFetch('/sessions', appId, privKey, {
     method: 'POST',
     body: JSON.stringify({ code }),
@@ -153,18 +161,40 @@ export async function ebExchangeAndSync(
     throw new Error(`Session exchange failed (${sessRes.status}): ${body}`)
   }
 
-  const session = await sessRes.json() as { session_id: string; accounts?: EbAccountResource[] }
+  const session = await sessRes.json() as {
+    session_id: string
+    accounts?: EbAccountResource[]
+    access?: { valid_until?: string }
+  }
   console.log('[EB] session_id=', session.session_id, '| accounts in response:', session.accounts?.length ?? 0)
 
   const accounts = session.accounts ?? []
   if (accounts.length === 0) throw new Error('Keine autorisierten Konten in der Session')
 
+  return {
+    sessionId: session.session_id,
+    accounts,
+    validUntil: session.access?.valid_until ?? null,
+  }
+}
+
+// Step 2b: Fetch balances + transactions for already-authorized accounts.
+// Works both right after the code exchange and later with the stored session's
+// account resources — no SCA involved.
+export async function ebFetchData(
+  appId: string,
+  privKey: string,
+  accounts: EbAccountResource[],
+  fromDate: Date,
+  toDate: Date,
+): Promise<{ accounts: MappedAccount[]; transactions: MappedTransaction[] }> {
   const dateFrom = fromDate.toISOString().slice(0, 10)
   const dateTo   = toDate.toISOString().slice(0, 10)
   console.log('[EB] date range', dateFrom, '→', dateTo)
 
   const mappedAccounts: MappedAccount[]         = []
   const mappedTransactions: MappedTransaction[] = []
+  let authFailures = 0
 
   // The continuation_key returned by EnableBanking contains the bank's internal
   // accountId (e.g. Commerzbank's XS2A ID), which differs from the EB session UID.
@@ -218,6 +248,7 @@ export async function ebExchangeAndSync(
     )
 
     if (!txRes.ok) {
+      if ([401, 403, 410, 422].includes(txRes.status)) authFailures++
       console.error('[EB] tx fetch failed for uid:', acct.uid, txRes.status, await txRes.text())
       return
     }
@@ -283,6 +314,12 @@ export async function ebExchangeAndSync(
       })
     }
   }))
+
+  // Every account rejected with an authorization-type status → the session
+  // (or the consent behind it) is gone, not a transient fetch problem.
+  if (accounts.length > 0 && mappedAccounts.length === 0 && authFailures === accounts.length) {
+    throw new EbSessionExpiredError()
+  }
 
   console.log('[EB] done: accounts=', mappedAccounts.length, 'transactions=', mappedTransactions.length)
   return { accounts: mappedAccounts, transactions: mappedTransactions }
