@@ -187,16 +187,28 @@ export function ChartLoader({ show, message, onClose, dismissible = true }: Char
             </div>
           </div>
 
-          {/* Message */}
+          {/* Message — readable glass pill; step changes crossfade so the
+              progression through the sync stages is easy to follow. */}
           {message && (
-            <motion.p
-              className="absolute bottom-16 left-0 right-0 text-center z-10 text-xs text-white/45 tracking-[0.2em] uppercase pointer-events-none"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0.3, 0.65, 0.3] }}
-              transition={{ duration: 2.2, repeat: Infinity, delay: 0.4 }}
-            >
-              {message}
-            </motion.p>
+            <div className="absolute bottom-14 left-0 right-0 z-10 flex justify-center px-6 pointer-events-none">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={message}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                  className="text-sm font-medium text-white/90 text-center tracking-wide px-5 py-2.5 rounded-pill border border-white/10 bg-white/8"
+                  style={{
+                    backdropFilter: 'blur(6px)',
+                    WebkitBackdropFilter: 'blur(6px)',
+                    boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+                  }}
+                >
+                  {message}
+                </motion.p>
+              </AnimatePresence>
+            </div>
           )}
         </motion.div>
       )}
