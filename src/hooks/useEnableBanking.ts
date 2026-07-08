@@ -81,10 +81,16 @@ export function useEnableBanking(
   // Sync via the session stored on the worker — no TAN, no redirect. Returns
   // 'needs_auth' when there is no usable session (never connected, expired,
   // or revoked by the bank) so the caller can point the user to Settings.
-  const refresh = useCallback(async (cfg: WorkerConfig, days = 30): Promise<'ok' | 'needs_auth' | 'error'> => {
+  // onProgress fires before each real await so callers can narrate the steps.
+  const refresh = useCallback(async (
+    cfg: WorkerConfig,
+    days = 30,
+    onProgress?: (msg: string) => void,
+  ): Promise<'ok' | 'needs_auth' | 'error'> => {
     setStatus('syncing')
     setMessage('')
     try {
+      onProgress?.(`Bank wird abgefragt — Buchungen der letzten ${days} Tage…`)
       const res  = await fetch(`${cfg.workerUrl.replace(/\/$/, '')}/eb/sync`, {
         method: 'POST',
         credentials: 'include',
@@ -97,6 +103,9 @@ export function useEnableBanking(
         return 'needs_auth'
       }
       if (!res.ok || data.error) throw new Error(data.error ?? `HTTP ${res.status}`)
+      onProgress?.(data.meta.added > 0
+        ? `${data.meta.added} neue Buchung${data.meta.added === 1 ? '' : 'en'} werden übernommen…`
+        : 'Keine neuen Buchungen — Kontostände werden übernommen…')
       applySync(data)
       return 'ok'
     } catch (e) {

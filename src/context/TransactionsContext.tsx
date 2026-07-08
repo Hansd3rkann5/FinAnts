@@ -21,7 +21,7 @@ type DataCtxType =
   ReturnType<typeof useTransactions> &
   ReturnType<typeof useAccounts> &
   ReturnType<typeof useAccountView> &
-  { refreshAll: () => Promise<void> }
+  { refreshAll: (onProgress?: (msg: string) => void) => Promise<void> }
 
 type PrefsCtxType =
   ReturnType<typeof useMerchantProfiles> &
@@ -194,8 +194,10 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   }, [transactions.transactions, accountsState.accounts]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Full cloud download: categories + patterns + splits (R2) then transactions (D1).
-  const refreshAll = useCallback(async () => {
+  const refreshAll = useCallback(async (onProgress?: (msg: string) => void) => {
+    onProgress?.('Cloud: Kategorien & Einstellungen werden geladen…')
     await pullPatterns().catch(err => reportError('Sync fehlgeschlagen', err))
+    onProgress?.('Cloud: Buchungen werden geladen…')
     await transactions.refresh()
   }, [pullPatterns, transactions])
 

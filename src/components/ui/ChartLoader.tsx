@@ -88,9 +88,11 @@ interface ChartLoaderProps {
   show: boolean
   message?: string
   onClose?: () => void
+  /** false hides the X button — for flows that must not be interrupted. */
+  dismissible?: boolean
 }
 
-export function ChartLoader({ show, message, onClose }: ChartLoaderProps) {
+export function ChartLoader({ show, message, onClose, dismissible = true }: ChartLoaderProps) {
   const [dismissed, setDismissed] = useState(false)
   const [prevShow, setPrevShow] = useState(show)
 
@@ -126,14 +128,16 @@ export function ChartLoader({ show, message, onClose }: ChartLoaderProps) {
           <div className="absolute inset-0 backdrop-blur-2xl bg-black/60" />
 
           {/* Close button */}
-          <button
-            onClick={handleClose}
-            aria-label="Schließen"
-            className="absolute right-4 z-10 w-9 h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
-            style={{ top: 'max(1rem, env(safe-area-inset-top))' }}
-          >
-            <X size={18} />
-          </button>
+          {dismissible && (
+            <button
+              onClick={handleClose}
+              aria-label="Schließen"
+              className="absolute right-4 z-10 w-9 h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+              style={{ top: 'max(1rem, env(safe-area-inset-top))' }}
+            >
+              <X size={18} />
+            </button>
+          )}
 
           {/* Chart animation — centred with 25% padding on each side */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

@@ -68,13 +68,13 @@ export function Transactions() {
   async function handleRefresh() {
     setRefreshing(true)
     try {
-      setRefreshMessage('Bank wird abgefragt…')
-      const bank = await ebRefresh(workerCfg, 30)
+      setRefreshMessage('Bank-Session wird geprüft…')
+      const bank = await ebRefresh(workerCfg, 30, setRefreshMessage)
       if (bank === 'needs_auth') {
         notify('Bank-Verbindung abgelaufen', 'In den Einstellungen neu mit der Bank verbinden (TAN nötig).')
       }
-      setRefreshMessage('Buchungen werden aktualisiert…')
-      await refreshAll()
+      await refreshAll(setRefreshMessage)
+      setRefreshMessage('Fertig!')
     } finally {
       setRefreshing(false)
     }
@@ -107,11 +107,7 @@ export function Transactions() {
 
   return (
     <PullToRefresh scrollId="page-scroll-transactions" onRefresh={handleRefresh}>
-    <ChartLoader
-      show={refreshing}
-      message={refreshMessage}
-      onClose={() => setRefreshing(false)}
-    />
+    <ChartLoader show={refreshing} message={refreshMessage} dismissible={false} />
     <div id="page-transactions" className="flex flex-col gap-4">
       <div
         id="tx-sticky-filter"
