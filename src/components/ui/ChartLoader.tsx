@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, type Transition, type TargetAndTransition } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
@@ -36,9 +36,15 @@ function pathFromYs(ys: number[]): string {
 const TICK_MS = 1000
 const MORPH: Transition = { duration: TICK_MS / 1000, ease: 'easeInOut' }
 
+// Close choreography: the line settles back to flat over this duration, then
+// the overlay itself fades out (see ChartLoader below).
+export const FLATTEN_MS = 500
+const FLATTEN: Transition = { duration: FLATTEN_MS / 1000, ease: 'easeOut' }
+const FLAT_D = pathFromYs(Array(POINTS).fill(VB_H / 2))
+
 type Target = Pick<TargetAndTransition, 'd' | 'stroke'>
 
-function ChartAnimation() {
+function ChartAnimation({ flatten = false }: { flatten?: boolean }) {
   // One persistent line — never replaced/remounted, just continuously
   // retargeted. Starts perfectly flat (all 5 points at the same y), then
   // morphs every tick. `target` IS the exact object passed to `animate`
@@ -53,6 +59,7 @@ function ChartAnimation() {
   const colorRef = useRef(0)
 
   useEffect(() => {
+    if (flatten) return  // stop retargeting; the flat target below takes over
     const iv = setInterval(() => {
       const colors = palette()
       colorRef.current = (colorRef.current + 1) % colors.length
@@ -62,7 +69,15 @@ function ChartAnimation() {
       })
     }, TICK_MS)
     return () => clearInterval(iv)
-  }, [])
+  }, [flatten])
+
+  // While flattening, keep the current stroke and only settle the shape.
+  // Memoized for the same reason `target` is kept stable (see above) — a
+  // fresh object literal per render would restart the in-flight morph.
+  const animateTarget = useMemo<Target>(
+    () => flatten ? { d: FLAT_D, stroke: target.stroke } : target,
+    [flatten, target],
+  )
 
   return (
     <div
@@ -76,8 +91,8 @@ function ChartAnimation() {
           strokeLinecap="round"
           strokeLinejoin="round"
           initial={target}
-          animate={target}
-          transition={MORPH}
+          animate={animateTarget}
+          transition={flatten ? FLATTEN : MORPH}
         />
       </svg>
     </div>
@@ -94,6 +109,10 @@ interface ChartLoaderProps {
 
 export function ChartLoader({ show, message, onClose, dismissible = true }: ChartLoaderProps) {
   const [dismissed, setDismissed] = useState(false)
+  // Close choreography: when `show` turns off, the loader lingers with the
+  // line settling back to flat (`closing`), and only then unmounts — which
+  // triggers the AnimatePresence fade. An X-dismissal skips the settle.
+  const [closing, setClosing] = useState(false)
   const [prevShow, setPrevShow] = useState(show)
 
   // Reset the dismiss flag whenever a fresh loading episode begins.
@@ -103,14 +122,27 @@ export function ChartLoader({ show, message, onClose, dismissible = true }: Char
   // no extra commit/flicker happens.
   if (show !== prevShow) {
     setPrevShow(show)
-    if (show) setDismissed(false)
+    if (show) {
+      setDismissed(false)
+      setClosing(false)
+    } else if (!dismissed) {
+      setClosing(true)
+    }
   }
+
+  useEffect(() => {
+    if (!closing) return
+    // Small buffer past the morph so the line visibly lands before the fade.
+    const t = setTimeout(() => setClosing(false), FLATTEN_MS + 150)
+    return () => clearTimeout(t)
+  }, [closing])
 
   if (typeof document === 'undefined') return null
 
-  const visible = show && !dismissed
+  const visible = (show && !dismissed) || closing
   const handleClose = () => {
     setDismissed(true)
+    setClosing(false)
     onClose?.()
   }
 
@@ -124,8 +156,17 @@ export function ChartLoader({ show, message, onClose, dismissible = true }: Char
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4 }}
         >
-          {/* Blurred backdrop */}
-          <div className="absolute inset-0 backdrop-blur-2xl bg-black/60" />
+          {/* Blurred, semi-transparent backdrop — inline styles (incl. the
+              -webkit- prefix) like the rest of the app, so the blur reliably
+              applies on iOS where the Tailwind backdrop utility didn't. */}
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundColor: 'rgba(10, 10, 20, 0.65)',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+            }}
+          />
 
           {/* Close button */}
           {dismissible && (
@@ -142,7 +183,7 @@ export function ChartLoader({ show, message, onClose, dismissible = true }: Char
           {/* Chart animation — centred with 25% padding on each side */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div style={{ width: '50vw', height: '32vh' }}>
-              <ChartAnimation />
+              <ChartAnimation flatten={closing} />
             </div>
           </div>
 
