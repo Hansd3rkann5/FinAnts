@@ -42,9 +42,11 @@ export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) 
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const didLongPress = useRef(false)
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null)
 
-  function startLongPress() {
+  function startLongPress(e: React.PointerEvent) {
     didLongPress.current = false
+    pressOrigin.current = { x: e.clientX, y: e.clientY }
     longPressTimer.current = setTimeout(() => {
       didLongPress.current = true
       navigator.vibrate?.(40)
@@ -57,6 +59,14 @@ export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) 
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
+    pressOrigin.current = null
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!pressOrigin.current) return
+    const dx = e.clientX - pressOrigin.current.x
+    const dy = e.clientY - pressOrigin.current.y
+    if (Math.sqrt(dx * dx + dy * dy) > 8) cancelLongPress()
   }
 
   function handleClick() {
@@ -77,6 +87,7 @@ export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) 
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1], delay: Math.min(index * 0.04, 0.3) }}
         onClick={handleClick}
         onPointerDown={startLongPress}
+        onPointerMove={handlePointerMove}
         onPointerUp={cancelLongPress}
         onPointerLeave={cancelLongPress}
         onPointerCancel={cancelLongPress}
