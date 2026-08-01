@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { MerchantProfile, Transaction } from '@/types'
 import { reportError } from '@/utils/notify'
+import { keywordRegex, fold } from '@/utils/merchantLogos'
 
 const STORAGE_KEY = 'finants_merchant_profiles'
 
@@ -35,15 +36,15 @@ function persist(profiles: MerchantProfile[]) {
 export function resolveProfile(tx: Transaction, profiles: MerchantProfile[]): MerchantProfile | null {
   // Match against the Bezeichnung (customLabel) too — for PayPal et al. the real
   // merchant lives there, not in the counterparty/Buchungstext.
-  const label = (tx.customLabel ?? '').toLowerCase()
-  const cp = tx.counterparty.toLowerCase()
-  const text = `${label} ${cp} ${tx.description}`.toLowerCase()
+  const label = fold(tx.customLabel ?? '')
+  const cp = fold(tx.counterparty)
+  const text = fold(`${label} ${cp} ${tx.description}`)
   const matches = profiles.filter(p =>
     p.matchStrings.some(ms => {
-      const m = ms.toLowerCase()
+      const m = fold(ms)
       return p.matchMode === 'exact'
         ? (cp === m || label === m)
-        : text.includes(m)
+        : keywordRegex(ms).test(text)
     })
   )
   if (!matches.length) return null
