@@ -1,5 +1,5 @@
 import type { CategoryId } from '@/types'
-import { findMerchant, fold } from './merchantLogos'
+import { findMerchant, fold, keywordRegex } from './merchantLogos'
 
 interface Rule {
   keywords: string[]
@@ -37,7 +37,7 @@ export function autoCategory(description: string, counterparty: string): Categor
   }
 
   for (const rule of RULES) {
-    if (rule.keywords.some(k => combined.includes(fold(k)))) {
+    if (rule.keywords.some(k => keywordRegex(k).test(combined))) {
       return rule.category
     }
   }

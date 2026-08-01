@@ -39,7 +39,7 @@ const MERCHANTS: MerchantInfo[] = [
   { name: 'Uber',          domain: 'uber.com',          keywords: ['uber bv', 'uber trip'],          categoryOverride: 'transport' },
   { name: 'ADAC',          domain: 'adac.de',           keywords: ['adac'],                          categoryOverride: 'transport' },
   { name: 'Shell',         domain: 'shell.de',          keywords: ['shell tankst', 'shell station'], categoryOverride: 'transport' },
-  { name: 'BP',            domain: 'bp.com',            keywords: ['bp tankst', ' bp '],             categoryOverride: 'transport' },
+  { name: 'BP',            domain: 'bp.com',            keywords: ['bp tankst', 'bp'],               categoryOverride: 'transport' },
   { name: 'Aral',          domain: 'aral.de',           keywords: ['aral'],                          categoryOverride: 'transport' },
   { name: 'Esso',          domain: 'esso.de',           keywords: ['esso'],                          categoryOverride: 'transport' },
   { name: 'Flixbus',       domain: 'flixbus.de',        keywords: ['flixbus', 'flix se'],            categoryOverride: 'transport' },
@@ -80,7 +80,7 @@ const MERCHANTS: MerchantInfo[] = [
   // Utilities & housing
   { name: 'Telekom',       domain: 'telekom.de',        keywords: ['telekom', 'dt ag'],              categoryOverride: 'housing' },
   { name: 'Vodafone',      domain: 'vodafone.de',       keywords: ['vodafone'],                      categoryOverride: 'housing' },
-  { name: 'O2',            domain: 'o2online.de',       keywords: ['telefonica', 'o2 '],             categoryOverride: 'housing' },
+  { name: 'O2',            domain: 'o2online.de',       keywords: ['telefonica', 'o2'],              categoryOverride: 'housing' },
   { name: '1&1',           domain: '1und1.de',          keywords: ['1&1', '1und1'],                  categoryOverride: 'housing' },
   // Insurance
   { name: 'HUK-COBURG',    domain: 'huk.de',            keywords: ['huk', 'huk-coburg'],             categoryOverride: 'insurance' },
@@ -108,10 +108,28 @@ export interface MerchantMatch {
 const LOGOS_TOKEN = import.meta.env.VITE_LOGOS_TOKEN ?? ''
 console.log('[logos.dev] token present:', !!LOGOS_TOKEN, LOGOS_TOKEN ? `(${LOGOS_TOKEN.slice(0, 6)}…)` : '(missing)')
 
+// Match a keyword as a whole word — prevents short tokens like "obi" from
+// hitting inside unrelated words like "ETOBICOKE". We build the regex once
+// per keyword and cache it; the word-boundary anchors are only added on sides
+// where the keyword itself starts/ends with a word character (\w).
+const _kwCache = new Map<string, RegExp>()
+export function keywordRegex(keyword: string): RegExp {
+  let re = _kwCache.get(keyword)
+  if (!re) {
+    const k = fold(keyword).trim()
+    const esc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const pre = /\w/.test(k[0] ?? '') ? '\\b' : ''
+    const suf = /\w/.test(k[k.length - 1] ?? '') ? '\\b' : ''
+    re = new RegExp(pre + esc + suf)
+    _kwCache.set(keyword, re)
+  }
+  return re
+}
+
 export function findMerchant(text: string): MerchantMatch | null {
   const lower = fold(text)
   for (const m of MERCHANTS) {
-    if (m.keywords.some(k => lower.includes(fold(k)))) {
+    if (m.keywords.some(k => keywordRegex(k).test(lower))) {
       return {
         merchantKey: m.domain,
         name: m.name,
