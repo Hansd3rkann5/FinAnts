@@ -1,5 +1,4 @@
-import { useState, useRef, useMemo } from 'react'
-import { useInView } from 'framer-motion'
+import { useState, useMemo } from 'react'
 import { useAppUnlocked } from '@/hooks/useAppUnlocked'
 import {
   ResponsiveContainer, LineChart, Line,
@@ -83,12 +82,10 @@ export function DepotChart({ globalFilter, periods }: Props) {
   const [showPct, setShowPct] = useState(true)
   const { data, loading, error } = useDepotHistory(LOOKBACK_DAYS)
 
-  const containerRef = useRef<HTMLDivElement>(null)
+  // Hold the entry animation while the lock screen is up — Recharts animates on
+  // the main thread and starves the PIN keypad of input events. Once unlocked,
+  // every range/holding change replays the draw (see keyed wrapper below).
   const unlocked = useAppUnlocked()
-  const inViewRaw = useInView(containerRef, { once: true, amount: 0.3 })
-  // Hold the entry animation while the lock screen is up — Recharts animates
-  // on the main thread and starves the PIN keypad of input events.
-  const inView = inViewRaw && unlocked
 
   const selectedStock = data?.perStock.find(s => s.isin === selectedIsin)
 
@@ -171,9 +168,13 @@ export function DepotChart({ globalFilter, periods }: Props) {
       ) : points.length === 0 ? (
         <div className="flex items-center justify-center py-10 text-xs text-white/30">Keine Daten im Zeitraum</div>
       ) : (
-        <div ref={containerRef} className="flex items-start">
+        <div className="flex items-start">
           <StickyYAxis ticks={ticks} yMin={yMin} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
-          <div className="flex-1 min-w-0">
+          {/* Keyed wrapper: remounting the whole ResponsiveContainer on each
+              range/holding change is the only reliable way to replay Recharts
+              3's mount "draw" animation — a key on <Line>/<LineChart> alone
+              stays inside the same chart instance and doesn't re-trigger it. */}
+          <div key={animKey} className="flex-1 min-w-0">
             <ResponsiveContainer width="100%" height={H}>
               <LineChart data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -189,10 +190,9 @@ export function DepotChart({ globalFilter, periods }: Props) {
                 <YAxis domain={[yMin, yMax]} hide />
                 <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
                 <Line
-                  key={animKey}
                   dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
                   activeDot={{ r: 3, fill: '#c084fc', strokeWidth: 0 }}
-                  isAnimationActive={inView} animationDuration={550} animationEasing="ease-out"
+                  isAnimationActive={unlocked} animationDuration={550} animationEasing="ease-out"
                 />
               </LineChart>
             </ResponsiveContainer>
