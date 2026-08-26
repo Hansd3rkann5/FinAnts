@@ -112,6 +112,11 @@ export function DepotChart({ globalFilter, periods }: Props) {
   const ticks = getNiceTicks(maxVal)
   const yMax = ticks[ticks.length - 1] || 1
 
+  // Remount the chart whenever the shown series changes (range or selected
+  // holding), so Recharts replays its left-to-right "draw" animation each time
+  // instead of silently swapping the data underneath a static line.
+  const animKey = `${selectedIsin ?? 'total'}|${effectiveFilter}`
+
   return (
     <GlassCard id="card-depot-chart" glow="purple" className="mx-4">
       <ChartHeader
@@ -166,7 +171,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
           <StickyYAxis ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
           <div className="flex-1 min-w-0">
             <ResponsiveContainer width="100%" height={H}>
-              <LineChart data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
+              <LineChart key={animKey} data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                 <XAxis
                   dataKey="label"
@@ -182,7 +187,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
                 <Line
                   dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
                   activeDot={{ r: 3, fill: '#c084fc', strokeWidth: 0 }}
-                  isAnimationActive={inView} animationDuration={300}
+                  isAnimationActive={inView} animationDuration={550} animationEasing="ease-out"
                 />
               </LineChart>
             </ResponsiveContainer>
