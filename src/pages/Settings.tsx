@@ -17,6 +17,7 @@ import { AppLockSection } from '@/components/settings/AppLockSection'
 import { ThemeSection } from '@/components/settings/ThemeSection'
 import { DataSection } from '@/components/settings/DataSection'
 import { ErrorLogSection } from '@/components/settings/ErrorLogSection'
+import { MerchantProfilesSection } from '@/components/settings/MerchantProfilesSection'
 
 export function Settings() {
   const [isAuth, setIsAuth] = useState(() => !!getApiKey())
@@ -93,6 +94,7 @@ export function Settings() {
         >
           <AppLockSection />
           <ThemeSection />
+          <MerchantProfilesSection />
           <DataSection />
           <ErrorLogSection />
         </SettingsGroup>
