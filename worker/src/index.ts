@@ -377,6 +377,15 @@ export default {
       }
     }
 
+    // ── POST /tr/instruments/clear — wipe the ISIN→ticker cache so the next
+    // depot-history call re-resolves from Yahoo (useful after a bad cache entry
+    // caused wrong portfolio valuation, e.g. XF000ETH0019 → wrong ticker).
+    if (request.method === 'POST' && path === '/tr/instruments/clear') {
+      if (!env.DB) return jsonResponse({ error: 'D1 not configured' }, 503, cors)
+      await env.DB.prepare('DELETE FROM instruments').run().catch(() => { /* ignore */ })
+      return jsonResponse({ ok: true }, 200, cors)
+    }
+
     // ── POST /upload-icon ─────────────────────────────────────────────────
     if (request.method === 'POST' && path.endsWith('/upload-icon')) {
       if (!env.ICONS) return jsonResponse({ error: 'R2 not configured' }, 503, cors)

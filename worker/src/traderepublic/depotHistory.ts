@@ -4,12 +4,13 @@
 // start: a position bought a year ago shows a year of history immediately,
 // limited only by how far back the trade itself goes.
 
-import { resolveInstrument, fetchHistoricalPrices, rangeForDays } from './marketdata'
+import { resolveInstrument, fetchHistoricalPrices, fetchCurrentPrice, rangeForDays } from './marketdata'
 
 export interface TradeRow {
   date: string  // yyyy-mm-dd
   isin: string
   shares: number  // signed: positive = bought, negative = sold
+  amount: number  // signed EUR transaction amount (negative = money out = buy)
 }
 
 export interface DepotHistoryPoint {
@@ -17,9 +18,21 @@ export interface DepotHistoryPoint {
   value: number
 }
 
+export interface DepotPosition {
+  isin: string
+  name: string
+  shares: number        // current quantity held
+  costBasis: number     // total EUR invested (average cost method)
+  currentValue: number  // shares × current market price
+  currentPrice: number
+  pnl: number           // currentValue - costBasis
+  pnlPct: number        // pnl / costBasis × 100
+}
+
 export interface DepotHistoryResult {
   cumulative: DepotHistoryPoint[]
   perStock: { isin: string; name: string; points: DepotHistoryPoint[] }[]
+  positions: DepotPosition[]
 }
 
 export async function computeDepotHistory(trades: TradeRow[], days: number, db?: D1Database): Promise<DepotHistoryResult> {
@@ -33,14 +46,18 @@ export async function computeDepotHistory(trades: TradeRow[], days: number, db?:
 
   const range = rangeForDays(days)
   const perStock: DepotHistoryResult['perStock'] = []
+  const positions: DepotPosition[] = []
   const cumulativeByDate = new Map<string, number>()
 
   for (const [isin, isinTrades] of byIsin) {
     const instrument = await resolveInstrument(isin, db)
     if (!instrument) continue
-    const prices = await fetchHistoricalPrices(instrument.symbol, range)
-    if (prices.length === 0) continue
+    const [prices, currentPrice] = await Promise.all([
+      fetchHistoricalPrices(instrument.symbol, range),
+      fetchCurrentPrice(instrument.symbol),
+    ])
 
+    // ── Historical chart ──────────────────────────────────────────────────────
     const points: DepotHistoryPoint[] = []
     let shares = 0
     let tradeIdx = 0
@@ -49,17 +66,41 @@ export async function computeDepotHistory(trades: TradeRow[], days: number, db?:
         shares += isinTrades[tradeIdx].shares
         tradeIdx++
       }
-      if (shares <= 0.000001) continue  // not held (yet, or anymore) on this date
+      if (shares <= 0.000001) continue
       const value = Math.round(shares * p.close * 100) / 100
       points.push({ date: p.date, value })
       cumulativeByDate.set(p.date, (cumulativeByDate.get(p.date) ?? 0) + value)
     }
     if (points.length > 0) perStock.push({ isin, name: instrument.name, points })
+
+    // ── Current position + P&L (average cost method) ─────────────────────────
+    // Only include positions still held (netShares > 0) with a valid live price.
+    if (currentPrice === null) continue
+    let totalShares = 0
+    let totalBuyShares = 0
+    let totalBuyCost = 0  // sum of |amount| for buy orders
+    for (const t of isinTrades) {
+      totalShares += t.shares
+      if (t.shares > 0) {
+        totalBuyShares += t.shares
+        totalBuyCost += Math.abs(t.amount)
+      }
+    }
+    if (totalShares <= 0.000001) continue
+    const avgCostPerShare = totalBuyShares > 0 ? totalBuyCost / totalBuyShares : 0
+    const costBasis = Math.round(avgCostPerShare * totalShares * 100) / 100
+    const currentValue = Math.round(totalShares * currentPrice * 100) / 100
+    const pnl = Math.round((currentValue - costBasis) * 100) / 100
+    const pnlPct = costBasis > 0 ? Math.round((pnl / costBasis) * 10000) / 100 : 0
+    positions.push({ isin, name: instrument.name, shares: Math.round(totalShares * 1000000) / 1000000, costBasis, currentValue, currentPrice, pnl, pnlPct })
   }
 
   const cumulative = [...cumulativeByDate.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([date, value]) => ({ date, value: Math.round(value * 100) / 100 }))
 
-  return { cumulative, perStock }
+  // Sort positions by current value descending
+  positions.sort((a, b) => b.currentValue - a.currentValue)
+
+  return { cumulative, perStock, positions }
 }

@@ -5,11 +5,12 @@ import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
-import { LineChart as LineChartIcon } from 'lucide-react'
+import { LineChart as LineChartIcon, TrendingUp, TrendingDown } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { useDepotHistory } from '@/hooks/useDepotHistory'
 import { getNiceTicks, StickyYAxis } from './chartUtils'
 import { formatEur } from '@/utils/format'
+import type { DepotPosition } from '@/utils/depotHistory'
 
 
 const RANGE_OPTIONS = [
@@ -36,6 +37,27 @@ function ChartTooltip({ active, payload }: any) {
   )
 }
 
+function PositionRow({ pos, showPct }: { pos: DepotPosition; showPct: boolean }) {
+  const positive = pos.pnl >= 0
+  return (
+    <div className="flex items-center gap-2 py-2.5 border-b border-white/5 last:border-0">
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-white/80 font-medium truncate">{pos.name}</p>
+        <p className="text-[10px] text-white/30 font-mono mt-0.5">{pos.isin} · {pos.shares.toLocaleString('de-DE', { maximumFractionDigits: 6 })} Stk</p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-xs text-white/80">{formatEur(pos.currentValue, 2)}</p>
+        <p className={`text-[10px] font-medium mt-0.5 flex items-center justify-end gap-0.5 ${positive ? 'text-emerald-400' : 'text-red-400'}`}>
+          {positive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+          {showPct
+            ? `${positive ? '+' : ''}${pos.pnlPct.toFixed(2)} %`
+            : `${positive ? '+' : ''}${formatEur(pos.pnl, 2)}`}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // Shown on the Dashboard once the Trade Republic account is toggled on —
 // cumulative depot value, or drill into a single holding, over a selectable
 // range. Reconstructed from stored trades + Yahoo historical prices, see
@@ -43,6 +65,7 @@ function ChartTooltip({ active, payload }: any) {
 export function DepotChart() {
   const [days, setDays] = useState(180)
   const [selectedIsin, setSelectedIsin] = useState<string | null>(null)
+  const [showPct, setShowPct] = useState(true)
   const { data, loading, error } = useDepotHistory(days)
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -147,6 +170,46 @@ export function DepotChart() {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      )}
+
+      {/* ── Positionen ── */}
+      {(data?.positions?.length ?? 0) > 0 && (
+        <div className="mt-4 pt-3 border-t border-white/6">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] text-white/30 uppercase tracking-wider">Positionen</p>
+            <button
+              onClick={() => setShowPct(p => !p)}
+              className="text-[10px] px-2 py-0.5 rounded-full border border-white/15 text-white/40 hover:text-white/70 transition-colors"
+            >
+              {showPct ? '% → €' : '€ → %'}
+            </button>
+          </div>
+          <div>
+            {data!.positions.map(pos => (
+              <PositionRow key={pos.isin} pos={pos} showPct={showPct} />
+            ))}
+          </div>
+          {/* Summary row */}
+          {(() => {
+            const totalCost = data!.positions.reduce((s, p) => s + p.costBasis, 0)
+            const totalVal  = data!.positions.reduce((s, p) => s + p.currentValue, 0)
+            const totalPnl  = totalVal - totalCost
+            const totalPct  = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
+            const pos       = totalPnl >= 0
+            return (
+              <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-white/8">
+                <p className="text-[10px] text-white/40">Depot gesamt</p>
+                <div className="text-right">
+                  <p className="text-xs text-white/70 font-medium">{formatEur(totalVal, 2)}</p>
+                  <p className={`text-[10px] font-medium flex items-center justify-end gap-0.5 ${pos ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {pos ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+                    {showPct ? `${pos ? '+' : ''}${totalPct.toFixed(2)} %` : `${pos ? '+' : ''}${formatEur(totalPnl, 2)}`}
+                  </p>
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
     </GlassCard>

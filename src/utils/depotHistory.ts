@@ -12,9 +12,21 @@ export interface DepotStockHistory {
   points: DepotHistoryPoint[]
 }
 
+export interface DepotPosition {
+  isin: string
+  name: string
+  shares: number
+  costBasis: number
+  currentValue: number
+  currentPrice: number
+  pnl: number
+  pnlPct: number
+}
+
 export interface DepotHistoryResult {
   cumulative: DepotHistoryPoint[]
   perStock: DepotStockHistory[]
+  positions: DepotPosition[]
 }
 
 // Reconstructed depot value over time — see worker/src/traderepublic/depotHistory.ts.
@@ -27,4 +39,13 @@ export async function fetchDepotHistory(days: number): Promise<DepotHistoryResul
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json() as Promise<DepotHistoryResult>
+}
+
+export async function clearInstrumentsCache(): Promise<void> {
+  const res = await fetch(`${cloudWorkerUrl()}/tr/instruments/clear`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: cfHeaders(),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
