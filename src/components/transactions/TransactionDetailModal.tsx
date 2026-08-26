@@ -133,9 +133,11 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
   }, [transactions, splitMatchStrings, splitMatchMode])
 
   function toggleSplitChip(chip: string) {
+    const isAdding = !splitMatchStrings.includes(chip)
     setSplitMatchStrings(prev =>
       prev.includes(chip) ? prev.filter(s => s !== chip) : [...prev, chip]
     )
+    if (isAdding && splitMatchMode === 'exact') setSplitMatchMode('contains')
   }
 
   const affectedCount = useMemo(() => {
@@ -152,9 +154,13 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
   }, [transactions, matchStrings, matchMode])
 
   function toggleChip(chip: string) {
+    const isAdding = !matchStrings.includes(chip)
     setMatchStrings(prev =>
       prev.includes(chip) ? prev.filter(s => s !== chip) : [...prev, chip]
     )
+    // Chips are word tokens from the transaction text, not full field values —
+    // exact mode compares the entire counterparty string and will never match.
+    if (isAdding && matchMode === 'exact') setMatchMode('contains')
   }
 
   function addCustom() {
