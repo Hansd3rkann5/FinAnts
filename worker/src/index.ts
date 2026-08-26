@@ -295,9 +295,17 @@ export default {
       const pin = env.TR_PIN ?? body.pin
       if (!phoneNo || !pin) return jsonResponse({ error: 'phoneNo und pin erforderlich (oder TR_PHONE_NO/TR_PIN als Secret setzen)' }, 400, cors)
 
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('WAF-Lösung/Login Timeout (>25 s) — bitte erneut versuchen')), 25_000)
+      )
       try {
-        const wafToken = await solveTradeRepublicWaf()
-        const session = await startTrLogin(phoneNo, pin, wafToken)
+        const session = await Promise.race([
+          (async () => {
+            const wafToken = await solveTradeRepublicWaf()
+            return startTrLogin(phoneNo, pin, wafToken)
+          })(),
+          timeout,
+        ])
         return jsonResponse({ session }, 200, cors)
       } catch (e) {
         return jsonResponse({ error: String(e) }, 502, cors)

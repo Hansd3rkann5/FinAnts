@@ -172,26 +172,38 @@ interface WafInputs {
   difficulty: number
 }
 
+function fetchWithTimeout(url: string, options: RequestInit, ms: number): Promise<Response> {
+  const ctrl = new AbortController()
+  const id = setTimeout(() => ctrl.abort(), ms)
+  return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(id))
+}
+
 // Full flow: GET login page → extract challenge.js URL → GET /inputs →
 // compute fingerprint + solve → POST /verify → return the WAF token string.
+// Each outbound request gets a 12-second abort timeout so a slow TR/WAF
+// endpoint can't cause the whole Worker to exceed Cloudflare's 30-second
+// wall-time limit (which would close the connection without CORS headers,
+// causing Safari to report "Load failed" instead of a useful error).
 export async function solveTradeRepublicWaf(): Promise<string> {
-  const loginRes = await fetch('https://app.traderepublic.com/login', {
+  const loginRes = await fetchWithTimeout('https://app.traderepublic.com/login', {
     headers: { 'user-agent': CHROME_UA, accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
-  })
+  }, 12_000)
   const loginHtml = await loginRes.text()
   const challengeMatch = loginHtml.match(/src="(https:\/\/[^"]+\/challenge\.js)"/)
   if (!challengeMatch) throw new Error('WAF challenge.js URL not found in login page')
   const challengeJsUrl = challengeMatch[1]
   const wafEndpoint = challengeJsUrl.split('https://')[1].split('/challenge.js')[0]
 
-  const inputsRes = await fetch(`https://${wafEndpoint}/inputs?client=browser`, {
+  const inputsRes = await fetchWithTimeout(`https://${wafEndpoint}/inputs?client=browser`, {
     headers: { 'user-agent': CHROME_UA, accept: '*/*' },
-  })
+  }, 10_000)
   if (!inputsRes.ok) throw new Error(`WAF /inputs failed: HTTP ${inputsRes.status}`)
   const inputs = await inputsRes.json() as WafInputs
 
   const solverName = CHALLENGE_SOLVERS[inputs.challenge_type]
   if (!solverName) throw new Error(`Unsupported WAF challenge type: ${inputs.challenge_type}`)
+
+  console.log(`[waf] challenge_type=${inputs.challenge_type} difficulty=${inputs.difficulty} solver=${solverName}`)
 
   const { checksum, encryptedFp } = await getFingerprint(CHROME_UA)
   const solution = solverName === 'network_bandwidth'
@@ -233,11 +245,11 @@ export async function solveTradeRepublicWaf(): Promise<string> {
     ],
   }
 
-  const verifyRes = await fetch(`https://${wafEndpoint}/verify`, {
+  const verifyRes = await fetchWithTimeout(`https://${wafEndpoint}/verify`, {
     method: 'POST',
     headers: { 'user-agent': CHROME_UA, accept: '*/*', 'content-type': 'text/plain;charset=UTF-8' },
     body: JSON.stringify(payload),
-  })
+  }, 15_000)
   if (!verifyRes.ok) throw new Error(`WAF /verify failed: HTTP ${verifyRes.status}`)
   const verifyJson = await verifyRes.json() as { token?: string }
   if (!verifyJson.token) throw new Error('WAF /verify response missing token')
