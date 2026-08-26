@@ -58,6 +58,9 @@ const TRADE_TYPES = new Set([
 ])
 const SAVEBACK_TYPES = new Set(['ACQUISITION_TRADE_PERK', 'benefits_saveback_execution'])
 const PRIVATE_MARKETS_TYPES = new Set(['private_markets_order_created', 'private_markets_trade_executed'])
+// TR card purchases — uppercase event type introduced alongside the new card product.
+const CARD_PURCHASE_TYPES = new Set(['CARD_TRANSACTION', 'CARD_SUCCESSFUL_TRANSACTION'])
+const CARD_FEE_TYPES = new Set(['CARD_ORDER_FEE', 'CARD_FAILED_TRANSACTION'])
 
 // Non-financial timeline noise (identity checks, document acceptance, etc.)
 // — pytr's events_known_ignored list, trimmed to what's worth carrying over.
@@ -89,6 +92,8 @@ function categoryForEventType(eventType: string | undefined, subtitle: string | 
   if (DEPOSIT_TYPES.has(t) || REMOVAL_TYPES.has(t)) return 'transfer'
   if (DIVIDEND_TYPES.has(t) || INTEREST_TYPES.has(t) || TAX_REFUND_TYPES.has(t)) return 'income'
   if (TRADE_TYPES.has(t) || SAVEBACK_TYPES.has(t) || PRIVATE_MARKETS_TYPES.has(t)) return 'savings'
+  if (CARD_PURCHASE_TYPES.has(t)) return 'other'
+  if (CARD_FEE_TYPES.has(t)) return 'fees'
   if (subtitle === 'Vorabpauschale') return 'fees'
   if (subtitle === 'Saveback') return 'savings'
   // Unknown type, not explicitly ignored — only carry it over if it actually
