@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAppUnlocked } from '@/hooks/useAppUnlocked'
 import {
   ResponsiveContainer, LineChart, Line,
@@ -80,6 +81,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
   const { synced, effectiveFilter, setFilter, toggleSync } = useChartFilter(globalFilter)
   const [selectedIsin, setSelectedIsin] = useState<string | null>(null)
   const [showPct, setShowPct] = useState(true)
+  const [collapsed, setCollapsed] = useState(false)
   const { data, loading, error } = useDepotHistory(LOOKBACK_DAYS)
 
   // Hold the entry animation while the lock screen is up — Recharts animates on
@@ -129,8 +131,21 @@ export function DepotChart({ globalFilter, periods }: Props) {
         onSyncToggle={toggleSync}
         onFilterChange={setFilter}
         periods={periods}
+        collapsible
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed(c => !c)}
       />
 
+      <AnimatePresence initial={false}>
+      {!collapsed && (
+      <motion.div
+        key="depot-body"
+        initial={{ height: 0, opacity: 0 }}
+        animate={{ height: 'auto', opacity: 1 }}
+        exit={{ height: 0, opacity: 0 }}
+        transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+        style={{ overflow: 'hidden' }}
+      >
       {(data?.perStock?.length ?? 0) > 0 && (
         <div id="depot-chart-stock-pills" className="flex flex-wrap gap-1.5 mb-3">
           <button
@@ -239,6 +254,9 @@ export function DepotChart({ globalFilter, periods }: Props) {
           })()}
         </div>
       )}
+      </motion.div>
+      )}
+      </AnimatePresence>
     </GlassCard>
   )
 }

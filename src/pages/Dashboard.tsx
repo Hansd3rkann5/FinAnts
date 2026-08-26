@@ -260,7 +260,6 @@ export function Dashboard() {
 
             {accountsList}
           </GlassCard>
-          {accounts.some(a => a.iban === TRADE_REPUBLIC_IBAN) && isAccountSelected(TRADE_REPUBLIC_IBAN) && <DepotChart globalFilter={timeFilter} periods={periods} />}
         </>
       ) : manualBalance !== null && (
         <GlassCard id="card-manual-balance" glow="purple" className="mx-4">
@@ -304,6 +303,11 @@ export function Dashboard() {
           </div>
         </GlassCard>
       </div>
+
+      {/* ── Depot-Verlauf (nur wenn Trade-Republic-Konto gewählt) ─────────── */}
+      {hasAccounts && accounts.some(a => a.iban === TRADE_REPUBLIC_IBAN) && isAccountSelected(TRADE_REPUBLIC_IBAN) && (
+        <DepotChart globalFilter={timeFilter} periods={periods} />
+      )}
 
       {/* ── Kategorien (Pie) ─────────────────────────────────────────────── */}
       <GlassCard id="card-categories" className="mx-4">

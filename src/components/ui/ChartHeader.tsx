@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { SlidersHorizontal, Link2, Check } from 'lucide-react'
+import { SlidersHorizontal, Link2, Check, ChevronDown } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import type { TimeFilter } from '@/types'
@@ -35,11 +35,17 @@ interface Props {
   extra?: React.ReactNode
   periods?: AvailablePeriods
   chartId?: string
+  /** When set, the title becomes a button that toggles the panel body and shows
+      a rotating chevron. */
+  collapsible?: boolean
+  collapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
 export function ChartHeader({
   icon, title, synced, effectiveFilter,
   onSyncToggle, onFilterChange, extra, periods, chartId,
+  collapsible, collapsed, onToggleCollapse,
 }: Props) {
   const [open, setOpen] = useState(false)
   const mode = getFilterMode(effectiveFilter)
@@ -87,7 +93,25 @@ export function ChartHeader({
   return (
     <div id={chartId ? `chart-${chartId}-header` : undefined} className="flex items-center gap-1.5 mb-4">
       {icon}
-      <h2 id={chartId ? `chart-${chartId}-title` : undefined} className="text-sm font-semibold text-white/70 flex-1 min-w-0 truncate">{title}</h2>
+      {collapsible ? (
+        <button
+          id={chartId ? `btn-${chartId}-collapse` : undefined}
+          onClick={onToggleCollapse}
+          aria-expanded={!collapsed}
+          className="flex items-center gap-1 flex-1 min-w-0 group -my-1 py-1"
+        >
+          <h2 id={chartId ? `chart-${chartId}-title` : undefined} className="text-sm font-semibold text-white/70 group-hover:text-white/90 min-w-0 truncate transition-colors">{title}</h2>
+          <motion.span
+            animate={{ rotate: collapsed ? 0 : 180 }}
+            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            className="text-white/35 group-hover:text-white/70 shrink-0 transition-colors"
+          >
+            <ChevronDown size={14} />
+          </motion.span>
+        </button>
+      ) : (
+        <h2 id={chartId ? `chart-${chartId}-title` : undefined} className="text-sm font-semibold text-white/70 flex-1 min-w-0 truncate">{title}</h2>
+      )}
 
       {!synced && (
         <span id={chartId ? `badge-${chartId}-filter` : undefined} className="h-6 flex items-center text-[9px] text-white/35 bg-white/5 border border-white/8 px-1.5 rounded-full shrink-0">
