@@ -11,6 +11,7 @@ export interface TradeRow {
   isin: string
   shares: number  // signed: positive = bought, negative = sold
   amount: number  // signed EUR transaction amount (negative = money out = buy)
+  description: string  // TR's own instrument name (e.g. "Semiconductor USD (Acc)")
 }
 
 export interface DepotHistoryPoint {
@@ -52,6 +53,10 @@ export async function computeDepotHistory(trades: TradeRow[], days: number, db?:
   for (const [isin, isinTrades] of byIsin) {
     const instrument = await resolveInstrument(isin, db)
     if (!instrument) continue
+    // Prefer TR's own instrument name (e.g. "Semiconductor USD (Acc)") over
+    // Yahoo's legal-entity name ("VANECK UCITS ETFS PLC…"); fall back to Yahoo
+    // if a trade somehow has no description.
+    const name = isinTrades.find(t => t.description)?.description || instrument.name
     const [prices, currentPrice] = await Promise.all([
       fetchHistoricalPrices(instrument.symbol, range),
       fetchCurrentPrice(instrument.symbol),
@@ -71,7 +76,7 @@ export async function computeDepotHistory(trades: TradeRow[], days: number, db?:
       points.push({ date: p.date, value })
       cumulativeByDate.set(p.date, (cumulativeByDate.get(p.date) ?? 0) + value)
     }
-    if (points.length > 0) perStock.push({ isin, name: instrument.name, points })
+    if (points.length > 0) perStock.push({ isin, name, points })
 
     // ── Current position + P&L (average cost method) ─────────────────────────
     // Only include positions still held (netShares > 0) with a valid live price.
@@ -92,7 +97,7 @@ export async function computeDepotHistory(trades: TradeRow[], days: number, db?:
     const currentValue = Math.round(totalShares * currentPrice * 100) / 100
     const pnl = Math.round((currentValue - costBasis) * 100) / 100
     const pnlPct = costBasis > 0 ? Math.round((pnl / costBasis) * 10000) / 100 : 0
-    positions.push({ isin, name: instrument.name, shares: Math.round(totalShares * 1000000) / 1000000, costBasis, currentValue, currentPrice, pnl, pnlPct })
+    positions.push({ isin, name, shares: Math.round(totalShares * 1000000) / 1000000, costBasis, currentValue, currentPrice, pnl, pnlPct })
   }
 
   const cumulative = [...cumulativeByDate.entries()]

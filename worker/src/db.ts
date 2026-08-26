@@ -143,10 +143,10 @@ async function countRows(db: D1Database): Promise<number> {
 
 // Every trade (buy/sell) with a known ISIN + share count, for reconstructing
 // depot holdings over time — see traderepublic/depotHistory.ts.
-export async function getTradeRows(db: D1Database): Promise<{ date: string; isin: string; shares: number; amount: number }[]> {
+export async function getTradeRows(db: D1Database): Promise<{ date: string; isin: string; shares: number; amount: number; description: string }[]> {
   const { results } = await db
-    .prepare('SELECT date, isin, shares, amount FROM transactions WHERE isin IS NOT NULL AND shares IS NOT NULL ORDER BY date ASC')
-    .all<{ date: string; isin: string; shares: number; amount: number }>()
+    .prepare('SELECT date, isin, shares, amount, description FROM transactions WHERE isin IS NOT NULL AND shares IS NOT NULL ORDER BY date ASC')
+    .all<{ date: string; isin: string; shares: number; amount: number; description: string }>()
   return results ?? []
 }
 

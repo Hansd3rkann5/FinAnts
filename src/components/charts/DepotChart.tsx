@@ -7,23 +7,32 @@ import {
 } from 'recharts'
 import { LineChart as LineChartIcon, TrendingUp, TrendingDown } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
+import { ChartHeader } from '@/components/ui/ChartHeader'
 import { useDepotHistory } from '@/hooks/useDepotHistory'
+import { useChartFilter } from '@/hooks/useChartFilter'
+import { getFilterDateRange, type AvailablePeriods } from '@/utils/chartCompute'
+import type { TimeFilter } from '@/types'
 import { getNiceTicks, StickyYAxis } from './chartUtils'
 import { formatEur } from '@/utils/format'
 import type { DepotPosition } from '@/utils/depotHistory'
 
-
-const RANGE_OPTIONS = [
-  { label: '1M', days: 30 },
-  { label: '3M', days: 90 },
-  { label: '6M', days: 180 },
-  { label: '1J', days: 365 },
-  { label: '5J', days: 1825 },
-]
+// The reconstructed history goes back only as far as the oldest trade, so
+// fetching a generous window once (and filtering client-side per TimeFilter)
+// is cheaper and snappier than re-hitting the worker on every range change.
+const LOOKBACK_DAYS = 1825
 
 const H = 150
 const MARGIN_TOP = 8
 const X_AXIS_H = 20
+
+// Below ~3 months the month-only label collapses every tick to "Aug"; show the
+// day too so the axis is actually readable. Longer spans stay month + year.
+function labelForDate(date: string, dayLevel: boolean): string {
+  const d = new Date(date + 'T00:00:00')
+  return dayLevel
+    ? d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+    : d.toLocaleDateString('de-DE', { month: 'short', year: '2-digit' }).replace('.', '')
+}
 
 function ChartTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null
@@ -58,15 +67,21 @@ function PositionRow({ pos, showPct }: { pos: DepotPosition; showPct: boolean })
   )
 }
 
+interface Props {
+  globalFilter: TimeFilter
+  periods: AvailablePeriods
+}
+
 // Shown on the Dashboard once the Trade Republic account is toggled on —
-// cumulative depot value, or drill into a single holding, over a selectable
-// range. Reconstructed from stored trades + Yahoo historical prices, see
-// useDepotHistory/worker/src/traderepublic/depotHistory.ts.
-export function DepotChart() {
-  const [days, setDays] = useState(180)
+// cumulative depot value, or drill into a single holding. Uses the same
+// ChartHeader as every other panel: linked to the global time filter by
+// default, unlink to pick its own range. Reconstructed from stored trades +
+// Yahoo historical prices, see worker/src/traderepublic/depotHistory.ts.
+export function DepotChart({ globalFilter, periods }: Props) {
+  const { synced, effectiveFilter, setFilter, toggleSync } = useChartFilter(globalFilter)
   const [selectedIsin, setSelectedIsin] = useState<string | null>(null)
   const [showPct, setShowPct] = useState(true)
-  const { data, loading, error } = useDepotHistory(days)
+  const { data, loading, error } = useDepotHistory(LOOKBACK_DAYS)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const unlocked = useAppUnlocked()
@@ -76,11 +91,22 @@ export function DepotChart() {
   const inView = inViewRaw && unlocked
 
   const selectedStock = data?.perStock.find(s => s.isin === selectedIsin)
-  const points = (selectedStock?.points ?? data?.cumulative ?? []).map(p => ({
-    date: p.date,
-    label: new Date(p.date + 'T00:00:00').toLocaleDateString('de-DE', { month: 'short' }).replace('.', ''),
-    value: p.value,
-  }))
+
+  const points = useMemo(() => {
+    const raw = selectedStock?.points ?? data?.cumulative ?? []
+    const { start, end } = getFilterDateRange(effectiveFilter)
+    const windowed = effectiveFilter === 'all'
+      ? raw
+      : raw.filter(p => {
+          const d = new Date(p.date + 'T00:00:00')
+          return d >= start && d <= end
+        })
+    const spanDays = windowed.length >= 2
+      ? (new Date(windowed[windowed.length - 1].date).getTime() - new Date(windowed[0].date).getTime()) / 86_400_000
+      : 0
+    const dayLevel = spanDays <= 92
+    return windowed.map(p => ({ date: p.date, label: labelForDate(p.date, dayLevel), value: p.value }))
+  }, [selectedStock, data?.cumulative, effectiveFilter])
 
   const maxVal = useMemo(() => Math.max(...points.map(p => p.value), 0), [points])
   const ticks = getNiceTicks(maxVal)
@@ -88,25 +114,16 @@ export function DepotChart() {
 
   return (
     <GlassCard id="card-depot-chart" glow="purple" className="mx-4">
-      <div className="flex items-center gap-2 mb-3">
-        <LineChartIcon size={14} className="text-purple-400" />
-        <h2 className="text-sm font-semibold text-white/70 flex-1 min-w-0 truncate">Depot-Verlauf</h2>
-        <div className="flex gap-1">
-          {RANGE_OPTIONS.map(opt => (
-            <button
-              key={opt.days}
-              onClick={() => setDays(opt.days)}
-              className="px-1.5 py-0.5 rounded-pill text-[10px] font-medium transition-colors"
-              style={{
-                backgroundColor: days === opt.days ? 'rgba(var(--acc-rgb),0.2)' : 'rgba(255,255,255,0.04)',
-                color: days === opt.days ? 'var(--acc-soft)' : 'rgba(255,255,255,0.4)',
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <ChartHeader
+        chartId="depot"
+        icon={<LineChartIcon size={14} className="text-purple-400" />}
+        title="Depot-Verlauf"
+        synced={synced}
+        effectiveFilter={effectiveFilter}
+        onSyncToggle={toggleSync}
+        onFilterChange={setFilter}
+        periods={periods}
+      />
 
       {(data?.perStock?.length ?? 0) > 0 && (
         <div id="depot-chart-stock-pills" className="flex flex-wrap gap-1.5 mb-3">

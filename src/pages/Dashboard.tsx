@@ -260,7 +260,7 @@ export function Dashboard() {
 
             {accountsList}
           </GlassCard>
-          {accounts.some(a => a.iban === TRADE_REPUBLIC_IBAN) && isAccountSelected(TRADE_REPUBLIC_IBAN) && <DepotChart />}
+          {accounts.some(a => a.iban === TRADE_REPUBLIC_IBAN) && isAccountSelected(TRADE_REPUBLIC_IBAN) && <DepotChart globalFilter={timeFilter} periods={periods} />}
         </>
       ) : manualBalance !== null && (
         <GlassCard id="card-manual-balance" glow="purple" className="mx-4">
