@@ -151,7 +151,7 @@ export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) 
               </span>
             )}
             {tx.source === 'traderepublic' && (
-              <span className="inline-flex items-center text-[10px] text-emerald-400/70 rounded-pill border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 shrink-0 font-medium tracking-wide">
+              <span className="inline-flex items-center text-[10px] text-white/30 rounded-pill border border-white/10 bg-white/4 px-1.5 py-0.5 shrink-0 font-medium tracking-wide">
                 TR
               </span>
             )}
