@@ -42,3 +42,10 @@ mockup.csv
 /all_events.json
 /other_events.json
 /events_with_documents.json
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example

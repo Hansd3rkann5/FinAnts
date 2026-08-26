@@ -5,6 +5,8 @@ import fs from 'fs'
 import { execSync } from 'child_process'
 import type { Plugin, ViteDevServer } from 'vite'
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 function buildVersion(): string {
   try {
     const count = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim()
@@ -49,7 +51,7 @@ function devVersionPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), devVersionPlugin()],
+  plugins: [react(), devVersionPlugin(), cloudflare()],
   base: '/FinAnts/',
   define: {
     __APP_VERSION__: JSON.stringify(buildVersion()),

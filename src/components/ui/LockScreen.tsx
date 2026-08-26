@@ -121,7 +121,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
                 transition={{ type: 'spring', stiffness: 500, damping: 25 }}
                 className="absolute w-8 h-8 rounded-full flex items-center justify-center"
                 style={{
-                  backgroundColor: phase === 'success' ? 'rgba(52,211,153,0.9)' : 'rgba(248,113,113,0.9)',
+                  backgroundColor: phase === 'success' ? 'rgba(52,211,3,0.9)' : 'rgba(248,50,50,0.9)',
                   willChange: 'transform, opacity',
                 }}
               >

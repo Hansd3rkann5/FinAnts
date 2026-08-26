@@ -506,14 +506,27 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
                 <div id="edit-form-body" className="flex flex-col gap-5">
                   <div id="edit-section-label">
                     <label className="text-[10px] text-white/60 uppercase tracking-wider block mb-1.5">Bezeichnung</label>
-                    <input
-                      id="input-edit-label"
-                      type="text"
-                      value={label}
-                      onChange={e => setLabel(e.target.value)}
-                      placeholder={tx.counterparty || 'Name…'}
-                      className="w-full rounded-card_sm bg-white/10 border border-white/20 px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none focus:border-purple-500/50 transition-colors"
-                    />
+                    <div className="relative">
+                      <input
+                        id="input-edit-label"
+                        type="text"
+                        value={label}
+                        onChange={e => setLabel(e.target.value)}
+                        placeholder={tx.counterparty || 'Name…'}
+                        className="w-full rounded-card_sm bg-white/10 border border-white/20 pl-3 pr-9 py-2.5 text-sm text-white placeholder-white/40 outline-none focus:border-purple-500/50 transition-colors"
+                      />
+                      {label && (
+                        <button
+                          id="btn-edit-label-clear"
+                          type="button"
+                          aria-label="Bezeichnung löschen"
+                          onClick={() => setLabel('')}
+                          className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div id="edit-section-category">
