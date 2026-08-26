@@ -236,10 +236,10 @@ export function Dashboard() {
         }}
       >
         <TimeFilterBar value={timeFilter} onChange={handleTimeFilter} id="dash" periods={periods} />
-      </div>
 
-      {/* ── Gesamtvermögen ───────────────────────────────────────────────────── */}
-      {hasAccounts ? (
+        {/* ── Gesamtvermögen — bleibt zusammen mit dem Filter sticky ───────── */}
+        <div className="mt-4">
+        {hasAccounts ? (
         <>
           <GlassCard id="card-wealth" glow="purple" className="mx-4">
             <div className="flex items-center gap-2 mb-1">
@@ -281,6 +281,8 @@ export function Dashboard() {
           </motion.p>
         </GlassCard>
       )}
+        </div>
+      </div>
 
       {/* ── Einnahmen / Ausgaben stats ──────────────────────────────────── */}
       <div id="stats-row" className="grid grid-cols-2 gap-3 px-4">
