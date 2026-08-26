@@ -12,7 +12,7 @@ import { useDepotHistory } from '@/hooks/useDepotHistory'
 import { useChartFilter } from '@/hooks/useChartFilter'
 import { getFilterDateRange, type AvailablePeriods } from '@/utils/chartCompute'
 import type { TimeFilter } from '@/types'
-import { getNiceTicks, StickyYAxis } from './chartUtils'
+import { getNiceBounds, StickyYAxis } from './chartUtils'
 import { formatEur } from '@/utils/format'
 import type { DepotPosition } from '@/utils/depotHistory'
 
@@ -108,9 +108,13 @@ export function DepotChart({ globalFilter, periods }: Props) {
     return windowed.map(p => ({ date: p.date, label: labelForDate(p.date, dayLevel), value: p.value }))
   }, [selectedStock, data?.cumulative, effectiveFilter])
 
-  const maxVal = useMemo(() => Math.max(...points.map(p => p.value), 0), [points])
-  const ticks = getNiceTicks(maxVal)
-  const yMax = ticks[ticks.length - 1] || 1
+  // Zoom the Y-axis to the visible series' own range — a 240–260 € window fills
+  // the plot instead of clinging to the top of a 0–300 axis.
+  const { ticks, min: yMin, max: yMax } = useMemo(() => {
+    const vals = points.map(p => p.value)
+    if (vals.length === 0) return { ticks: [0], min: 0, max: 1 }
+    return getNiceBounds(Math.min(...vals), Math.max(...vals))
+  }, [points])
 
   // Remount the chart whenever the shown series changes (range or selected
   // holding), so Recharts replays its left-to-right "draw" animation each time
@@ -168,7 +172,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
         <div className="flex items-center justify-center py-10 text-xs text-white/30">Keine Daten im Zeitraum</div>
       ) : (
         <div ref={containerRef} className="flex items-start">
-          <StickyYAxis ticks={ticks} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
+          <StickyYAxis ticks={ticks} yMin={yMin} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
           <div className="flex-1 min-w-0">
             <ResponsiveContainer width="100%" height={H}>
               <LineChart key={animKey} data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
@@ -176,13 +180,13 @@ export function DepotChart({ globalFilter, periods }: Props) {
                 <XAxis
                   dataKey="label"
                   height={X_AXIS_H}
-                  padding={{ left: 12, right: 12 }}
+                  padding={{ left: 20, right: 12 }}
                   tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.35)' }}
                   axisLine={false}
                   tickLine={false}
                   interval={Math.max(0, Math.floor(points.length / 6))}
                 />
-                <YAxis domain={[0, yMax]} hide />
+                <YAxis domain={[yMin, yMax]} hide />
                 <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
                 <Line
                   dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
