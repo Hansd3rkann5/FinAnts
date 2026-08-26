@@ -175,7 +175,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
           <StickyYAxis ticks={ticks} yMin={yMin} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
           <div className="flex-1 min-w-0">
             <ResponsiveContainer width="100%" height={H}>
-              <LineChart key={animKey} data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
+              <LineChart data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                 <XAxis
                   dataKey="label"
@@ -189,6 +189,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
                 <YAxis domain={[yMin, yMax]} hide />
                 <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
                 <Line
+                  key={animKey}
                   dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
                   activeDot={{ r: 3, fill: '#c084fc', strokeWidth: 0 }}
                   isAnimationActive={inView} animationDuration={550} animationEasing="ease-out"
