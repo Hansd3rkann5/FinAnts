@@ -9,6 +9,7 @@ import { useModalRegistration } from '@/hooks/useModalRegistration'
 import { isExcluded } from '@/data/categories'
 import { categoryPortions } from '@/utils/chartCompute'
 import { GlassCard } from './GlassCard'
+import { CollapsibleHeader, CollapsibleBody } from './ChartHeader'
 import { PillButton } from './PillButton'
 import { CategoryPicker } from './CategoryPicker'
 import { formatEur } from '@/utils/format'
@@ -20,6 +21,7 @@ export function BudgetsPanel({ transactions }: { transactions: Transaction[] }) 
   const { budgets, setBudget, removeBudget } = useTransactionsCtx()
   const { allMap } = useAllCategories()
 
+  const [collapsed, setCollapsed] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null)
   const [limitInput, setLimitInput] = useState('')
@@ -70,20 +72,28 @@ export function BudgetsPanel({ transactions }: { transactions: Transaction[] }) 
 
   return (
     <GlassCard id="card-budgets" glow="purple" className="mx-4">
-      <div className="flex items-center gap-2 mb-1">
-        <PiggyBank size={14} className="text-purple-400" />
-        <h2 className="text-sm font-semibold text-white/70 flex-1 min-w-0 truncate">Budgets</h2>
-        <span className="text-[10px] text-white/30">{monthLabel}</span>
-        <button
-          id="btn-budget-add"
-          onClick={openAdd}
-          aria-label="Budget hinzufügen"
-          className="w-6 h-6 flex items-center justify-center rounded-full text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
-        >
-          <Plus size={13} />
-        </button>
-      </div>
+      <CollapsibleHeader
+        className="mb-1"
+        icon={<PiggyBank size={14} className="text-purple-400" />}
+        title="Budgets"
+        collapsed={collapsed}
+        onToggle={() => setCollapsed(c => !c)}
+        right={
+          <>
+            <span className="text-[10px] text-white/30">{monthLabel}</span>
+            <button
+              id="btn-budget-add"
+              onClick={openAdd}
+              aria-label="Budget hinzufügen"
+              className="w-6 h-6 flex items-center justify-center rounded-full text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
+            >
+              <Plus size={13} />
+            </button>
+          </>
+        }
+      />
 
+      <CollapsibleBody collapsed={collapsed}>
       {budgets.length === 0 ? (
         <button onClick={openAdd} className="w-full py-4 text-xs text-white/30 text-center">
           Noch keine Budgets — tippe hier um eins anzulegen
@@ -128,6 +138,7 @@ export function BudgetsPanel({ transactions }: { transactions: Transaction[] }) 
           })}
         </div>
       )}
+      </CollapsibleBody>
 
       {createPortal(
         <AnimatePresence>

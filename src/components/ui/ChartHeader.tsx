@@ -271,3 +271,39 @@ export function CollapsibleBody({ collapsed, children }: { collapsed: boolean; c
     </AnimatePresence>
   )
 }
+
+// Lightweight collapsible header for panels that don't use the full ChartHeader
+// (no time-filter/sync controls) — e.g. Budgets, Daueraufträge. Clickable title
+// with the same rotating chevron; `right` holds any trailing controls.
+export function CollapsibleHeader({
+  icon, title, collapsed, onToggle, right, id, className = 'mb-3',
+}: {
+  icon?: React.ReactNode
+  title: string
+  collapsed: boolean
+  onToggle: () => void
+  right?: React.ReactNode
+  id?: string
+  className?: string
+}) {
+  return (
+    <div id={id} className={`flex items-center gap-2 ${className}`}>
+      {icon}
+      <button
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        className="flex items-center gap-1 flex-1 min-w-0 group -my-1 py-1"
+      >
+        <h2 className="text-sm font-semibold text-white/70 group-hover:text-white/90 min-w-0 truncate transition-colors">{title}</h2>
+        <motion.span
+          animate={{ rotate: collapsed ? 180 : 0 }}
+          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+          className="text-white/35 group-hover:text-white/70 shrink-0 transition-colors"
+        >
+          <ChevronDown size={14} />
+        </motion.span>
+      </button>
+      {right}
+    </div>
+  )
+}

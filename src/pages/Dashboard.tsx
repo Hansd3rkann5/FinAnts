@@ -21,7 +21,7 @@ import {
 import { filterTransactionsByAccounts } from '@/utils/accountFilter'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
-import { ChartHeader, CollapsibleBody } from '@/components/ui/ChartHeader'
+import { ChartHeader, CollapsibleBody, CollapsibleHeader } from '@/components/ui/ChartHeader'
 import { CategoryPieChart } from '@/components/charts/CategoryPieChart'
 import { MonthlyBarChart } from '@/components/charts/MonthlyBarChart'
 import { SpendingAreaChart } from '@/components/charts/SpendingAreaChart'
@@ -516,33 +516,37 @@ export function Dashboard() {
       {/* ── Daueraufträge ─────────────────────────────────────────────────── */}
       {recurringGroups.length > 0 && (
         <GlassCard id="card-recurring" glow="purple" className="mx-4">
-          <div className="flex items-center gap-2 mb-3">
-            <RefreshCw size={14} className="text-purple-400" />
-            <h2 className="text-sm font-semibold text-white/70">Daueraufträge erkannt</h2>
-            <span className="ml-auto text-xs text-white/30">{recurringGroups.length}</span>
-          </div>
-          <div id="recurring-list" className="flex flex-col gap-2">
-            {recurringGroups.slice(0, 4).map(g => (
-              <div key={g.id} data-component="recurring-row" className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-white/80 truncate max-w-45">{g.counterparty}</p>
-                  <p className="text-[10px] text-purple-400/70 capitalize">{
-                    { weekly: 'Wöchentlich', monthly: 'Monatlich', quarterly: 'Quartalsweise', yearly: 'Jährlich' }[g.frequency]
-                  }</p>
+          <CollapsibleHeader
+            icon={<RefreshCw size={14} className="text-purple-400" />}
+            title="Daueraufträge erkannt"
+            collapsed={!!collapsed['recurring']}
+            onToggle={() => toggleCollapse('recurring')}
+            right={<span className="text-xs text-white/30">{recurringGroups.length}</span>}
+          />
+          <CollapsibleBody collapsed={!!collapsed['recurring']}>
+            <div id="recurring-list" className="flex flex-col gap-2">
+              {recurringGroups.slice(0, 4).map(g => (
+                <div key={g.id} data-component="recurring-row" className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-white/80 truncate max-w-45">{g.counterparty}</p>
+                    <p className="text-[10px] text-purple-400/70 capitalize">{
+                      { weekly: 'Wöchentlich', monthly: 'Monatlich', quarterly: 'Quartalsweise', yearly: 'Jährlich' }[g.frequency]
+                    }</p>
+                  </div>
+                  <p className={`text-sm font-semibold ${g.approximateAmount < 0 ? 'text-white/70' : 'text-emerald-400'}`}>
+                    {g.approximateAmount < 0 ? '' : '+'}{formatEur(g.approximateAmount, 0)}
+                  </p>
                 </div>
-                <p className={`text-sm font-semibold ${g.approximateAmount < 0 ? 'text-white/70' : 'text-emerald-400'}`}>
-                  {g.approximateAmount < 0 ? '' : '+'}{formatEur(g.approximateAmount, 0)}
-                </p>
-              </div>
-            ))}
-          </div>
-          <button
-            id="btn-recurring-all"
-            onClick={() => setRecurringOpen(true)}
-            className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-2 border-t border-white/6"
-          >
-            {recurringGroups.length > 4 ? `Alle anzeigen (+${recurringGroups.length - 4})` : 'Alle anzeigen'}
-          </button>
+              ))}
+            </div>
+            <button
+              id="btn-recurring-all"
+              onClick={() => setRecurringOpen(true)}
+              className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-2 border-t border-white/6"
+            >
+              {recurringGroups.length > 4 ? `Alle anzeigen (+${recurringGroups.length - 4})` : 'Alle anzeigen'}
+            </button>
+          </CollapsibleBody>
         </GlassCard>
       )}
 
