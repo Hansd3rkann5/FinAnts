@@ -9,7 +9,7 @@ import type { Transaction } from '@/types'
 import { CATEGORIES } from '@/data/categories'
 import { useAllCategories } from '@/hooks/useAllCategories'
 import { MerchantLogo } from './MerchantLogo'
-import { findMerchant } from '@/utils/merchantLogos'
+import { findMerchant, keywordRegex, fold } from '@/utils/merchantLogos'
 import { AmountDisplay } from '@/components/ui/AmountDisplay'
 import { CategoryPicker } from '@/components/ui/CategoryPicker'
 import { resolveWorkerUrl } from '@/utils/workerConfig'
@@ -122,12 +122,12 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
   const splitAffectedCount = useMemo(() => {
     if (!splitMatchStrings.length) return 0
     return transactions.filter(t => {
-      const text = `${t.customLabel ?? ''} ${t.counterparty} ${t.description}`.toLowerCase()
+      const text = fold(`${t.customLabel ?? ''} ${t.counterparty} ${t.description}`)
       return splitMatchStrings.some(ms => {
-        const m = ms.toLowerCase()
+        const m = fold(ms)
         return splitMatchMode === 'exact'
-          ? (t.counterparty.toLowerCase() === m || (t.customLabel ?? '').toLowerCase() === m)
-          : text.includes(m)
+          ? (fold(t.counterparty) === m || fold(t.customLabel ?? '') === m)
+          : keywordRegex(ms).test(text)
       })
     }).length
   }, [transactions, splitMatchStrings, splitMatchMode])
@@ -141,12 +141,12 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
   const affectedCount = useMemo(() => {
     if (!matchStrings.length) return 0
     return transactions.filter(t => {
-      const text = `${t.customLabel ?? ''} ${t.counterparty} ${t.description}`.toLowerCase()
+      const text = fold(`${t.customLabel ?? ''} ${t.counterparty} ${t.description}`)
       return matchStrings.some(ms => {
-        const m = ms.toLowerCase()
+        const m = fold(ms)
         return matchMode === 'exact'
-          ? (t.counterparty.toLowerCase() === m || (t.customLabel ?? '').toLowerCase() === m)
-          : text.includes(m)
+          ? (fold(t.counterparty) === m || fold(t.customLabel ?? '') === m)
+          : keywordRegex(ms).test(text)
       })
     }).length
   }, [transactions, matchStrings, matchMode])
@@ -166,9 +166,9 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
   function openEdit() {
     if (!tx) return
     const p = resolveProfile(tx, merchantProfiles)
-    setLabel(p?.label ?? tx.customLabel ?? tx.counterparty ?? '')
+    setLabel(tx.customLabel ?? p?.label ?? tx.counterparty ?? '')
     setCategory(tx.categoryId)
-    setIcon(p?.customIcon ?? tx.customIcon)
+    setIcon(tx.customIcon ?? p?.customIcon)
     // For PayPal rows the raw counterparty is the same boilerplate on every
     // payment ("PayPal Europe S.a.r.l. …") — seeding the pattern with it made
     // a rename of ONE PayPal payment relabel ALL of them. Use the extracted
@@ -194,19 +194,19 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
   function save() {
     if (!tx) return
     if (matchStrings.length > 0) {
-      // Store label + icon + category on the pattern; it drives every matching
-      // transaction (existing and future) live via enrichment. Clear any per-tx
-      // override on this row so it falls back to the pattern.
+      // Update (or create) the profile so every matching transaction picks up
+      // the new label/icon/category via re-enrichment.
       upsertProfile(existingProfileId, matchStrings, matchMode, {
         label: label.trim() || undefined,
         customIcon: icon,
         categoryId: category,
       })
-      onUpdate(tx.id, { customLabel: undefined, customIcon: undefined, categoryId: undefined })
-    } else {
-      // No pattern → a one-off edit stored only on this transaction.
-      onUpdate(tx.id, { customLabel: label.trim() || undefined, customIcon: icon, categoryId: category })
     }
+    // Always write the new values directly onto this transaction too. This keeps
+    // the optimistic local state correct immediately (no undefined flash) and
+    // ensures the DB override is up-to-date — a stale r.customLabel / r.categoryId
+    // in the DB would shadow the profile on the next pull-to-refresh otherwise.
+    onUpdate(tx.id, { customLabel: label.trim() || undefined, customIcon: icon, categoryId: category })
     setEditing(false)
   }
 
@@ -236,12 +236,12 @@ export function TransactionDetailModal({ transaction: txProp, onClose, onUpdate 
 
     const targets = splitMatchStrings.length
       ? transactions.filter(t => {
-          const text = `${t.customLabel ?? ''} ${t.counterparty} ${t.description}`.toLowerCase()
+          const text = fold(`${t.customLabel ?? ''} ${t.counterparty} ${t.description}`)
           return splitMatchStrings.some(ms => {
-            const m = ms.toLowerCase()
+            const m = fold(ms)
             return splitMatchMode === 'exact'
-              ? (t.counterparty.toLowerCase() === m || (t.customLabel ?? '').toLowerCase() === m)
-              : text.includes(m)
+              ? (fold(t.counterparty) === m || fold(t.customLabel ?? '') === m)
+              : keywordRegex(ms).test(text)
           })
         })
       : [tx]

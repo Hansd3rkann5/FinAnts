@@ -239,7 +239,7 @@ export async function mergeTransactions(rows: MergeRow[], source = 'csv'): Promi
 
 export async function updateTransactionRemote(
   id: string,
-  patch: { categoryId?: string; customLabel?: string; customIcon?: string; parentId?: string },
+  patch: { categoryId?: string | null; customLabel?: string | null; customIcon?: string | null; parentId?: string | null },
 ): Promise<void> {
   const res = await fetch(`${workerUrl()}/transactions/update`, {
     method: 'POST', credentials: 'include', headers: cfHeaders(),

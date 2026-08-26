@@ -183,7 +183,9 @@ export function useTransactions(merchantProfiles: MerchantProfile[], txSplits: S
     if ('customLabel' in patch) rawPatch.customLabel = patch.customLabel ?? null
     if ('customIcon' in patch)  rawPatch.customIcon  = patch.customIcon  ?? null
     patchRaw(new Set([id]), rawPatch)
-    updateTransactionRemote(id, patch).catch(e => reportError('Speichern fehlgeschlagen', e))
+    // Use rawPatch (null instead of undefined) so the server receives explicit
+    // null for fields to clear — JSON.stringify silently drops undefined values.
+    updateTransactionRemote(id, rawPatch).catch(e => reportError('Speichern fehlgeschlagen', e))
   }, [recurringGroups])
 
   const removeRecurringGroup = useCallback((id: string) => {
