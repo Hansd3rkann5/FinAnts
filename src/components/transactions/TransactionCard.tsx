@@ -150,6 +150,11 @@ export function TransactionCard({ transaction: tx, onClick, index = 0 }: Props) 
                 Wiederkehrend
               </span>
             )}
+            {tx.source === 'traderepublic' && (
+              <span className="inline-flex items-center text-[10px] text-emerald-400/70 rounded-pill border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 shrink-0 font-medium tracking-wide">
+                TR
+              </span>
+            )}
           </div>
         </div>
       </motion.div>
