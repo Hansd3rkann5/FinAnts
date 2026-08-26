@@ -111,7 +111,7 @@ export function PullToRefresh({ scrollId, onRefresh, children }: Props) {
 
   return (
     <div>
-      <div style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div style={{ paddingTop: '40px' }}>
       <motion.div style={{ height }} className="relative overflow-hidden">
         <div className="absolute inset-x-0 bottom-2 flex flex-col items-center gap-1.5">
           <motion.div

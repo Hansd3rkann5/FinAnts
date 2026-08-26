@@ -114,7 +114,7 @@ export function Transactions() {
         className="sticky top-0 z-30"
         style={{
           backdropFilter: 'blur(5px)',
-          paddingTop: '60px',
+          paddingTop: '20px',
           WebkitBackdropFilter: 'blur(5px)',
           backgroundColor: 'rgba(10, 10, 10, 0.8)',
           boxShadow: '0 -4px 24px 10px rgba(10,10,10,0.8), 0 -1px 80px 10px rgba(10,10,10,0.8)',
