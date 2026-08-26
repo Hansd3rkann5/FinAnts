@@ -37,34 +37,45 @@ interface TrEventItem {
 
 // Mirrors pytr's tr_event_type_mapping, collapsed to FinAnts categories —
 // buy/sell don't need to be distinguished since both land in 'savings'.
-const DEPOSIT_TYPES = new Set([
+//
+// TR ships the same logical event under different casings over time (e.g.
+// `trading_trade_executed` → `TRADING_TRADE_EXECUTED`, `card_successful_
+// transaction` → `CARD_TRANSACTION`), and a lowercase-only entry silently
+// stops matching the moment they rename it uppercase — which is exactly how
+// every stock trade got dropped from the import (empty depot chart). So all
+// sets are uppercased at definition and every lookup uppercases its input,
+// making the mapping case-insensitive and immune to that rename churn.
+const up = (arr: string[]) => new Set(arr.map(s => s.toUpperCase()))
+
+const DEPOSIT_TYPES = up([
   'ACCOUNT_TRANSFER_INCOMING', 'INCOMING_TRANSFER', 'INCOMING_TRANSFER_DELEGATION',
   'PAYMENT_INBOUND', 'PAYMENT_INBOUND_APPLE_PAY', 'PAYMENT_INBOUND_GOOGLE_PAY',
   'PAYMENT_INBOUND_SEPA_DIRECT_DEBIT', 'PAYMENT_INBOUND_CREDIT_CARD',
   'PAYMENT-SERVICE-IN-PAYMENT-DIRECT-DEBIT', 'card_refund', 'card_successful_oct', 'card_tr_refund',
+  'BANK_TRANSACTION_INCOMING',
 ])
-const REMOVAL_TYPES = new Set([
+const REMOVAL_TYPES = up([
   'OUTGOING_TRANSFER', 'OUTGOING_TRANSFER_DELEGATION', 'PAYMENT_OUTBOUND',
   'card_failed_transaction', 'card_order_billed', 'card_successful_atm_withdrawal',
   'card_successful_transaction', 'junior_p2p_transfer',
+  'BANK_TRANSACTION_OUTGOING',
 ])
-const DIVIDEND_TYPES = new Set(['CREDIT'])
-const INTEREST_TYPES = new Set(['INTEREST_PAYOUT', 'INTEREST_PAYOUT_CREATED'])
-const TAX_REFUND_TYPES = new Set(['TAX_CORRECTION', 'TAX_REFUND', 'ssp_tax_correction_invoice'])
-const TRADE_TYPES = new Set([
+const DIVIDEND_TYPES = up(['CREDIT'])
+const INTEREST_TYPES = up(['INTEREST_PAYOUT', 'INTEREST_PAYOUT_CREATED'])
+const TAX_REFUND_TYPES = up(['TAX_CORRECTION', 'TAX_REFUND', 'ssp_tax_correction_invoice'])
+const TRADE_TYPES = up([
   'IPO_TRADE_EXECUTED', 'ORDER_EXECUTED', 'SAVINGS_PLAN_EXECUTED', 'SAVINGS_PLAN_INVOICE_CREATED',
   'TRADE_CORRECTED', 'TRADE_INVOICE', 'benefits_spare_change_execution',
   'trading_savingsplan_executed', 'trading_trade_executed',
 ])
-const SAVEBACK_TYPES = new Set(['ACQUISITION_TRADE_PERK', 'benefits_saveback_execution'])
-const PRIVATE_MARKETS_TYPES = new Set(['private_markets_order_created', 'private_markets_trade_executed'])
-// TR card purchases — uppercase event type introduced alongside the new card product.
-const CARD_PURCHASE_TYPES = new Set(['CARD_TRANSACTION', 'CARD_SUCCESSFUL_TRANSACTION'])
-const CARD_FEE_TYPES = new Set(['CARD_ORDER_FEE', 'CARD_FAILED_TRANSACTION'])
+const SAVEBACK_TYPES = up(['ACQUISITION_TRADE_PERK', 'benefits_saveback_execution'])
+const PRIVATE_MARKETS_TYPES = up(['private_markets_order_created', 'private_markets_trade_executed'])
+const CARD_PURCHASE_TYPES = up(['CARD_TRANSACTION', 'CARD_SUCCESSFUL_TRANSACTION'])
+const CARD_FEE_TYPES = up(['CARD_ORDER_FEE', 'CARD_FAILED_TRANSACTION'])
 
 // Non-financial timeline noise (identity checks, document acceptance, etc.)
 // — pytr's events_known_ignored list, trimmed to what's worth carrying over.
-const IGNORED_TYPES = new Set([
+const IGNORED_TYPES = up([
   'AML_SOURCE_OF_WEALTH_RESPONSE_EXECUTED', 'CASH_ACCOUNT_CHANGED', 'CREDIT_CANCELED',
   'CUSTOMER_CREATED', 'CRYPTO_ANNUAL_STATEMENT', 'CSX_CHAT_ACTIVITY', 'DEVICE_RESET',
   'DOCUMENTS_ACCEPTED', 'DOCUMENTS_CHANGED', 'DOCUMENTS_CREATED', 'EMAIL_VALIDATED',
@@ -87,7 +98,7 @@ const IGNORED_TYPES = new Set([
 ])
 
 function categoryForEventType(eventType: string | undefined, subtitle: string | undefined): string | null {
-  const t = eventType ?? ''
+  const t = (eventType ?? '').toUpperCase()
   if (IGNORED_TYPES.has(t)) return null
   if (DEPOSIT_TYPES.has(t) || REMOVAL_TYPES.has(t)) return 'transfer'
   if (DIVIDEND_TYPES.has(t) || INTEREST_TYPES.has(t) || TAX_REFUND_TYPES.has(t)) return 'income'
@@ -120,7 +131,7 @@ function mapEvent(item: TrEventItem): TrTimelineTransaction | null {
     counterparty: item.subtitle || item.title,
     reference: item.eventType,
     categoryId,
-    isin: TRADE_TYPES.has(item.eventType ?? '') ? extractIsin(item.icon) : undefined,
+    isin: TRADE_TYPES.has((item.eventType ?? '').toUpperCase()) ? extractIsin(item.icon) : undefined,
   }
 }
 

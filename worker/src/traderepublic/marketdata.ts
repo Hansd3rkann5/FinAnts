@@ -59,11 +59,50 @@ export interface PricePoint {
 interface YahooChartResponse {
   chart: {
     result?: [{
-      meta: { regularMarketPrice?: number }
+      meta: { regularMarketPrice?: number; currency?: string }
       timestamp?: number[]
       indicators: { quote: [{ close: (number | null)[] }] }
     }]
   }
+}
+
+// ─── Currency normalization ────────────────────────────────────────────────
+//
+// Yahoo quotes each instrument in its listing currency, NOT EUR: US stocks in
+// USD, London ETFs in GBp (pence — a factor of 100 off GBP), etc. Multiplying
+// those raw prices by share count without converting is what produced the
+// ~25k phantom depot value (a single GBp-quoted iShares ETF at ~6700 "per
+// share" instead of ~57 EUR). Every price that leaves this module is therefore
+// converted to EUR first, using Yahoo's own FX pairs ({CUR}EUR=X). FX rates
+// are cached per isolate — for a reconstructed daily-close chart, using
+// today's rate across the whole series is a negligible error next to the
+// currency bug it fixes.
+const fxCache = new Map<string, number>()
+
+async function fetchFxToEur(currency: string): Promise<number> {
+  if (currency === 'EUR' || !currency) return 1
+  // GBp/GBX are pence — normalize to GBP first, then apply the GBP→EUR rate.
+  let cur = currency
+  let scale = 1
+  if (cur === 'GBp' || cur === 'GBX') { cur = 'GBP'; scale = 0.01 }
+  if (cur === 'EUR') return scale
+  if (fxCache.has(cur)) return fxCache.get(cur)! * scale
+
+  try {
+    const res = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${cur}EUR=X?range=1d&interval=1d`,
+      { headers: { 'user-agent': UA } },
+    )
+    if (res.ok) {
+      const data = await res.json() as YahooChartResponse
+      const rate = data.chart.result?.[0]?.meta.regularMarketPrice
+      if (rate && rate > 0) { fxCache.set(cur, rate); return rate * scale }
+    }
+  } catch { /* fall through to no-conversion */ }
+  // Unknown/unfetchable FX: better to leave the raw price than to zero it out.
+  // Cache 1 so we don't re-hit Yahoo for every point on a broken pair.
+  fxCache.set(cur, 1)
+  return scale
 }
 
 // Yahoo's `range` param only accepts a fixed preset list — pick the smallest
@@ -83,7 +122,9 @@ export function rangeForDays(days: number): string {
 // own zone; the actual Yahoo URL goes in the fetch only.
 export async function fetchHistoricalPrices(ticker: string, range: string): Promise<PricePoint[]> {
   const cache = (globalThis as { caches?: CacheStorage & { default?: Cache } }).caches?.default
-  const cacheKey = new Request(`https://finants-cache.internal/yahoo/${encodeURIComponent(ticker)}/${range}`)
+  // v2: cached closes are now EUR-converted; bump the key so pre-conversion
+  // (raw-currency) entries from the old code aren't served.
+  const cacheKey = new Request(`https://finants-cache.internal/yahoo/v2/${encodeURIComponent(ticker)}/${range}`)
 
   const cached = await cache?.match(cacheKey)
   if (cached) return cached.json() as Promise<PricePoint[]>
@@ -96,12 +137,13 @@ export async function fetchHistoricalPrices(ticker: string, range: string): Prom
   const data = await res.json() as YahooChartResponse
   const result = data.chart.result?.[0]
   if (!result?.timestamp) return []
+  const fx = await fetchFxToEur(result.meta.currency ?? 'EUR')
   const closes = result.indicators.quote[0].close
   const points: PricePoint[] = []
   for (let i = 0; i < result.timestamp.length; i++) {
     const close = closes[i]
     if (close === null || close === undefined) continue
-    points.push({ date: new Date(result.timestamp[i] * 1000).toISOString().slice(0, 10), close })
+    points.push({ date: new Date(result.timestamp[i] * 1000).toISOString().slice(0, 10), close: close * fx })
   }
 
   await cache?.put(cacheKey, new Response(JSON.stringify(points), {
@@ -118,5 +160,8 @@ export async function fetchCurrentPrice(ticker: string): Promise<number | null> 
   )
   if (!res.ok) return null
   const data = await res.json() as YahooChartResponse
-  return data.chart.result?.[0]?.meta.regularMarketPrice ?? null
+  const meta = data.chart.result?.[0]?.meta
+  const price = meta?.regularMarketPrice
+  if (price === undefined || price === null) return null
+  return price * await fetchFxToEur(meta?.currency ?? 'EUR')
 }
