@@ -21,7 +21,7 @@ import {
 import { filterTransactionsByAccounts } from '@/utils/accountFilter'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { TimeFilterBar } from '@/components/ui/TimeFilterBar'
-import { ChartHeader } from '@/components/ui/ChartHeader'
+import { ChartHeader, CollapsibleBody } from '@/components/ui/ChartHeader'
 import { CategoryPieChart } from '@/components/charts/CategoryPieChart'
 import { MonthlyBarChart } from '@/components/charts/MonthlyBarChart'
 import { SpendingAreaChart } from '@/components/charts/SpendingAreaChart'
@@ -132,6 +132,10 @@ export function Dashboard() {
   const saChart  = useChartFilter(timeFilter)
   const catChart = useChartFilter(timeFilter)
   const topChart = useChartFilter(timeFilter)
+
+  // ── Per-panel collapse state (keyed by chartId) ───────────────────────────
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const toggleCollapse = (id: string) => setCollapsed(c => ({ ...c, [id]: !c[id] }))
 
   // ── Per-chart data ────────────────────────────────────────────────────────
   const pieFiltered = useMemo(
@@ -322,6 +326,9 @@ export function Dashboard() {
           onSyncToggle={pieChart.toggleSync}
           onFilterChange={pieChart.setFilter}
           periods={periods}
+          collapsible
+          collapsed={collapsed['categories']}
+          onToggleCollapse={() => toggleCollapse('categories')}
           extra={
             <button
               id="btn-manage-categories"
@@ -333,21 +340,23 @@ export function Dashboard() {
           }
         />
 
-        {pieSummary.categories.length > 0 ? (
-          <CategoryPieChart categories={pieSummary.categories} />
-        ) : (
-          <div id="categories-empty-state" className="flex flex-col items-center gap-2 py-8 text-white/25">
-            <span className="text-2xl">📊</span>
-            <p className="text-xs">Noch keine Ausgaben im Zeitraum</p>
-          </div>
-        )}
-        <button
-          id="btn-category-breakdown"
-          onClick={() => setCatBreakdownOpen(true)}
-          className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-1 border-t border-white/6"
-        >
-          {`Alle anzeigen (${new Set(accountTransactions.map(t => t.categoryId)).size})`}
-        </button>
+        <CollapsibleBody collapsed={!!collapsed['categories']}>
+          {pieSummary.categories.length > 0 ? (
+            <CategoryPieChart categories={pieSummary.categories} />
+          ) : (
+            <div id="categories-empty-state" className="flex flex-col items-center gap-2 py-8 text-white/25">
+              <span className="text-2xl">📊</span>
+              <p className="text-xs">Noch keine Ausgaben im Zeitraum</p>
+            </div>
+          )}
+          <button
+            id="btn-category-breakdown"
+            onClick={() => setCatBreakdownOpen(true)}
+            className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-1 border-t border-white/6"
+          >
+            {`Alle anzeigen (${new Set(accountTransactions.map(t => t.categoryId)).size})`}
+          </button>
+        </CollapsibleBody>
       </GlassCard>
 
       {/* ── Budgets (per-category monthly limits) ───────────────────────── */}
@@ -367,22 +376,27 @@ export function Dashboard() {
               onSyncToggle={mbChart.toggleSync}
               onFilterChange={mbChart.setFilter}
               periods={periods}
+              collapsible
+              collapsed={collapsed['monthly-bar']}
+              onToggleCollapse={() => toggleCollapse('monthly-bar')}
             />
-            <MonthlyBarChart data={monthlyBarData} />
-            <div className="flex gap-4 justify-center mt-3">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-sm bg-emerald-400/70" />
-                <span className="text-[10px] text-white/35">Einnahmen</span>
+            <CollapsibleBody collapsed={!!collapsed['monthly-bar']}>
+              <MonthlyBarChart data={monthlyBarData} />
+              <div className="flex gap-4 justify-center mt-3">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm bg-emerald-400/70" />
+                  <span className="text-[10px] text-white/35">Einnahmen</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm bg-red-400/70" />
+                  <span className="text-[10px] text-white/35">Ausgaben</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-px bg-white/30" />
+                  <span className="text-[10px] text-white/35">Saldo</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-sm bg-red-400/70" />
-                <span className="text-[10px] text-white/35">Ausgaben</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-px bg-white/30" />
-                <span className="text-[10px] text-white/35">Saldo</span>
-              </div>
-            </div>
+            </CollapsibleBody>
           </GlassCard>
 
           {/* Statistiken Highlights */}
@@ -432,8 +446,13 @@ export function Dashboard() {
                 onSyncToggle={saChart.toggleSync}
                 onFilterChange={saChart.setFilter}
                 periods={periods}
+                collapsible
+                collapsed={collapsed['spending-area']}
+                onToggleCollapse={() => toggleCollapse('spending-area')}
               />
-              <SpendingAreaChart data={spendingData} timeFilter={saChart.effectiveFilter} />
+              <CollapsibleBody collapsed={!!collapsed['spending-area']}>
+                <SpendingAreaChart data={spendingData} timeFilter={saChart.effectiveFilter} />
+              </CollapsibleBody>
             </GlassCard>
           )}
 
@@ -449,12 +468,17 @@ export function Dashboard() {
                 onSyncToggle={catChart.toggleSync}
                 onFilterChange={catChart.setFilter}
                 periods={periods}
+                collapsible
+                collapsed={collapsed['category-trends']}
+                onToggleCollapse={() => toggleCollapse('category-trends')}
               />
-              <CategoryTrendChart
-                points={catTrendPoints}
-                topCats={topCats}
-                allMap={allMap}
-              />
+              <CollapsibleBody collapsed={!!collapsed['category-trends']}>
+                <CategoryTrendChart
+                  points={catTrendPoints}
+                  topCats={topCats}
+                  allMap={allMap}
+                />
+              </CollapsibleBody>
             </GlassCard>
           )}
 
@@ -470,15 +494,20 @@ export function Dashboard() {
                 onSyncToggle={topChart.toggleSync}
                 onFilterChange={topChart.setFilter}
                 periods={periods}
+                collapsible
+                collapsed={collapsed['top-merchants']}
+                onToggleCollapse={() => toggleCollapse('top-merchants')}
               />
-              <TopMerchantsBar merchants={topMerchants} allMap={allMap} />
-              <button
-                id="btn-merchant-breakdown"
-                onClick={() => setMerchBreakdownOpen(true)}
-                className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-3 border-t border-white/6"
-              >
-                {`Alle anzeigen (${merchantCount})`}
-              </button>
+              <CollapsibleBody collapsed={!!collapsed['top-merchants']}>
+                <TopMerchantsBar merchants={topMerchants} allMap={allMap} />
+                <button
+                  id="btn-merchant-breakdown"
+                  onClick={() => setMerchBreakdownOpen(true)}
+                  className="w-full text-center text-xs text-white/25 hover:text-white/50 transition-colors pt-3 mt-3 border-t border-white/6"
+                >
+                  {`Alle anzeigen (${merchantCount})`}
+                </button>
+              </CollapsibleBody>
             </GlassCard>
           )}
         </>

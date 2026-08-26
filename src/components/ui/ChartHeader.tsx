@@ -102,7 +102,7 @@ export function ChartHeader({
         >
           <h2 id={chartId ? `chart-${chartId}-title` : undefined} className="text-sm font-semibold text-white/70 group-hover:text-white/90 min-w-0 truncate transition-colors">{title}</h2>
           <motion.span
-            animate={{ rotate: collapsed ? 0 : 180 }}
+            animate={{ rotate: collapsed ? 180 : 0 }}
             transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
             className="text-white/35 group-hover:text-white/70 shrink-0 transition-colors"
           >
@@ -247,5 +247,27 @@ export function ChartHeader({
         <Link2 size={11} />
       </button>
     </div>
+  )
+}
+
+// Wraps a panel's body so it can slide open/closed under a collapsible
+// ChartHeader (height + fade animation). Pair with ChartHeader's
+// collapsible/collapsed/onToggleCollapse props on the same panel.
+export function CollapsibleBody({ collapsed, children }: { collapsed: boolean; children: React.ReactNode }) {
+  return (
+    <AnimatePresence initial={false}>
+      {!collapsed && (
+        <motion.div
+          key="collapsible-body"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+          style={{ overflow: 'hidden' }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
