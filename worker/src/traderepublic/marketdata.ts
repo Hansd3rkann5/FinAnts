@@ -17,7 +17,20 @@ export interface ResolvedInstrument {
 // never change), so Yahoo's search endpoint is hit at most once per ISIN ever.
 const isinCache = new Map<string, ResolvedInstrument | null>()
 
+// Crypto ISINs Yahoo's search endpoint doesn't index at all (returns 0 quotes),
+// which silently valued the whole position at 0 — the ~400 EUR gap between the
+// app's depot total and the real one was exactly the missing Ethereum. TR lists
+// crypto under synthetic XF000… ISINs whose net size is denominated directly in
+// the coin (e.g. 0.188 ETH), so map straight to Yahoo's {COIN}-EUR spot ticker
+// (already EUR, so no FX step needed). Checked before the caches and Yahoo.
+const ISIN_OVERRIDES: Record<string, ResolvedInstrument> = {
+  XF000ETH0019: { symbol: 'ETH-EUR', name: 'Ethereum' },
+  XF000BTC0017: { symbol: 'BTC-EUR', name: 'Bitcoin' },
+}
+
 export async function resolveInstrument(isin: string, db?: D1Database): Promise<ResolvedInstrument | null> {
+  const override = ISIN_OVERRIDES[isin]
+  if (override) return override
   if (isinCache.has(isin)) return isinCache.get(isin) ?? null
 
   if (db) {
