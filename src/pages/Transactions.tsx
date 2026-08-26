@@ -116,14 +116,15 @@ export function Transactions() {
           backdropFilter: 'blur(5px)',
           paddingTop: '60px',
           WebkitBackdropFilter: 'blur(5px)',
-          backgroundColor: 'rgba(10, 10, 20, 0.75)',
+          backgroundColor: 'rgba(10, 10, 10, 0.8)',
           boxShadow: '0 -4px 24px 10px rgba(10,10,10,0.8), 0 -1px 80px 10px rgba(10,10,10,0.8)',
+          borderRadius: '20px',
         }}
       >
         <TimeFilterBar value={timeFilter} onChange={setTimeFilter} id="tx" periods={periods} />
       </div>
 
-      <div id="tx-search-row" className="flex items-center gap-2 mx-4">
+      <div id="tx-search-row" className="flex items-center gap-2">
         <div id="tx-search-bar" className="relative flex-1 flex items-center">
           <Search size={14} className="absolute left-3 text-white/30 pointer-events-none" />
           <input
@@ -178,7 +179,7 @@ export function Transactions() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden mx-4"
+            className="overflow-hidden"
           >
             <div id="tx-filter-pills" className="flex flex-wrap gap-2 pb-1">
               <PillButton
@@ -209,11 +210,11 @@ export function Transactions() {
         )}
       </AnimatePresence>
 
-      <p id="tx-result-count" className="text-xs text-white/30 mx-4">
+      <p id="tx-result-count" className="text-xs text-white/30">
         {displayed.length} Buchung{displayed.length !== 1 ? 'en' : ''}
       </p>
 
-      <div className="mx-4">
+      <div id="tx-transaction-list">
         <TransactionList
           transactions={displayed}
           onTransactionClick={handleTransactionClick}

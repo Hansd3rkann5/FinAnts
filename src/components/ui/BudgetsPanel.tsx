@@ -71,7 +71,7 @@ export function BudgetsPanel({ transactions }: { transactions: Transaction[] }) 
   const isNew = editCategoryId === null || !budgets.some(b => b.categoryId === editCategoryId)
 
   return (
-    <GlassCard id="card-budgets" glow="purple" className="mx-4">
+    <GlassCard id="card-budgets" glow="purple" >
       <CollapsibleHeader
         className="mb-1"
         icon={<PiggyBank size={14} className="text-purple-400" />}

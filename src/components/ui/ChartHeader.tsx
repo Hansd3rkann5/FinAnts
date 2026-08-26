@@ -91,7 +91,12 @@ export function ChartHeader({
   function selectPeriod(f: TimeFilter) { onFilterChange(f); setOpen(false) }
 
   return (
-    <div id={chartId ? `chart-${chartId}-header` : undefined} className="flex items-center gap-1.5 mb-4">
+    <div id={chartId ? `chart-${chartId}-header` : undefined} className="flex items-center gap-1.5"
+    style={{
+      marginBottom: collapsed ? '0' : 'calc(var(--spacing) * 4)',
+      transition: 'margin-bottom 0.3s ease-in-out'
+    }}
+    >
       {icon}
       {collapsible ? (
         <button
@@ -103,7 +108,7 @@ export function ChartHeader({
           <h2 id={chartId ? `chart-${chartId}-title` : undefined} className="text-sm font-semibold text-white/70 group-hover:text-white/90 min-w-0 truncate transition-colors">{title}</h2>
           <motion.span
             animate={{ rotate: collapsed ? 180 : 0 }}
-            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             className="text-white/35 group-hover:text-white/70 shrink-0 transition-colors"
           >
             <ChevronDown size={14} />

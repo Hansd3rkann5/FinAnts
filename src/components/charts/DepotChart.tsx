@@ -121,7 +121,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
   const animKey = `${selectedIsin ?? 'total'}|${effectiveFilter}`
 
   return (
-    <GlassCard id="card-depot-chart" glow="purple" className="mx-4">
+    <GlassCard id="card-depot-chart" glow="purple">
       <ChartHeader
         chartId="depot"
         icon={<LineChartIcon size={14} className="text-purple-400" />}

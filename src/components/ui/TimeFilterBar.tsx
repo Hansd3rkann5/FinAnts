@@ -161,8 +161,10 @@ export function TimeFilterBar({ value, onChange, id = 'default', periods }: Prop
   useEffect(() => () => clearOpenTimer(), [])
 
   return (
-    <div id={`tf-${id}`} className="px-4">
-      <div id={`tf-bar-${id}`} ref={barRef} className="relative flex rounded-pill bg-white/5 border border-white/8 p-1 gap-0.5">
+    <div id={`tf-${id}`}>
+      <div id={`tf-bar-${id}`} ref={barRef} className="relative flex rounded-pill bg-white/5 border border-white/8 p-1 gap-0.5"
+      style={{backdropFilter: 'blur(5px)'}}
+      >
         {MODES.map((opt, i) => (
           <button
             key={opt.value}

@@ -232,11 +232,11 @@ export function Dashboard() {
         id="dash-sticky-filter"
         className="sticky top-0 z-30 pt-2"
         style={{
-          backdropFilter: 'blur(5px)',
           paddingTop: '60px',
           WebkitBackdropFilter: 'blur(5px)',
           backgroundColor: 'rgba(10, 10, 20, 0.75)',
           boxShadow: '0 -4px 24px 10px rgba(10,10,10,0.8), 0 -1px 80px 10px rgba(10,10,10,0.8)',
+          borderRadius: '20px'
         }}
       >
         <TimeFilterBar value={timeFilter} onChange={handleTimeFilter} id="dash" periods={periods} />
@@ -245,19 +245,18 @@ export function Dashboard() {
         <div className="mt-4">
         {hasAccounts ? (
         <>
-          <GlassCard id="card-wealth" glow="purple" className="mx-4">
+          <GlassCard id="card-wealth" glow="purple" >
             <div className="flex items-center gap-2 mb-1">
               <Landmark size={14} className="text-purple-400" />
               <p className="text-xs text-white/40">Gesamtvermögen</p>
               {accountsToggle}
             </div>
-
             <motion.p
               key={effectiveWealth}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className={`text-3xl font-bold mb-3 ${effectiveWealth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+              className={`text-3xl font-bold ${effectiveWealth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
             >
               {formatEur(effectiveWealth, 2)}
             </motion.p>
@@ -266,7 +265,7 @@ export function Dashboard() {
           </GlassCard>
         </>
       ) : manualBalance !== null && (
-        <GlassCard id="card-manual-balance" glow="purple" className="mx-4">
+        <GlassCard id="card-manual-balance" glow="purple" >
           <div className="flex items-center gap-2 mb-1">
             <Landmark size={14} className="text-purple-400" />
             <p className="text-xs text-white/40">Kontostand</p>
@@ -289,7 +288,7 @@ export function Dashboard() {
       </div>
 
       {/* ── Einnahmen / Ausgaben stats ──────────────────────────────────── */}
-      <div id="stats-row" className="grid grid-cols-2 gap-3 px-4">
+      <div id="stats-row" className="grid grid-cols-2 gap-3">
         <GlassCard id="card-income-stat" padding="sm" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-card_sm bg-emerald-500/15 flex items-center justify-center text-emerald-400">
             <TrendingUp size={18} />
@@ -316,7 +315,7 @@ export function Dashboard() {
       )}
 
       {/* ── Kategorien (Pie) ─────────────────────────────────────────────── */}
-      <GlassCard id="card-categories" className="mx-4">
+      <GlassCard id="card-categories">
         <ChartHeader
           chartId="categories"
           icon={<PieChart size={14} className="text-pink-400" />}
@@ -366,7 +365,7 @@ export function Dashboard() {
       {analytics.hasEnoughData && (
         <>
           {/* Monatlicher Verlauf */}
-          <GlassCard id="card-monthly-bar" className="mx-4">
+          <GlassCard id="card-monthly-bar">
             <ChartHeader
               chartId="monthly-bar"
               icon={<BarChart2 size={14} className="text-purple-400" />}
@@ -400,7 +399,7 @@ export function Dashboard() {
           </GlassCard>
 
           {/* Statistiken Highlights */}
-          <GlassCard id="card-stats-highlights" padding="sm" className="mx-4">
+          <GlassCard id="card-stats-highlights" padding="sm" >
             <div className="flex gap-1 divide-x divide-white/6">
               <div className="flex-1 px-3 py-1">
                 <StatPill
@@ -436,7 +435,7 @@ export function Dashboard() {
 
           {/* Ausgaben im Überblick */}
           {spendingData.length >= 2 && (
-            <GlassCard id="card-spending-area" className="mx-4">
+            <GlassCard id="card-spending-area" >
               <ChartHeader
                 chartId="spending-area"
                 icon={<Calendar size={14} className="text-blue-400" />}
@@ -458,7 +457,7 @@ export function Dashboard() {
 
           {/* Kategorie-Entwicklung */}
           {topCats.length >= 2 && (
-            <GlassCard id="card-category-trends" className="mx-4">
+            <GlassCard id="card-category-trends" >
               <ChartHeader
                 chartId="category-trends"
                 icon={<TrendIcon size={14} className="text-orange-400" />}
@@ -484,7 +483,7 @@ export function Dashboard() {
 
           {/* Top Händler */}
           {topMerchants.length >= 2 && (
-            <GlassCard id="card-top-merchants" className="mx-4">
+            <GlassCard id="card-top-merchants" >
               <ChartHeader
                 chartId="top-merchants"
                 icon={<ShoppingBag size={14} className="text-yellow-400" />}
@@ -515,7 +514,7 @@ export function Dashboard() {
 
       {/* ── Daueraufträge ─────────────────────────────────────────────────── */}
       {recurringGroups.length > 0 && (
-        <GlassCard id="card-recurring" glow="purple" className="mx-4">
+        <GlassCard id="card-recurring" glow="purple" >
           <CollapsibleHeader
             icon={<RefreshCw size={14} className="text-purple-400" />}
             title="Daueraufträge erkannt"

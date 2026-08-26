@@ -42,7 +42,7 @@ export function Settings() {
       <ChartLoader show={loaderMessage !== undefined} message={loaderMessage} />
 
       <div className="flex flex-col min-h-full">
-      <div className="flex-1 flex flex-col gap-3 px-4">
+      <div className="flex-1 flex flex-col gap-3">
         <div
         id="dash-sticky-filter"
         className="sticky top-0 z-30 pt-2 mb-5"
