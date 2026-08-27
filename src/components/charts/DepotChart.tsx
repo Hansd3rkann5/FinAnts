@@ -5,28 +5,22 @@ import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
-import { LineChart as LineChartIcon, TrendingUp, TrendingDown } from 'lucide-react'
+import { LineChart as LineChartIcon, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { ChartHeader } from '@/components/ui/ChartHeader'
 import { useDepotHistory } from '@/hooks/useDepotHistory'
 import { useChartFilter } from '@/hooks/useChartFilter'
 import { getFilterDateRange, type AvailablePeriods } from '@/utils/chartCompute'
 import type { TimeFilter } from '@/types'
+import type { DepotHistoryPoint, DepotPosition } from '@/utils/depotHistory'
 import { getNiceBounds, StickyYAxis } from './chartUtils'
 import { formatEur } from '@/utils/format'
-import type { DepotPosition } from '@/utils/depotHistory'
 
-// The reconstructed history goes back only as far as the oldest trade, so
-// fetching a generous window once (and filtering client-side per TimeFilter)
-// is cheaper and snappier than re-hitting the worker on every range change.
 const LOOKBACK_DAYS = 1825
-
-const H = 150
+const H = 140
 const MARGIN_TOP = 8
 const X_AXIS_H = 20
 
-// Below ~3 months the month-only label collapses every tick to "Aug"; show the
-// day too so the axis is actually readable. Longer spans stay month + year.
 function labelForDate(date: string, dayLevel: boolean): string {
   const d = new Date(date + 'T00:00:00')
   return dayLevel
@@ -46,23 +40,130 @@ function ChartTooltip({ active, payload }: any) {
   )
 }
 
-function PositionRow({ pos, showPct }: { pos: DepotPosition; showPct: boolean }) {
-  const positive = pos.pnl >= 0
+function buildPoints(raw: DepotHistoryPoint[], effectiveFilter: TimeFilter) {
+  const { start, end } = getFilterDateRange(effectiveFilter)
+  const windowed = effectiveFilter === 'all'
+    ? raw
+    : raw.filter(p => { const d = new Date(p.date + 'T00:00:00'); return d >= start && d <= end })
+  const spanDays = windowed.length >= 2
+    ? (new Date(windowed[windowed.length - 1].date).getTime() - new Date(windowed[0].date).getTime()) / 86_400_000
+    : 0
+  const dayLevel = spanDays <= 92
+  return windowed.map(p => ({ date: p.date, label: labelForDate(p.date, dayLevel), value: p.value }))
+}
+
+interface ItemProps {
+  itemKey: string
+  isOpen: boolean
+  onToggle: () => void
+  label: string
+  isin?: string
+  shares?: number
+  currentValue: number
+  pnl: number
+  pnlPct: number
+  showPct: boolean
+  rawPoints: DepotHistoryPoint[]
+  effectiveFilter: TimeFilter
+  unlocked: boolean
+}
+
+function AccordionItem({
+  itemKey, isOpen, onToggle,
+  label, isin, shares,
+  currentValue, pnl, pnlPct, showPct,
+  rawPoints, effectiveFilter, unlocked,
+}: ItemProps) {
+  const positive = pnl >= 0
+
+  const points = useMemo(
+    () => buildPoints(rawPoints, effectiveFilter),
+    [rawPoints, effectiveFilter],
+  )
+
+  const { ticks, min: yMin, max: yMax } = useMemo(() => {
+    const vals = points.map(p => p.value)
+    if (!vals.length) return { ticks: [0], min: 0, max: 1 }
+    return getNiceBounds(Math.min(...vals), Math.max(...vals))
+  }, [points])
+
   return (
-    <div className="flex items-center gap-2 py-2.5 border-b border-white/5 last:border-0">
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-white/80 font-medium truncate">{pos.name}</p>
-        <p className="text-[10px] text-white/30 font-mono mt-0.5">{pos.isin} · {pos.shares.toLocaleString('de-DE', { maximumFractionDigits: 6 })} Stk</p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="text-xs text-white/80">{formatEur(pos.currentValue, 2)}</p>
-        <p className={`text-[10px] font-medium mt-0.5 flex items-center justify-end gap-0.5 ${positive ? 'text-emerald-400' : 'text-red-400'}`}>
-          {positive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
-          {showPct
-            ? `${positive ? '+' : ''}${pos.pnlPct.toFixed(2)} %`
-            : `${positive ? '+' : ''}${formatEur(pos.pnl, 2)}`}
-        </p>
-      </div>
+    <div className="border-b border-white/6 last:border-0">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-2 py-3 text-left"
+      >
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-white/80 truncate">{label}</p>
+          {isin && shares !== undefined && (
+            <p className="text-[9px] text-white/25 font-mono mt-0.5">
+              {isin} · {shares.toLocaleString('de-DE', { maximumFractionDigits: 6 })} Stk
+            </p>
+          )}
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-xs text-white/80">{formatEur(currentValue, 2)}</p>
+          <p className={`text-[10px] font-medium mt-0.5 flex items-center justify-end gap-0.5 ${positive ? 'text-emerald-400' : 'text-red-400'}`}>
+            {positive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+            {showPct
+              ? `${positive ? '+' : ''}${pnlPct.toFixed(2)} %`
+              : `${positive ? '+' : ''}${formatEur(pnl, 2)}`}
+          </p>
+        </div>
+        <motion.span
+          animate={{ rotate: isOpen ? 0 : -90 }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+          className="text-white/30 shrink-0"
+        >
+          <ChevronDown size={14} />
+        </motion.span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key={`chart-${itemKey}`}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="pb-4">
+              {points.length === 0 ? (
+                <p className="text-xs text-white/25 text-center py-6">Keine Daten im Zeitraum</p>
+              ) : (
+                <div className="flex items-start">
+                  <StickyYAxis ticks={ticks} yMin={yMin} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
+                  <div key={`${itemKey}|${effectiveFilter}`} className="flex-1 min-w-0">
+                    <ResponsiveContainer width="100%" height={H}>
+                      <LineChart data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis
+                          dataKey="label"
+                          height={X_AXIS_H}
+                          padding={{ left: 20, right: 12 }}
+                          tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.35)' }}
+                          axisLine={false}
+                          tickLine={false}
+                          interval={Math.max(0, Math.floor(points.length / 6))}
+                        />
+                        <YAxis domain={[yMin, yMax]} hide />
+                        <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
+                        <Line
+                          dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
+                          activeDot={{ r: 3, fill: '#c084fc', strokeWidth: 0 }}
+                          isAnimationActive={unlocked} animationDuration={550} animationEasing="ease-out"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -72,53 +173,28 @@ interface Props {
   periods: AvailablePeriods
 }
 
-// Shown on the Dashboard once the Trade Republic account is toggled on —
-// cumulative depot value, or drill into a single holding. Uses the same
-// ChartHeader as every other panel: linked to the global time filter by
-// default, unlink to pick its own range. Reconstructed from stored trades +
-// Yahoo historical prices, see worker/src/traderepublic/depotHistory.ts.
 export function DepotChart({ globalFilter, periods }: Props) {
   const { synced, effectiveFilter, setFilter, toggleSync } = useChartFilter(globalFilter)
-  const [selectedIsin, setSelectedIsin] = useState<string | null>(null)
+  const [openKey, setOpenKey] = useState<string>('total')
   const [showPct, setShowPct] = useState(true)
   const [collapsed, setCollapsed] = useState(false)
   const { data, loading, error, lastFetched } = useDepotHistory(LOOKBACK_DAYS)
-
-  // Hold the entry animation while the lock screen is up — Recharts animates on
-  // the main thread and starves the PIN keypad of input events. Once unlocked,
-  // every range/holding change replays the draw (see keyed wrapper below).
   const unlocked = useAppUnlocked()
 
-  const selectedStock = data?.perStock.find(s => s.isin === selectedIsin)
+  function toggle(key: string) {
+    setOpenKey(prev => prev === key ? '' : key)
+  }
 
-  const points = useMemo(() => {
-    const raw = selectedStock?.points ?? data?.cumulative ?? []
-    const { start, end } = getFilterDateRange(effectiveFilter)
-    const windowed = effectiveFilter === 'all'
-      ? raw
-      : raw.filter(p => {
-          const d = new Date(p.date + 'T00:00:00')
-          return d >= start && d <= end
-        })
-    const spanDays = windowed.length >= 2
-      ? (new Date(windowed[windowed.length - 1].date).getTime() - new Date(windowed[0].date).getTime()) / 86_400_000
-      : 0
-    const dayLevel = spanDays <= 92
-    return windowed.map(p => ({ date: p.date, label: labelForDate(p.date, dayLevel), value: p.value }))
-  }, [selectedStock, data?.cumulative, effectiveFilter])
+  const totalCost = data?.positions.reduce((s, p) => s + p.costBasis, 0) ?? 0
+  const totalVal  = data?.positions.reduce((s, p) => s + p.currentValue, 0) ?? 0
+  const totalPnl  = totalVal - totalCost
+  const totalPct  = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
 
-  // Zoom the Y-axis to the visible series' own range — a 240–260 € window fills
-  // the plot instead of clinging to the top of a 0–300 axis.
-  const { ticks, min: yMin, max: yMax } = useMemo(() => {
-    const vals = points.map(p => p.value)
-    if (vals.length === 0) return { ticks: [0], min: 0, max: 1 }
-    return getNiceBounds(Math.min(...vals), Math.max(...vals))
-  }, [points])
-
-  // Remount the chart whenever the shown series changes (range or selected
-  // holding), so Recharts replays its left-to-right "draw" animation each time
-  // instead of silently swapping the data underneath a static line.
-  const animKey = `${selectedIsin ?? 'total'}|${effectiveFilter}`
+  const positionsByIsin = useMemo(() => {
+    const map = new Map<string, DepotPosition>()
+    for (const p of data?.positions ?? []) map.set(p.isin, p)
+    return map
+  }, [data?.positions])
 
   return (
     <GlassCard id="card-depot-chart" glow="purple">
@@ -142,125 +218,75 @@ export function DepotChart({ globalFilter, periods }: Props) {
       />
 
       <AnimatePresence initial={false}>
-      {!collapsed && (
-      <motion.div
-        key="depot-body"
-        initial={{ height: 0, opacity: 0 }}
-        animate={{ height: 'auto', opacity: 1 }}
-        exit={{ height: 0, opacity: 0 }}
-        transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
-        style={{ overflow: 'hidden' }}
-      >
-      {(data?.perStock?.length ?? 0) > 0 && (
-        <div id="depot-chart-stock-pills" className="flex flex-wrap gap-1.5 mb-3">
-          <button
-            onClick={() => setSelectedIsin(null)}
-            className="px-2.5 py-1 rounded-pill text-xs font-medium border transition-all"
-            style={{
-              backgroundColor: selectedIsin === null ? 'rgba(var(--acc-rgb),0.2)' : 'rgba(255,255,255,0.04)',
-              borderColor: selectedIsin === null ? 'rgba(var(--acc-rgb),0.4)' : 'rgba(255,255,255,0.08)',
-              color: selectedIsin === null ? 'var(--acc-soft)' : 'rgba(255,255,255,0.5)',
-            }}
+        {!collapsed && (
+          <motion.div
+            key="depot-body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+            style={{ overflow: 'hidden' }}
           >
-            Gesamt
-          </button>
-          {data?.perStock.map(s => (
-            <button
-              key={s.isin}
-              onClick={() => setSelectedIsin(s.isin)}
-              className="px-2.5 py-1 rounded-pill text-xs font-medium border transition-all"
-              style={{
-                backgroundColor: selectedIsin === s.isin ? 'rgba(var(--acc-rgb),0.2)' : 'rgba(255,255,255,0.04)',
-                borderColor: selectedIsin === s.isin ? 'rgba(var(--acc-rgb),0.4)' : 'rgba(255,255,255,0.08)',
-                color: selectedIsin === s.isin ? 'var(--acc-soft)' : 'rgba(255,255,255,0.5)',
-              }}
-            >
-              {s.name}
-            </button>
-          ))}
-        </div>
-      )}
+            {loading && !data ? (
+              <div className="flex items-center justify-center py-10 text-xs text-white/30">Lädt…</div>
+            ) : error ? (
+              <div className="flex items-center justify-center py-10 text-xs text-red-400/70">{error}</div>
+            ) : (
+              <>
+                {/* % ↔ € toggle */}
+                {(data?.positions?.length ?? 0) > 0 && (
+                  <div className="flex justify-end mb-1 -mt-1">
+                    <button
+                      onClick={() => setShowPct(p => !p)}
+                      className="text-[10px] px-2 py-0.5 rounded-full border border-white/15 text-white/40 hover:text-white/70 transition-colors"
+                    >
+                      {showPct ? '% → €' : '€ → %'}
+                    </button>
+                  </div>
+                )}
 
-      {loading && points.length === 0 ? (
-        <div className="flex items-center justify-center py-10 text-xs text-white/30">Lädt…</div>
-      ) : error ? (
-        <div className="flex items-center justify-center py-10 text-xs text-red-400/70">{error}</div>
-      ) : points.length === 0 ? (
-        <div className="flex items-center justify-center py-10 text-xs text-white/30">Keine Daten im Zeitraum</div>
-      ) : (
-        <div className="flex items-start">
-          <StickyYAxis ticks={ticks} yMin={yMin} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
-          {/* Keyed wrapper: remounting the whole ResponsiveContainer on each
-              range/holding change is the only reliable way to replay Recharts
-              3's mount "draw" animation — a key on <Line>/<LineChart> alone
-              stays inside the same chart instance and doesn't re-trigger it. */}
-          <div key={animKey} className="flex-1 min-w-0">
-            <ResponsiveContainer width="100%" height={H}>
-              <LineChart data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  height={X_AXIS_H}
-                  padding={{ left: 20, right: 12 }}
-                  tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.35)' }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval={Math.max(0, Math.floor(points.length / 6))}
+                {/* Gesamt */}
+                <AccordionItem
+                  itemKey="total"
+                  isOpen={openKey === 'total'}
+                  onToggle={() => toggle('total')}
+                  label="Depot Gesamt"
+                  currentValue={totalVal}
+                  pnl={totalPnl}
+                  pnlPct={totalPct}
+                  showPct={showPct}
+                  rawPoints={data?.cumulative ?? []}
+                  effectiveFilter={effectiveFilter}
+                  unlocked={unlocked}
                 />
-                <YAxis domain={[yMin, yMax]} hide />
-                <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
-                <Line
-                  dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
-                  activeDot={{ r: 3, fill: '#c084fc', strokeWidth: 0 }}
-                  isAnimationActive={unlocked} animationDuration={550} animationEasing="ease-out"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
 
-      {/* ── Positionen ── */}
-      {(data?.positions?.length ?? 0) > 0 && (
-        <div className="mt-4 pt-3 border-t border-white/6">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] text-white/30 uppercase tracking-wider">Positionen</p>
-            <button
-              onClick={() => setShowPct(p => !p)}
-              className="text-[10px] px-2 py-0.5 rounded-full border border-white/15 text-white/40 hover:text-white/70 transition-colors"
-            >
-              {showPct ? '% → €' : '€ → %'}
-            </button>
-          </div>
-          <div>
-            {data!.positions.map(pos => (
-              <PositionRow key={pos.isin} pos={pos} showPct={showPct} />
-            ))}
-          </div>
-          {/* Summary row */}
-          {(() => {
-            const totalCost = data!.positions.reduce((s, p) => s + p.costBasis, 0)
-            const totalVal  = data!.positions.reduce((s, p) => s + p.currentValue, 0)
-            const totalPnl  = totalVal - totalCost
-            const totalPct  = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
-            const pos       = totalPnl >= 0
-            return (
-              <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-white/8">
-                <p className="text-[10px] text-white/40">Depot gesamt</p>
-                <div className="text-right">
-                  <p className="text-xs text-white/70 font-medium">{formatEur(totalVal, 2)}</p>
-                  <p className={`text-[10px] font-medium flex items-center justify-end gap-0.5 ${pos ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {pos ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
-                    {showPct ? `${pos ? '+' : ''}${totalPct.toFixed(2)} %` : `${pos ? '+' : ''}${formatEur(totalPnl, 2)}`}
-                  </p>
-                </div>
-              </div>
-            )
-          })()}
-        </div>
-      )}
-      </motion.div>
-      )}
+                {/* Per-position */}
+                {data?.perStock.map(stock => {
+                  const pos = positionsByIsin.get(stock.isin)
+                  if (!pos) return null
+                  return (
+                    <AccordionItem
+                      key={stock.isin}
+                      itemKey={stock.isin}
+                      isOpen={openKey === stock.isin}
+                      onToggle={() => toggle(stock.isin)}
+                      label={pos.name}
+                      isin={pos.isin}
+                      shares={pos.shares}
+                      currentValue={pos.currentValue}
+                      pnl={pos.pnl}
+                      pnlPct={pos.pnlPct}
+                      showPct={showPct}
+                      rawPoints={stock.points}
+                      effectiveFilter={effectiveFilter}
+                      unlocked={unlocked}
+                    />
+                  )
+                })}
+              </>
+            )}
+          </motion.div>
+        )}
       </AnimatePresence>
     </GlassCard>
   )
