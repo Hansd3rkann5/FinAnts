@@ -109,16 +109,24 @@ export function Dashboard() {
     return baseBalance + delta
   })()
 
-  // Transactions counted on top of the saved manual balance (giro only).
+  // Transactions counted on top of the saved manual balance — giro-only:
+  // only transactions attributed to the giro account (by accountIban or by
+  // default fallback), so TR buys/sells don't skew the breakdown.
   const giroDeltaTransactions = useMemo(() => {
     if (baseBalance === null || balanceSavedAt === null) return []
     const savedTs = new Date(balanceSavedAt).getTime()
     const known = balanceKnownIds !== null ? new Set(balanceKnownIds) : null
     const cutoff = known ? new Date(savedTs).setHours(0, 0, 0, 0) : savedTs
-    return accountTransactions.filter(
-      t => !t.isPending && !isExcluded(t) && t.date.getTime() >= cutoff && !known?.has(t.id)
-    )
-  }, [baseBalance, balanceSavedAt, balanceKnownIds, accountTransactions])
+    const giroIban = accounts.find(a => a.type === 'giro')?.iban
+    return transactions.filter(t => {
+      const acctIban = t.accountIban ?? giroIban
+      return acctIban === giroIban
+        && !t.isPending
+        && !isExcluded(t)
+        && t.date.getTime() >= cutoff
+        && !known?.has(t.id)
+    })
+  }, [baseBalance, balanceSavedAt, balanceKnownIds, transactions, accounts])
 
   // The manual Kontostand replaces the giro balance whenever it is fresher
   // than the bank sync: either the sync never delivered a balance (0 / no
