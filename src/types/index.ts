@@ -77,6 +77,8 @@ export interface Account {
   balanceDate: string
   /** Whether this account is counted toward Gesamtvermögen. */
   included: boolean
+  /** User-set logo: base64 data URL or remote URL. */
+  customLogo?: string
 }
 
 export interface RecurringGroup {

@@ -32,6 +32,7 @@ import { CategoryBreakdownModal } from '@/components/ui/CategoryBreakdownModal'
 import { MerchantBreakdownModal } from '@/components/ui/MerchantBreakdownModal'
 import { RecurringModal } from '@/components/ui/RecurringModal'
 import { AccountCard } from '@/components/ui/AccountCard'
+import { AccountDetailModal } from '@/components/ui/AccountDetailModal'
 
 import { BudgetsPanel } from '@/components/ui/BudgetsPanel'
 import { DepotChart } from '@/components/charts/DepotChart'
@@ -63,6 +64,7 @@ export function Dashboard() {
   }
 
   const [showAccounts,    setShowAccounts]    = useState(false)
+  const [detailAccount,   setDetailAccount]   = useState<typeof accounts[number] | null>(null)
   const [catManageOpen,   setCatManageOpen]   = useState(false)
   const [catBreakdownOpen, setCatBreakdownOpen] = useState(false)
   const [merchBreakdownOpen, setMerchBreakdownOpen] = useState(false)
@@ -106,6 +108,17 @@ export function Dashboard() {
       .reduce((s, t) => s + t.amount, 0)
     return baseBalance + delta
   })()
+
+  // Transactions counted on top of the saved manual balance (giro only).
+  const giroDeltaTransactions = useMemo(() => {
+    if (baseBalance === null || balanceSavedAt === null) return []
+    const savedTs = new Date(balanceSavedAt).getTime()
+    const known = balanceKnownIds !== null ? new Set(balanceKnownIds) : null
+    const cutoff = known ? new Date(savedTs).setHours(0, 0, 0, 0) : savedTs
+    return accountTransactions.filter(
+      t => !t.isPending && !isExcluded(t) && t.date.getTime() >= cutoff && !known?.has(t.id)
+    )
+  }, [baseBalance, balanceSavedAt, balanceKnownIds, accountTransactions])
 
   // The manual Kontostand replaces the giro balance whenever it is fresher
   // than the bank sync: either the sync never delivered a balance (0 / no
@@ -207,19 +220,23 @@ export function Dashboard() {
           className="overflow-hidden"
         >
           <div id="accounts-list" className="flex flex-col gap-2 pt-1">
-            {accounts.map(a => (
-              <AccountCard
-                key={a.iban}
-                account={{
-                  ...a,
-                  included: isAccountSelected(a.iban),
-                  balance: giroOverride?.iban === a.iban ? giroOverride.balance : a.balance,
-                  balanceDate: giroOverride?.iban === a.iban && balanceSavedAt ? balanceSavedAt : a.balanceDate,
-                }}
-                onToggle={toggleAccount}
-                showToggle
-              />
-            ))}
+            {accounts.map(a => {
+              const isGiro = a.type === 'giro'
+              return (
+                <AccountCard
+                  key={a.iban}
+                  account={{
+                    ...a,
+                    included: isAccountSelected(a.iban),
+                    balance: giroOverride?.iban === a.iban ? giroOverride.balance : a.balance,
+                    balanceDate: giroOverride?.iban === a.iban && balanceSavedAt ? balanceSavedAt : a.balanceDate,
+                  }}
+                  onToggle={toggleAccount}
+                  showToggle
+                  onLongPress={isGiro ? () => setDetailAccount(a) : undefined}
+                />
+              )
+            })}
           </div>
         </motion.div>
       )}
@@ -572,6 +589,18 @@ export function Dashboard() {
         }}
       />
       <RecurringModal open={recurringOpen} onClose={() => setRecurringOpen(false)} />
+      {detailAccount && (
+        <AccountDetailModal
+          open={!!detailAccount}
+          onClose={() => setDetailAccount(null)}
+          account={detailAccount}
+          breakdown={baseBalance !== null && balanceSavedAt !== null ? {
+            baseBalance,
+            savedAt: balanceSavedAt,
+            deltaTransactions: giroDeltaTransactions,
+          } : undefined}
+        />
+      )}
     </div>
   )
 }

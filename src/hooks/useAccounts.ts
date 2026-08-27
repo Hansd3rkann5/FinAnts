@@ -70,7 +70,9 @@ export function useAccounts() {
     setAccountsState(prev => {
       const existing = prev.find(p => p.iban === account.iban)
       const updated = dedupe(existing
-        ? prev.map(a => a.iban === account.iban ? { ...account, included: a.included } : a)
+        ? prev.map(a => a.iban === account.iban
+            ? { ...account, included: a.included, customLogo: account.customLogo ?? a.customLogo }
+            : a)
         : [...prev, { ...account, included: true }])
       saveAccounts(updated)
       return updated
