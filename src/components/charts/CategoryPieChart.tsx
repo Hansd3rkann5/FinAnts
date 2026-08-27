@@ -92,7 +92,7 @@ export function CategoryPieChart({ categories }: Props) {
             className="flex items-center gap-2 w-full text-left transition-opacity duration-150 active:opacity-70"
           >
             <div
-              className="w-2 h-2 rounded-full shrink-0 transition-transform duration-200"
+              className="w-2 h-2 rounded-full shrink-0 transition-all duration-200"
               style={{
                 backgroundColor: item.color,
                 transform: i === activeIndex ? 'scale(1.5)' : 'scale(1)',
