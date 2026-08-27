@@ -220,23 +220,20 @@ export function Dashboard() {
           className="overflow-hidden"
         >
           <div id="accounts-list" className="flex flex-col gap-2 pt-1">
-            {accounts.map(a => {
-              const isGiro = a.type === 'giro'
-              return (
-                <AccountCard
-                  key={a.iban}
-                  account={{
-                    ...a,
-                    included: isAccountSelected(a.iban),
-                    balance: giroOverride?.iban === a.iban ? giroOverride.balance : a.balance,
-                    balanceDate: giroOverride?.iban === a.iban && balanceSavedAt ? balanceSavedAt : a.balanceDate,
-                  }}
-                  onToggle={toggleAccount}
-                  showToggle
-                  onLongPress={isGiro ? () => setDetailAccount(a) : undefined}
-                />
-              )
-            })}
+            {accounts.map(a => (
+              <AccountCard
+                key={a.iban}
+                account={{
+                  ...a,
+                  included: isAccountSelected(a.iban),
+                  balance: giroOverride?.iban === a.iban ? giroOverride.balance : a.balance,
+                  balanceDate: giroOverride?.iban === a.iban && balanceSavedAt ? balanceSavedAt : a.balanceDate,
+                }}
+                onToggle={toggleAccount}
+                showToggle
+                onLongPress={() => setDetailAccount(a)}
+              />
+            ))}
           </div>
         </motion.div>
       )}
