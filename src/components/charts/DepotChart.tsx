@@ -82,7 +82,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
   const [selectedIsin, setSelectedIsin] = useState<string | null>(null)
   const [showPct, setShowPct] = useState(true)
   const [collapsed, setCollapsed] = useState(false)
-  const { data, loading, error } = useDepotHistory(LOOKBACK_DAYS)
+  const { data, loading, error, lastFetched } = useDepotHistory(LOOKBACK_DAYS)
 
   // Hold the entry animation while the lock screen is up — Recharts animates on
   // the main thread and starves the PIN keypad of input events. Once unlocked,
@@ -134,6 +134,11 @@ export function DepotChart({ globalFilter, periods }: Props) {
         collapsible
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed(c => !c)}
+        extra={lastFetched && (
+          <span className="text-[9px] text-white/25 shrink-0 tabular-nums">
+            {lastFetched.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
       />
 
       <AnimatePresence initial={false}>

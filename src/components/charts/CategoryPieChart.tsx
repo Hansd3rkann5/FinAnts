@@ -96,6 +96,7 @@ export function CategoryPieChart({ categories }: Props) {
               style={{
                 backgroundColor: item.color,
                 transform: i === activeIndex ? 'scale(1.5)' : 'scale(1)',
+                paddingLeft: i === activeIndex ? '8px' : '0',
               }}
             />
             <span className={`text-xs flex-1 truncate transition-colors duration-150 ${i === activeIndex ? 'text-white/90 font-medium' : 'text-white/60'}`}>
