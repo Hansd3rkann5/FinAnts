@@ -56,6 +56,7 @@ interface ItemProps {
   itemKey: string
   isOpen: boolean
   onToggle: () => void
+  onTogglePct: () => void
   label: string
   isin?: string
   shares?: number
@@ -69,7 +70,7 @@ interface ItemProps {
 }
 
 function AccordionItem({
-  itemKey, isOpen, onToggle,
+  itemKey, isOpen, onToggle, onTogglePct,
   label, isin, shares,
   currentValue, pnl, pnlPct, showPct,
   rawPoints, effectiveFilter, unlocked,
@@ -89,19 +90,34 @@ function AccordionItem({
 
   return (
     <div className="border-b border-white/6 last:border-0">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center gap-2 py-3 text-left"
-      >
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-white/80 truncate">{label}</p>
-          {isin && shares !== undefined && (
-            <p className="text-[9px] text-white/25 font-mono mt-0.5">
-              {isin} · {shares.toLocaleString('de-DE', { maximumFractionDigits: 6 })} Stk
-            </p>
-          )}
-        </div>
-        <div className="text-right shrink-0">
+      <div className="flex items-center gap-2">
+        {/* Left — toggle accordion */}
+        <button
+          onClick={onToggle}
+          className="flex-1 min-w-0 flex items-center gap-2 py-3 text-left"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-white/80 truncate">{label}</p>
+            {isin && shares !== undefined && (
+              <p className="text-[9px] text-white/25 font-mono mt-0.5">
+                {isin} · {shares.toLocaleString('de-DE', { maximumFractionDigits: 6 })} Stk
+              </p>
+            )}
+          </div>
+          <motion.span
+            animate={{ rotate: isOpen ? 0 : -90 }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            className="text-white/30 shrink-0"
+          >
+            <ChevronDown size={14} />
+          </motion.span>
+        </button>
+
+        {/* Right — toggle % ↔ € */}
+        <button
+          onClick={onTogglePct}
+          className="text-right shrink-0 py-3 pl-2"
+        >
           <p className="text-xs text-white/80">{formatEur(currentValue, 2)}</p>
           <p className={`text-[10px] font-medium mt-0.5 flex items-center justify-end gap-0.5 ${positive ? 'text-emerald-400' : 'text-red-400'}`}>
             {positive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
@@ -109,15 +125,8 @@ function AccordionItem({
               ? `${positive ? '+' : ''}${pnlPct.toFixed(2)} %`
               : `${positive ? '+' : ''}${formatEur(pnl, 2)}`}
           </p>
-        </div>
-        <motion.span
-          animate={{ rotate: isOpen ? 0 : -90 }}
-          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-          className="text-white/30 shrink-0"
-        >
-          <ChevronDown size={14} />
-        </motion.span>
-      </button>
+        </button>
+      </div>
 
       <AnimatePresence initial={false}>
         {isOpen && (
@@ -233,23 +242,12 @@ export function DepotChart({ globalFilter, periods }: Props) {
               <div className="flex items-center justify-center py-10 text-xs text-red-400/70">{error}</div>
             ) : (
               <>
-                {/* % ↔ € toggle */}
-                {(data?.positions?.length ?? 0) > 0 && (
-                  <div className="flex justify-end mb-1 -mt-1">
-                    <button
-                      onClick={() => setShowPct(p => !p)}
-                      className="text-[10px] px-2 py-0.5 rounded-full border border-white/15 text-white/40 hover:text-white/70 transition-colors"
-                    >
-                      {showPct ? '% → €' : '€ → %'}
-                    </button>
-                  </div>
-                )}
-
                 {/* Gesamt */}
                 <AccordionItem
                   itemKey="total"
                   isOpen={openKey === 'total'}
                   onToggle={() => toggle('total')}
+                  onTogglePct={() => setShowPct(p => !p)}
                   label="Depot Gesamt"
                   currentValue={totalVal}
                   pnl={totalPnl}
@@ -270,6 +268,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
                       itemKey={stock.isin}
                       isOpen={openKey === stock.isin}
                       onToggle={() => toggle(stock.isin)}
+                      onTogglePct={() => setShowPct(p => !p)}
                       label={pos.name}
                       isin={pos.isin}
                       shares={pos.shares}

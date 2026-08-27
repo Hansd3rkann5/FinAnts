@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "finants",
   "compatibility_date": "2026-08-25",
+  "main": "src/auth-worker.ts",
   "observability": {
     "enabled": true
   },

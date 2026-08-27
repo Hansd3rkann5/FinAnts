@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react'
 import { DEV_VERSION } from 'virtual:dev-version'
-import { Wallet, Download, Lock } from 'lucide-react'
+import { Wallet, Download, Lock, LogOut } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { ChartLoader } from '@/components/ui/ChartLoader'
 import { getApiKey } from '@/utils/cfAuth'
@@ -97,6 +97,13 @@ export function Settings() {
           <MerchantProfilesSection />
           <DataSection />
           <ErrorLogSection />
+          <a
+            href="/__auth/logout"
+            className="flex items-center justify-center gap-2 w-full mt-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors active:scale-98"
+          >
+            <LogOut size={14} />
+            Abmelden
+          </a>
         </SettingsGroup>
 
       </div>
