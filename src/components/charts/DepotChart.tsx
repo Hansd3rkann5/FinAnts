@@ -104,13 +104,6 @@ function AccordionItem({
               </p>
             )}
           </div>
-          <motion.span
-            animate={{ rotate: isOpen ? 0 : -90 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            className="text-white/30 shrink-0"
-          >
-            <ChevronDown size={14} />
-          </motion.span>
         </button>
 
         {/* Right — toggle % ↔ € */}
@@ -126,6 +119,13 @@ function AccordionItem({
               : `${positive ? '+' : ''}${formatEur(pnl, 2)}`}
           </p>
         </button>
+        <motion.span
+          animate={{ rotate: isOpen ? 0 : -90 }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+          className="text-white/30 shrink-0"
+        >
+          <ChevronDown size={14} />
+        </motion.span>
       </div>
 
       <AnimatePresence initial={false}>
@@ -195,9 +195,9 @@ export function DepotChart({ globalFilter, periods }: Props) {
   }
 
   const totalCost = data?.positions.reduce((s, p) => s + p.costBasis, 0) ?? 0
-  const totalVal  = data?.positions.reduce((s, p) => s + p.currentValue, 0) ?? 0
-  const totalPnl  = totalVal - totalCost
-  const totalPct  = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
+  const totalVal = data?.positions.reduce((s, p) => s + p.currentValue, 0) ?? 0
+  const totalPnl = totalVal - totalCost
+  const totalPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
 
   const positionsByIsin = useMemo(() => {
     const map = new Map<string, DepotPosition>()
