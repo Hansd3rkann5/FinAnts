@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  TrendingDown, TrendingUp, RefreshCw, ChevronDown, ChevronUp,
+  TrendingDown, TrendingUp, RefreshCw, ChevronDown,
   Landmark, Pencil, BarChart2, ShoppingBag, TrendingUp as TrendIcon,
   Calendar, PieChart,
 } from 'lucide-react'
@@ -213,7 +213,9 @@ export function Dashboard() {
       whileTap={{ scale: 0.95 }}
     >
       {accounts.length} {accounts.length === 1 ? 'Konto' : 'Konten'}
-      {showAccounts ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+      <motion.span animate={{ rotate: showAccounts ? 0 : 180 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }} style={{ display: 'flex' }}>
+        <ChevronDown size={11} />
+      </motion.span>
     </motion.button>
   )
 
@@ -599,7 +601,7 @@ export function Dashboard() {
           open={!!detailAccount}
           onClose={() => setDetailAccount(null)}
           account={detailAccount}
-          breakdown={baseBalance !== null && balanceSavedAt !== null ? {
+          breakdown={detailAccount.type === 'giro' && baseBalance !== null && balanceSavedAt !== null ? {
             baseBalance,
             savedAt: balanceSavedAt,
             deltaTransactions: giroDeltaTransactions,

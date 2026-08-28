@@ -4,7 +4,7 @@ import {
 } from './enablebanking'
 import {
   mergeTransactions, getTransactions, updateTransaction, deleteTransaction, clearTransactions, toStored,
-  insertError, getErrors, clearErrors, getTradeRows,
+  insertError, getErrors, clearErrors, getTradeRows, getTradeIsins, upsertHoldingSnapshots,
   saveEbSession, getEbSession, clearEbSession,
   type MergeInput, type StoredTx,
 } from './db'
@@ -341,7 +341,7 @@ export default {
 
       const TRADE_REPUBLIC_IBAN = 'DE62100123454047536911'
       try {
-        const [events, portfolioValue] = await Promise.all([
+        const [events, portfolioResult] = await Promise.all([
           fetchTradeRepublicTransactions(body.session.cookies),
           fetchTradeRepublicPortfolioValue(body.session, env.DB).catch(e => {
             // Don't fail the whole sync if the valuation step breaks —
@@ -362,7 +362,24 @@ export default {
           shares: e.shares,
         }))
         const meta = await mergeTransactions(env.DB, rows, 'traderepublic')
+
+        // Backfill holding snapshots for positions with no real trade history
+        // (e.g. crypto transferred in from an external wallet). Only for ISINs
+        // not already covered by actual buy/sell trades in D1.
+        if (portfolioResult?.positions.length) {
+          const tradeIsins = await getTradeIsins(env.DB)
+          const missing = portfolioResult.positions.filter(p => !tradeIsins.has(p.isin))
+          if (missing.length) {
+            const today = new Date().toISOString().slice(0, 10)
+            await upsertHoldingSnapshots(env.DB, missing, TRADE_REPUBLIC_IBAN, today)
+          } else {
+            // All positions have real trades — remove any stale snapshots
+            await env.DB.prepare("DELETE FROM transactions WHERE source = 'tr-holding'").run().catch(() => { /* ignore */ })
+          }
+        }
+
         const transactions = await getTransactions(env.DB)
+        const portfolioValue = portfolioResult?.value ?? null
         return jsonResponse({ transactions, meta, portfolioValue }, 200, cors)
       } catch (e) {
         return jsonResponse({ error: String(e) }, 502, cors)

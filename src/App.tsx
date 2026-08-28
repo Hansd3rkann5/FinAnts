@@ -6,9 +6,21 @@ import { AppShell } from './components/layout/AppShell'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { ToastHost } from './components/ui/ToastHost'
 import { LockScreen } from './components/ui/LockScreen'
+import { SitePinGate } from './components/ui/SitePinGate'
 import { isLockEnabled, lockTimeoutMinutes, setAppLocked } from './utils/appLock'
+import { isSitePinEnabled, isSitePinUnlocked, markSitePinUnlocked } from './utils/sitePin'
 
 export default function App() {
+  const [siteUnlocked, setSiteUnlocked] = useState(
+    () => !isSitePinEnabled() || isSitePinUnlocked()
+  )
+
+  if (!siteUnlocked) {
+    return (
+      <SitePinGate onUnlock={() => { markSitePinUnlocked(); setSiteUnlocked(true) }} />
+    )
+  }
+
   // Locked on first open, and re-locked once the app has been backgrounded
   // (home screen / app switch) for at least the configured timeout — a quick
   // switch-away-and-back within that window doesn't re-prompt. The LockScreen

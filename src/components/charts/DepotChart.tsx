@@ -90,11 +90,18 @@ function AccordionItem({
 
   return (
     <div className="border-b border-white/6 last:border-0">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {/* Left — toggle accordion */}
+          <motion.span
+            animate={{ rotate: isOpen ? 0 : 180 }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            className="text-white/30 shrink-0"
+          >
+            <ChevronDown size={14} />
+          </motion.span>
         <button
           onClick={onToggle}
-          className="flex-1 min-w-0 flex items-center gap-2 py-3 text-left"
+          className="flex-1 min-w-0 flex items-center gap-1 py-3 text-left"
         >
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-white/80 truncate">{label}</p>
@@ -119,13 +126,13 @@ function AccordionItem({
               : `${positive ? '+' : ''}${formatEur(pnl, 2)}`}
           </p>
         </button>
-        <motion.span
+        {/* <motion.span
           animate={{ rotate: isOpen ? 0 : -90 }}
           transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
           className="text-white/30 shrink-0"
         >
           <ChevronDown size={14} />
-        </motion.span>
+        </motion.span> */}
       </div>
 
       <AnimatePresence initial={false}>

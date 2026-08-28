@@ -154,10 +154,49 @@ export async function getTransactions(db: D1Database): Promise<StoredTx[]> {
   // Days newest-first; within a day, insertion order (rowid ASC) so the app
   // mirrors the order the rows were imported in. Without the explicit rowid
   // tiebreaker SQLite reverse-scans idx_tx_date and flips same-day rows.
+  // Exclude synthetic holding-snapshot rows (source = 'tr-holding') — those
+  // exist only to feed the depot chart and are not real transactions.
   const { results } = await db
-    .prepare('SELECT * FROM transactions ORDER BY date DESC, rowid ASC')
+    .prepare("SELECT * FROM transactions WHERE source IS NULL OR source != 'tr-holding' ORDER BY date DESC, rowid ASC")
     .all<DbRow>()
   return (results ?? []).map(rowToStored)
+}
+
+// Returns ISINs that already have real trade rows (bought/sold through TR),
+// so we don't overwrite them with a holding snapshot.
+export async function getTradeIsins(db: D1Database): Promise<Set<string>> {
+  const { results } = await db
+    .prepare("SELECT DISTINCT isin FROM transactions WHERE isin IS NOT NULL AND shares IS NOT NULL AND (source IS NULL OR source != 'tr-holding')")
+    .all<{ isin: string }>()
+  return new Set((results ?? []).map(r => r.isin))
+}
+
+// Inserts synthetic "holding" rows for positions that have no real trade history
+// (e.g. crypto transferred in from an external wallet). These rows are picked up
+// by getTradeRows so the depot chart can value the position, but are excluded
+// from getTransactions so they don't pollute the transaction list.
+// Old snapshots are deleted first so stale/sold positions don't linger.
+export async function upsertHoldingSnapshots(
+  db: D1Database,
+  positions: { isin: string; shares: number; name: string }[],
+  accountIban: string,
+  today: string,
+): Promise<void> {
+  const stmts: D1PreparedStatement[] = [
+    db.prepare("DELETE FROM transactions WHERE source = 'tr-holding'"),
+  ]
+  const now = new Date().toISOString()
+  for (const p of positions) {
+    stmts.push(
+      db.prepare(
+        `INSERT INTO transactions
+           (id, date, amount, type, description, counterparty, iban, account_iban, reference, category_id, source, isin, shares, created_at)
+         VALUES (?, ?, 0, 'other', ?, 'Trade Republic', null, ?, null, 'savings', 'tr-holding', ?, ?, ?)`,
+      ).bind(`holding:${p.isin}`, today, p.name, accountIban, p.isin, p.shares, now),
+    )
+  }
+  if (stmts.length > 1) await db.batch(stmts)
+  else await stmts[0].run()
 }
 
 // Map raw input rows to stored rows with fresh unique ids. Pending rows are

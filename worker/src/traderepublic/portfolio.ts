@@ -55,7 +55,12 @@ function flattenPositions(res: CompactPortfolioByType): { isin: string; netSize:
   return out
 }
 
-export async function fetchTradeRepublicPortfolioValue(session: TrSession, db?: D1Database): Promise<number> {
+export interface PortfolioResult {
+  value: number
+  positions: { isin: string; shares: number; name: string }[]
+}
+
+export async function fetchTradeRepublicPortfolioValue(session: TrSession, db?: D1Database): Promise<PortfolioResult> {
   const secAccNo = await fetchSecAccNo(session)
   const socket = await connectTrWebSocket(session.cookies)
   try {
@@ -65,18 +70,23 @@ export async function fetchTradeRepublicPortfolioValue(session: TrSession, db?: 
     ])
 
     const cash = (cashRes ?? []).reduce((sum, c) => sum + (c.amount ?? 0), 0)
-    const positions = flattenPositions(portfolioRes)
+    const rawPositions = flattenPositions(portfolioRes)
 
-    const values = await Promise.all(positions.map(async pos => {
+    const resolved = await Promise.all(rawPositions.map(async pos => {
       const instrument = await resolveInstrument(pos.isin, db)
-      if (!instrument) return 0
+      if (!instrument) return null
       const price = await fetchCurrentPrice(instrument.symbol)
-      if (price === null) return 0
-      return price * parseFloat(pos.netSize)
+      if (price === null) return null
+      const shares = parseFloat(pos.netSize)
+      return { isin: pos.isin, shares, name: instrument.name, value: price * shares }
     }))
 
-    const holdingsValue = values.reduce((sum, v) => sum + v, 0)
-    return Math.round((cash + holdingsValue) * 100) / 100
+    const positions = resolved.filter((p): p is NonNullable<typeof p> => p !== null)
+    const holdingsValue = positions.reduce((sum, p) => sum + p.value, 0)
+    return {
+      value: Math.round((cash + holdingsValue) * 100) / 100,
+      positions: positions.map(p => ({ isin: p.isin, shares: p.shares, name: p.name })),
+    }
   } finally {
     socket.close()
   }

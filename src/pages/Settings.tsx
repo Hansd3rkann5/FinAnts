@@ -14,6 +14,7 @@ import { CreditCardImportSection } from '@/components/settings/CreditCardImportS
 import { TradeRepublicSection } from '@/components/settings/TradeRepublicSection'
 import { CsvImportSection } from '@/components/settings/CsvImportSection'
 import { AppLockSection } from '@/components/settings/AppLockSection'
+import { SitePinSection } from '@/components/settings/SitePinSection'
 import { ThemeSection } from '@/components/settings/ThemeSection'
 import { DataSection } from '@/components/settings/DataSection'
 import { ErrorLogSection } from '@/components/settings/ErrorLogSection'
@@ -92,6 +93,7 @@ export function Settings() {
           title="Sicherheit & Daten"
           subtitle="App-Sperre, Darstellung, Datenlöschung, Fehlerprotokoll"
         >
+          <SitePinSection />
           <AppLockSection />
           <ThemeSection />
           <MerchantProfilesSection />
