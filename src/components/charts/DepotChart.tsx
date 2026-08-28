@@ -12,7 +12,7 @@ import { useDepotHistory } from '@/hooks/useDepotHistory'
 import { useChartFilter } from '@/hooks/useChartFilter'
 import { getFilterDateRange, type AvailablePeriods } from '@/utils/chartCompute'
 import type { TimeFilter } from '@/types'
-import type { DepotHistoryPoint, DepotPosition } from '@/utils/depotHistory'
+import type { DepotHistoryPoint } from '@/utils/depotHistory'
 import { getNiceBounds, StickyYAxis } from './chartUtils'
 import { formatEur } from '@/utils/format'
 
@@ -206,12 +206,6 @@ export function DepotChart({ globalFilter, periods }: Props) {
   const totalPnl = totalVal - totalCost
   const totalPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
 
-  const positionsByIsin = useMemo(() => {
-    const map = new Map<string, DepotPosition>()
-    for (const p of data?.positions ?? []) map.set(p.isin, p)
-    return map
-  }, [data?.positions])
-
   return (
     <GlassCard id="card-depot-chart" glow="purple">
       <ChartHeader
@@ -265,16 +259,15 @@ export function DepotChart({ globalFilter, periods }: Props) {
                   unlocked={unlocked}
                 />
 
-                {/* Per-position */}
-                {data?.perStock.map(stock => {
-                  const pos = positionsByIsin.get(stock.isin)
-                  if (!pos) return null
+                {/* Per-position — all current positions, chart data where available */}
+                {data?.positions.map(pos => {
+                  const stock = data.perStock.find(s => s.isin === pos.isin)
                   return (
                     <AccordionItem
-                      key={stock.isin}
-                      itemKey={stock.isin}
-                      isOpen={openKey === stock.isin}
-                      onToggle={() => toggle(stock.isin)}
+                      key={pos.isin}
+                      itemKey={pos.isin}
+                      isOpen={openKey === pos.isin}
+                      onToggle={() => toggle(pos.isin)}
                       onTogglePct={() => setShowPct(p => !p)}
                       label={pos.name}
                       isin={pos.isin}
@@ -283,7 +276,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
                       pnl={pos.pnl}
                       pnlPct={pos.pnlPct}
                       showPct={showPct}
-                      rawPoints={stock.points}
+                      rawPoints={stock?.points ?? []}
                       effectiveFilter={effectiveFilter}
                       unlocked={unlocked}
                     />

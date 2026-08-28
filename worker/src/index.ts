@@ -370,8 +370,11 @@ export default {
           const tradeIsins = await getTradeIsins(env.DB)
           const missing = portfolioResult.positions.filter(p => !tradeIsins.has(p.isin))
           if (missing.length) {
-            const today = new Date().toISOString().slice(0, 10)
-            await upsertHoldingSnapshots(env.DB, missing, TRADE_REPUBLIC_IBAN, today)
+              // Use a date 2 years back so computeDepotHistory picks up Yahoo
+            // price history for the full chart — the snapshot date acts as
+            // the "acquisition date" for positions with no real trade rows.
+            const snapshotDate = new Date(Date.now() - 2 * 365 * 86_400_000).toISOString().slice(0, 10)
+            await upsertHoldingSnapshots(env.DB, missing, TRADE_REPUBLIC_IBAN, snapshotDate)
           } else {
             // All positions have real trades — remove any stale snapshots
             await env.DB.prepare("DELETE FROM transactions WHERE source = 'tr-holding'").run().catch(() => { /* ignore */ })
