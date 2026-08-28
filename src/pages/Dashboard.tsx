@@ -97,18 +97,6 @@ export function Dashboard() {
   // cutoff would miss same-day transactions synced *after* the save — when the
   // save recorded which transactions were already known (knownIds), count
   // everything from the save day onward that wasn't known yet instead. Old
-  // saves without a snapshot keep the previous timestamp-cutoff behavior.
-  const manualBalance = (() => {
-    if (baseBalance === null || balanceSavedAt === null) return null
-    const savedTs = new Date(balanceSavedAt).getTime()
-    const known = balanceKnownIds !== null ? new Set(balanceKnownIds) : null
-    const cutoff = known ? new Date(savedTs).setHours(0, 0, 0, 0) : savedTs
-    const delta = accountTransactions
-      .filter(t => !t.isPending && !isExcluded(t) && t.date.getTime() >= cutoff && !known?.has(t.id))
-      .reduce((s, t) => s + t.amount, 0)
-    return baseBalance + delta
-  })()
-
   // Transactions counted on top of the saved manual balance — giro-only:
   // only transactions attributed to the giro account (by accountIban or by
   // default fallback), so TR buys/sells don't skew the breakdown.
@@ -127,6 +115,13 @@ export function Dashboard() {
         && !known?.has(t.id)
     })
   }, [baseBalance, balanceSavedAt, balanceKnownIds, transactions, accounts])
+
+  // Use the same giro-only delta as the modal breakdown so both values are
+  // always consistent — avoids TR buys/sells skewing the displayed balance.
+  const manualBalance = useMemo(() => {
+    if (baseBalance === null || balanceSavedAt === null) return null
+    return baseBalance + giroDeltaTransactions.reduce((s, t) => s + t.amount, 0)
+  }, [baseBalance, balanceSavedAt, giroDeltaTransactions])
 
   // The manual Kontostand replaces the giro balance whenever it is fresher
   // than the bank sync: either the sync never delivered a balance (0 / no
