@@ -131,9 +131,6 @@ export function Dashboard() {
     if (manualBalance === null || balanceSavedAt === null) return null
     const giro = accounts.find(a => a.type === 'giro')
     if (!giro) return null
-    const manualTs = new Date(balanceSavedAt).getTime()
-    const syncTs = giro.balanceDate ? new Date(giro.balanceDate).getTime() : 0
-    if (giro.balance !== 0 && syncTs >= manualTs) return null
     return { iban: giro.iban, prevBalance: giro.balance, included: giro.included, balance: manualBalance }
   }, [accounts, manualBalance, balanceSavedAt])
 
