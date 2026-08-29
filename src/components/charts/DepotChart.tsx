@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAppUnlocked } from '@/hooks/useAppUnlocked'
 import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -74,14 +73,13 @@ interface ItemProps {
   showPct: boolean
   rawPoints: DepotHistoryPoint[]
   effectiveFilter: TimeFilter
-  unlocked: boolean
 }
 
 function AccordionItem({
   itemKey, isOpen, onToggle, onTogglePct,
   label, isin, shares,
   currentValue, pnl, pnlPct, showPct,
-  rawPoints, effectiveFilter, unlocked,
+  rawPoints, effectiveFilter,
 }: ItemProps) {
   const positive = pnl >= 0
   const [linked, setLinked] = useState(true)
@@ -140,8 +138,6 @@ function AccordionItem({
     if (!vals.length) return { ticks: [0], min: 0, max: 1 }
     return getNiceBounds(Math.min(...vals), Math.max(...vals))
   }, [points])
-
-  const activeFilter = linked ? effectiveFilter : localFilter
 
   return (
     <div className="border-b border-white/6 last:border-0">
@@ -235,7 +231,7 @@ function AccordionItem({
               ) : (
                 <div className="flex items-start">
                   <StickyYAxis ticks={ticks} yMin={yMin} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
-                  <div key={`${itemKey}|${activeFilter}`} className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0">
                     <ResponsiveContainer width="100%" height={H}>
                       <LineChart data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -253,7 +249,7 @@ function AccordionItem({
                         <Line
                           dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
                           activeDot={{ r: 3, fill: '#c084fc', strokeWidth: 0 }}
-                          isAnimationActive={unlocked} animationDuration={550} animationEasing="ease-out"
+                          isAnimationActive={false}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -279,7 +275,6 @@ export function DepotChart({ globalFilter, periods }: Props) {
   const [showPct, setShowPct] = useState(true)
   const [collapsed, setCollapsed] = useState(false)
   const { data, loading, error, lastFetched } = useDepotHistory(LOOKBACK_DAYS)
-  const unlocked = useAppUnlocked()
 
   function toggle(key: string) {
     setOpenKey(prev => prev === key ? '' : key)
@@ -339,8 +334,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
                   showPct={showPct}
                   rawPoints={data?.cumulative ?? []}
                   effectiveFilter={effectiveFilter}
-                  unlocked={unlocked}
-                />
+                                  />
 
                 {data?.positions.map(pos => {
                   const stock = data.perStock.find(s => s.isin === pos.isin)
@@ -360,8 +354,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
                       showPct={showPct}
                       rawPoints={stock?.points ?? []}
                       effectiveFilter={effectiveFilter}
-                      unlocked={unlocked}
-                    />
+                                          />
                   )
                 })}
               </>
