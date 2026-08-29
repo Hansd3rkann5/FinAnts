@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useInView } from 'framer-motion'
 import { useAppUnlocked } from '@/hooks/useAppUnlocked'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import type { PieSectorDataItem } from 'recharts'
 import type { CategorySummary } from '@/types'
 import { useAllCategories } from '@/hooks/useAllCategories'
 import { formatEur } from '@/utils/format'
@@ -49,7 +50,7 @@ export function CategoryPieChart({ categories }: Props) {
               cx="50%"
               cy="50%"
               innerRadius={65}
-              outerRadius={90}
+              outerRadius={(dp: PieSectorDataItem & { outerRadius?: number }) => dp.outerRadius ?? 90}
               dataKey="total"
               onMouseEnter={(_, index) => setActiveIndex(index)}
               onClick={(_, index) => setActiveIndex(index)}
