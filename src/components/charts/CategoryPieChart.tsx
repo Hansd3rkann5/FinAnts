@@ -7,10 +7,11 @@ import { formatEur } from '@/utils/format'
 
 const CX = 110
 const CY = 110
-const INNER_R = 65
+const INNER_R = 60
 const OUTER_R = 90
-const EXPLODE = 9
-const GAP_DEG = 2
+const CORNER_R = 5
+const EXPLODE = 4
+const GAP_DEG = 1
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = (angleDeg - 90) * Math.PI / 180
@@ -18,16 +19,39 @@ function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
 }
 
 function sectorPath(innerR: number, outerR: number, startAngle: number, endAngle: number): string {
-  const p1 = polarToCartesian(CX, CY, outerR, startAngle)
-  const p2 = polarToCartesian(CX, CY, outerR, endAngle)
-  const p3 = polarToCartesian(CX, CY, innerR, endAngle)
-  const p4 = polarToCartesian(CX, CY, innerR, startAngle)
-  const largeArc = endAngle - startAngle > 180 ? 1 : 0
+  const sweep = endAngle - startAngle
+  const maxD = sweep / 2 - 0.1
+  const dO = Math.min(Math.asin(Math.min(1, CORNER_R / outerR)) * 180 / Math.PI, maxD)
+  const dI = Math.min(Math.asin(Math.min(1, CORNER_R / innerR)) * 180 / Math.PI, maxD)
+  const cr = Math.min(CORNER_R, (outerR - innerR) / 2)
+
+  const outerStart = polarToCartesian(CX, CY, outerR, startAngle + dO)
+  const outerEnd   = polarToCartesian(CX, CY, outerR, endAngle - dO)
+  const innerEnd   = polarToCartesian(CX, CY, innerR, endAngle - dI)
+  const innerStart = polarToCartesian(CX, CY, innerR, startAngle + dI)
+
+  const radStartOuter = polarToCartesian(CX, CY, outerR - cr, startAngle)
+  const radEndOuter   = polarToCartesian(CX, CY, outerR - cr, endAngle)
+  const radEndInner   = polarToCartesian(CX, CY, innerR + cr, endAngle)
+  const radStartInner = polarToCartesian(CX, CY, innerR + cr, startAngle)
+
+  const cOS = polarToCartesian(CX, CY, outerR, startAngle)
+  const cOE = polarToCartesian(CX, CY, outerR, endAngle)
+  const cIE = polarToCartesian(CX, CY, innerR, endAngle)
+  const cIS = polarToCartesian(CX, CY, innerR, startAngle)
+
+  const largeArc = sweep > 180 ? 1 : 0
+  const f = (p: { x: number; y: number }) => `${p.x.toFixed(3)} ${p.y.toFixed(3)}`
+
   return [
-    `M ${p1.x} ${p1.y}`,
-    `A ${outerR} ${outerR} 0 ${largeArc} 1 ${p2.x} ${p2.y}`,
-    `L ${p3.x} ${p3.y}`,
-    `A ${innerR} ${innerR} 0 ${largeArc} 0 ${p4.x} ${p4.y}`,
+    `M ${f(radStartOuter)}`,
+    `Q ${f(cOS)} ${f(outerStart)}`,
+    `A ${outerR} ${outerR} 0 ${largeArc} 1 ${f(outerEnd)}`,
+    `Q ${f(cOE)} ${f(radEndOuter)}`,
+    `L ${f(radEndInner)}`,
+    `Q ${f(cIE)} ${f(innerEnd)}`,
+    `A ${innerR} ${innerR} 0 ${largeArc} 0 ${f(innerStart)}`,
+    `Q ${f(cIS)} ${f(radStartInner)}`,
     'Z',
   ].join(' ')
 }
