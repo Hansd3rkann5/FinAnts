@@ -7,8 +7,8 @@ import { formatEur } from '@/utils/format'
 
 const CX = 110
 const CY = 110
-const INNER_R = 60
-const OUTER_R = 90
+const INNER_R = 70
+const OUTER_R = 100
 const CORNER_R = 2
 const EXPLODE = 4
 const GAP_DEG = 2
@@ -141,7 +141,7 @@ export function CategoryPieChart({ categories }: Props) {
           })}
         </motion.svg>
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pt-4">
           <span className="text-sm font-semibold text-white/90 text-center px-2 leading-tight">
             {data[activeIndex]?.name ?? ''}
           </span>

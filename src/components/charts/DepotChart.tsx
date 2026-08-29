@@ -82,9 +82,16 @@ function AccordionItem({
   rawPoints, effectiveFilter,
 }: ItemProps) {
   const positive = pnl >= 0
+  const [settled, setSettled] = useState(false)
   const [linked, setLinked] = useState(true)
   const [localFilter, setLocalFilter] = useState<DepotFilter>('all')
   const [unlinkedPrices, setUnlinkedPrices] = useState<{ date: string; price: number }[] | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const t = setTimeout(() => { if (!cancelled) setSettled(isOpen) }, isOpen ? 320 : 0)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [isOpen])
 
   const FILTER_TO_RANGE: Record<DepotFilter, string> = {
     '3m': '3mo', '6m': '6mo', '1y': '1y', '5y': '5y', 'all': 'max',
@@ -96,9 +103,9 @@ function AccordionItem({
     let cancelled = false
     fetchPositionPrices(isin, range)
       .then(data => { if (!cancelled) setUnlinkedPrices(data) })
-      .catch(() => {})
+      .catch(() => { })
     return () => { cancelled = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linked, localFilter, isin])
 
   const points = useMemo(() => {
@@ -123,9 +130,9 @@ function AccordionItem({
     const windowed = isAll
       ? rawPoints
       : rawPoints.filter(p => {
-          const d = new Date(p.date + 'T00:00:00')
-          return d >= start && d <= end
-        })
+        const d = new Date(p.date + 'T00:00:00')
+        return d >= start && d <= end
+      })
     const spanDays = windowed.length >= 2
       ? (new Date(windowed[windowed.length - 1].date).getTime() - new Date(windowed[0].date).getTime()) / 86_400_000
       : 0
@@ -189,40 +196,41 @@ function AccordionItem({
           >
             <div className="pb-4">
               {/* Filter bar */}
-              <div className="flex items-center justify-end gap-1.5 mb-2 min-h-5">
-                <AnimatePresence>
-                  {!linked && (
-                    <motion.div
-                      className="flex gap-1 flex-1"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                    >
-                      {DEPOT_FILTERS.map(f => (
-                        <button
-                          key={f.value}
-                          onClick={() => setLocalFilter(f.value)}
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all duration-150 ${
-                            localFilter === f.value
+              {label !== 'Depot Gesamt' ?
+                <div className="flex items-center justify-end gap-1.5 mb-2 min-h-5">
+                  <AnimatePresence>
+                    {!linked && (
+                      <motion.div
+                        className="flex gap-1 flex-1"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                      >
+                        {DEPOT_FILTERS.map(f => (
+                          <button
+                            key={f.value}
+                            onClick={() => setLocalFilter(f.value)}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all duration-150 ${localFilter === f.value
                               ? 'bg-purple-500/25 text-purple-300'
                               : 'text-white/30 hover:text-white/55'
-                          }`}
-                        >
-                          {f.label}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <button
-                  onClick={() => setLinked(l => !l)}
-                  className={`shrink-0 transition-colors duration-150 ${linked ? 'text-white/25 hover:text-white/50' : 'text-purple-400/70 hover:text-purple-300'}`}
-                  title={linked ? 'Zeitraum entkoppeln' : 'Zeitraum koppeln'}
-                >
-                  {linked ? <Link2 size={11} /> : <Link2Off size={11} />}
-                </button>
-              </div>
+                              }`}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <button
+                    onClick={() => setLinked(l => !l)}
+                    className={`shrink-0 transition-colors duration-150 ${linked ? 'text-white/25 hover:text-white/50' : 'text-purple-400/70 hover:text-purple-300'}`}
+                    title={linked ? 'Zeitraum entkoppeln' : 'Zeitraum koppeln'}
+                  >
+                    {linked ? <Link2 size={11} /> : <Link2Off size={11} />}
+                  </button>
+                </div>
+                : null}
 
               {!linked && !!isin && !unlinkedPrices ? (
                 <p className="text-xs text-white/25 text-center py-6">Lädt Kursdaten…</p>
@@ -249,7 +257,9 @@ function AccordionItem({
                         <Line
                           dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
                           activeDot={{ r: 3, fill: '#c084fc', strokeWidth: 0 }}
-                          isAnimationActive={false}
+                          isAnimationActive={settled}
+                          animationDuration={500}
+                          animationEasing="ease-out"
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -334,7 +344,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
                   showPct={showPct}
                   rawPoints={data?.cumulative ?? []}
                   effectiveFilter={effectiveFilter}
-                                  />
+                />
 
                 {data?.positions.map(pos => {
                   const stock = data.perStock.find(s => s.isin === pos.isin)
@@ -354,7 +364,7 @@ export function DepotChart({ globalFilter, periods }: Props) {
                       showPct={showPct}
                       rawPoints={stock?.points ?? []}
                       effectiveFilter={effectiveFilter}
-                                          />
+                    />
                   )
                 })}
               </>
