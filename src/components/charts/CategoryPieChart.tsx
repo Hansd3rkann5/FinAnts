@@ -9,9 +9,9 @@ const CX = 110
 const CY = 110
 const INNER_R = 60
 const OUTER_R = 90
-const CORNER_R = 5
+const CORNER_R = 2
 const EXPLODE = 4
-const GAP_DEG = 1
+const GAP_DEG = 2
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = (angleDeg - 90) * Math.PI / 180

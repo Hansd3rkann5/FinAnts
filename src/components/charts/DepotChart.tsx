@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
-import { LineChart as LineChartIcon, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react'
+import { LineChart as LineChartIcon, TrendingUp, TrendingDown, ChevronDown, Link2, Link2Off } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { ChartHeader } from '@/components/ui/ChartHeader'
 import { useDepotHistory } from '@/hooks/useDepotHistory'
@@ -20,6 +20,25 @@ const LOOKBACK_DAYS = 1825
 const H = 140
 const MARGIN_TOP = 8
 const X_AXIS_H = 20
+
+type DepotFilter = '3m' | '6m' | '1y' | '5y' | 'all'
+
+const DEPOT_FILTERS: { label: string; value: DepotFilter }[] = [
+  { label: '3M', value: '3m' },
+  { label: '6M', value: '6m' },
+  { label: '1J', value: '1y' },
+  { label: '5J', value: '5y' },
+  { label: 'Alle', value: 'all' },
+]
+
+function getDepotDateRange(f: DepotFilter): { start: Date; end: Date } {
+  const now = new Date()
+  if (f === 'all') return { start: new Date(0), end: now }
+  const months = f === '3m' ? 3 : f === '6m' ? 6 : f === '1y' ? 12 : 60
+  const start = new Date(now)
+  start.setMonth(start.getMonth() - months)
+  return { start, end: now }
+}
 
 function labelForDate(date: string, dayLevel: boolean): string {
   const d = new Date(date + 'T00:00:00')
@@ -38,18 +57,6 @@ function ChartTooltip({ active, payload }: any) {
       <p className="text-purple-300 font-medium">{formatEur(payload[0].value, 2)}</p>
     </div>
   )
-}
-
-function buildPoints(raw: DepotHistoryPoint[], effectiveFilter: TimeFilter) {
-  const { start, end } = getFilterDateRange(effectiveFilter)
-  const windowed = effectiveFilter === 'all'
-    ? raw
-    : raw.filter(p => { const d = new Date(p.date + 'T00:00:00'); return d >= start && d <= end })
-  const spanDays = windowed.length >= 2
-    ? (new Date(windowed[windowed.length - 1].date).getTime() - new Date(windowed[0].date).getTime()) / 86_400_000
-    : 0
-  const dayLevel = spanDays <= 92
-  return windowed.map(p => ({ date: p.date, label: labelForDate(p.date, dayLevel), value: p.value }))
 }
 
 interface ItemProps {
@@ -76,11 +83,26 @@ function AccordionItem({
   rawPoints, effectiveFilter, unlocked,
 }: ItemProps) {
   const positive = pnl >= 0
+  const [linked, setLinked] = useState(true)
+  const [localFilter, setLocalFilter] = useState<DepotFilter>('all')
 
-  const points = useMemo(
-    () => buildPoints(rawPoints, effectiveFilter),
-    [rawPoints, effectiveFilter],
-  )
+  const points = useMemo(() => {
+    const { start, end } = linked
+      ? getFilterDateRange(effectiveFilter)
+      : getDepotDateRange(localFilter)
+    const isAll = linked ? effectiveFilter === 'all' : localFilter === 'all'
+    const windowed = isAll
+      ? rawPoints
+      : rawPoints.filter(p => {
+          const d = new Date(p.date + 'T00:00:00')
+          return d >= start && d <= end
+        })
+    const spanDays = windowed.length >= 2
+      ? (new Date(windowed[windowed.length - 1].date).getTime() - new Date(windowed[0].date).getTime()) / 86_400_000
+      : 0
+    const dayLevel = spanDays <= 92
+    return windowed.map(p => ({ date: p.date, label: labelForDate(p.date, dayLevel), value: p.value }))
+  }, [rawPoints, effectiveFilter, linked, localFilter])
 
   const { ticks, min: yMin, max: yMax } = useMemo(() => {
     const vals = points.map(p => p.value)
@@ -88,17 +110,18 @@ function AccordionItem({
     return getNiceBounds(Math.min(...vals), Math.max(...vals))
   }, [points])
 
+  const activeFilter = linked ? effectiveFilter : localFilter
+
   return (
     <div className="border-b border-white/6 last:border-0">
       <div className="flex items-center gap-1">
-        {/* Left — toggle accordion */}
-          <motion.span
-            animate={{ rotate: isOpen ? 0 : 180 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            className="text-white/30 shrink-0"
-          >
-            <ChevronDown size={14} />
-          </motion.span>
+        <motion.span
+          animate={{ rotate: isOpen ? 0 : 180 }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+          className="text-white/30 shrink-0"
+        >
+          <ChevronDown size={14} />
+        </motion.span>
         <button
           onClick={onToggle}
           className="flex-1 min-w-0 flex items-center gap-1 py-3 text-left"
@@ -113,7 +136,6 @@ function AccordionItem({
           </div>
         </button>
 
-        {/* Right — toggle % ↔ € */}
         <button
           onClick={onTogglePct}
           className="text-right shrink-0 py-3 pl-2"
@@ -126,13 +148,6 @@ function AccordionItem({
               : `${positive ? '+' : ''}${formatEur(pnl, 2)}`}
           </p>
         </button>
-        {/* <motion.span
-          animate={{ rotate: isOpen ? 0 : -90 }}
-          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-          className="text-white/30 shrink-0"
-        >
-          <ChevronDown size={14} />
-        </motion.span> */}
       </div>
 
       <AnimatePresence initial={false}>
@@ -146,12 +161,48 @@ function AccordionItem({
             style={{ overflow: 'hidden' }}
           >
             <div className="pb-4">
+              {/* Filter bar */}
+              <div className="flex items-center justify-end gap-1.5 mb-2 min-h-5">
+                <AnimatePresence>
+                  {!linked && (
+                    <motion.div
+                      className="flex gap-1 flex-1"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                    >
+                      {DEPOT_FILTERS.map(f => (
+                        <button
+                          key={f.value}
+                          onClick={() => setLocalFilter(f.value)}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all duration-150 ${
+                            localFilter === f.value
+                              ? 'bg-purple-500/25 text-purple-300'
+                              : 'text-white/30 hover:text-white/55'
+                          }`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <button
+                  onClick={() => setLinked(l => !l)}
+                  className={`shrink-0 transition-colors duration-150 ${linked ? 'text-white/25 hover:text-white/50' : 'text-purple-400/70 hover:text-purple-300'}`}
+                  title={linked ? 'Zeitraum entkoppeln' : 'Zeitraum koppeln'}
+                >
+                  {linked ? <Link2 size={11} /> : <Link2Off size={11} />}
+                </button>
+              </div>
+
               {points.length === 0 ? (
                 <p className="text-xs text-white/25 text-center py-6">Keine Daten im Zeitraum</p>
               ) : (
                 <div className="flex items-start">
                   <StickyYAxis ticks={ticks} yMin={yMin} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
-                  <div key={`${itemKey}|${effectiveFilter}`} className="flex-1 min-w-0">
+                  <div key={`${itemKey}|${activeFilter}`} className="flex-1 min-w-0">
                     <ResponsiveContainer width="100%" height={H}>
                       <LineChart data={points} margin={{ top: MARGIN_TOP, right: 8, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -243,7 +294,6 @@ export function DepotChart({ globalFilter, periods }: Props) {
               <div className="flex items-center justify-center py-10 text-xs text-red-400/70">{error}</div>
             ) : (
               <>
-                {/* Gesamt */}
                 <AccordionItem
                   itemKey="total"
                   isOpen={openKey === 'total'}
@@ -259,7 +309,6 @@ export function DepotChart({ globalFilter, periods }: Props) {
                   unlocked={unlocked}
                 />
 
-                {/* Per-position — all current positions, chart data where available */}
                 {data?.positions.map(pos => {
                   const stock = data.perStock.find(s => s.isin === pos.isin)
                   return (
