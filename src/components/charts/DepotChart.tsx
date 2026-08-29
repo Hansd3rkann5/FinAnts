@@ -237,7 +237,11 @@ function AccordionItem({
               ) : points.length === 0 ? (
                 <p className="text-xs text-white/25 text-center py-6">Keine Daten im Zeitraum</p>
               ) : (
-                <div className="flex items-start">
+                <div
+                  key={settled ? 'chart-ready' : 'chart-hidden'}
+                  className="flex items-start"
+                  style={{ opacity: settled ? 1 : 0, transition: 'opacity 0.15s' }}
+                >
                   <StickyYAxis ticks={ticks} yMin={yMin} yMax={yMax} height={H} marginTop={MARGIN_TOP} xAxisHeight={X_AXIS_H} />
                   <div className="flex-1 min-w-0">
                     <ResponsiveContainer width="100%" height={H}>
@@ -257,7 +261,7 @@ function AccordionItem({
                         <Line
                           dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
                           activeDot={{ r: 3, fill: '#c084fc', strokeWidth: 0 }}
-                          isAnimationActive={settled}
+                          isAnimationActive={true}
                           animationDuration={500}
                           animationEasing="ease-out"
                         />
