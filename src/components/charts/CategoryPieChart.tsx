@@ -47,7 +47,7 @@ export function CategoryPieChart({ categories }: Props) {
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={60}
+              innerRadius={65}
               outerRadius={90}
               dataKey="total"
               onMouseEnter={(_, index) => setActiveIndex(index)}
@@ -63,7 +63,8 @@ export function CategoryPieChart({ categories }: Props) {
                   key={entry.categoryId}
                   fill={entry.color}
                   opacity={i === activeIndex ? 1 : 0.55}
-                  radius={i === activeIndex ? 6 : 0}
+                  radius={i === activeIndex ? 60 : 0}
+                  style={{transition: 'all 0.2s ease-out', transform: i === activeIndex ? 'scale(1.05)' : 'none'}}
                 />
               ))}
             </Pie>
