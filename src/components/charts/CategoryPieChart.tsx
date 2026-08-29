@@ -24,10 +24,11 @@ export function CategoryPieChart({ categories }: Props) {
 
   const data = categories
     .filter(c => allMap[c.categoryId])
-    .map(c => ({
+    .map((c, i) => ({
       ...c,
       name: allMap[c.categoryId].label,
       color: allMap[c.categoryId].color,
+      outerRadius: i === activeIndex ? 98 : 90,
     }))
 
   if (data.length === 0) {
@@ -63,8 +64,6 @@ export function CategoryPieChart({ categories }: Props) {
                   key={entry.categoryId}
                   fill={entry.color}
                   opacity={i === activeIndex ? 1 : 0.55}
-                  radius={i === activeIndex ? 60 : 0}
-                  style={{transition: 'all 0.2s ease-out', transform: i === activeIndex ? 'scale(1.05)' : 'none'}}
                 />
               ))}
             </Pie>
