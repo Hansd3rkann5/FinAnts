@@ -13,6 +13,7 @@ import { startTrLogin, pollTrLogin, type TrLoginSession } from './traderepublic/
 import { fetchTradeRepublicTransactions } from './traderepublic/timeline'
 import { fetchTradeRepublicPortfolioValue } from './traderepublic/portfolio'
 import { computeDepotHistory } from './traderepublic/depotHistory'
+import { resolveInstrument, fetchHistoricalPrices, rangeForDays } from './traderepublic/marketdata'
 
 export interface Env {
   ALLOWED_ORIGIN: string
@@ -400,6 +401,26 @@ export default {
         const trades = await getTradeRows(env.DB)
         const history = await computeDepotHistory(trades, days, env.DB)
         return jsonResponse(history, 200, cors)
+      } catch (e) {
+        return jsonResponse({ error: String(e) }, 502, cors)
+      }
+    }
+
+    // ── GET /tr/position-history?isin=XX&range=5y — raw Yahoo price history
+    // for a single ISIN, independent of trade dates. Used by the frontend when
+    // a depot position's chart is unlinked from the global filter so the user
+    // can see full market history regardless of acquisition date.
+    if (request.method === 'GET' && path === '/tr/position-history') {
+      const isin = url.searchParams.get('isin') ?? ''
+      const rangePar = url.searchParams.get('range') ?? '5y'
+      const daysPar = url.searchParams.get('days')
+      const range = daysPar ? rangeForDays(Number(daysPar)) : rangePar
+      if (!isin) return jsonResponse({ error: 'isin required' }, 400, cors)
+      const instrument = await resolveInstrument(isin, env.DB)
+      if (!instrument) return jsonResponse({ error: 'instrument not found' }, 404, cors)
+      try {
+        const prices = await fetchHistoricalPrices(instrument.symbol, range)
+        return jsonResponse(prices.map(p => ({ date: p.date, price: p.close })), 200, cors)
       } catch (e) {
         return jsonResponse({ error: String(e) }, 502, cors)
       }

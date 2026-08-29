@@ -41,6 +41,17 @@ export async function fetchDepotHistory(days: number): Promise<DepotHistoryResul
   return res.json() as Promise<DepotHistoryResult>
 }
 
+// Raw Yahoo price history for one position (close price in EUR, independent of
+// trade dates). Frontend multiplies by current shares to get portfolio value.
+export async function fetchPositionPrices(isin: string, range: string): Promise<{ date: string; price: number }[]> {
+  const res = await fetch(
+    `${cloudWorkerUrl()}/tr/position-history?isin=${encodeURIComponent(isin)}&range=${encodeURIComponent(range)}`,
+    { credentials: 'include', headers: cfHeaders() },
+  )
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json() as Promise<{ date: string; price: number }[]>
+}
+
 export async function clearInstrumentsCache(): Promise<void> {
   const res = await fetch(`${cloudWorkerUrl()}/tr/instruments/clear`, {
     method: 'POST',

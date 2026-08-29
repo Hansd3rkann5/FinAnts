@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppUnlocked } from '@/hooks/useAppUnlocked'
 import {
@@ -9,6 +9,7 @@ import { LineChart as LineChartIcon, TrendingUp, TrendingDown, ChevronDown, Link
 import { GlassCard } from '@/components/ui/GlassCard'
 import { ChartHeader } from '@/components/ui/ChartHeader'
 import { useDepotHistory } from '@/hooks/useDepotHistory'
+import { fetchPositionPrices } from '@/utils/depotHistory'
 import { useChartFilter } from '@/hooks/useChartFilter'
 import { getFilterDateRange, type AvailablePeriods } from '@/utils/chartCompute'
 import type { TimeFilter } from '@/types'
@@ -85,8 +86,38 @@ function AccordionItem({
   const positive = pnl >= 0
   const [linked, setLinked] = useState(true)
   const [localFilter, setLocalFilter] = useState<DepotFilter>('all')
+  const [unlinkedPrices, setUnlinkedPrices] = useState<{ date: string; price: number }[] | null>(null)
+
+  const FILTER_TO_RANGE: Record<DepotFilter, string> = {
+    '3m': '3mo', '6m': '6mo', '1y': '1y', '5y': '5y', 'all': 'max',
+  }
+
+  useEffect(() => {
+    if (linked || !isin) return
+    const range = FILTER_TO_RANGE[localFilter]
+    let cancelled = false
+    fetchPositionPrices(isin, range)
+      .then(data => { if (!cancelled) setUnlinkedPrices(data) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linked, localFilter, isin])
 
   const points = useMemo(() => {
+    // Unlinked + ISIN: show full Yahoo price history × current shares held
+    if (!linked && isin && shares !== undefined && unlinkedPrices) {
+      const pts = unlinkedPrices
+      const spanDays = pts.length >= 2
+        ? (new Date(pts[pts.length - 1].date).getTime() - new Date(pts[0].date).getTime()) / 86_400_000
+        : 0
+      const dayLevel = spanDays <= 92
+      return pts.map(p => ({
+        date: p.date,
+        label: labelForDate(p.date, dayLevel),
+        value: Math.round(p.price * shares * 100) / 100,
+      }))
+    }
+    // Linked or total row: filter rawPoints by the active date range
     const { start, end } = linked
       ? getFilterDateRange(effectiveFilter)
       : getDepotDateRange(localFilter)
@@ -102,7 +133,7 @@ function AccordionItem({
       : 0
     const dayLevel = spanDays <= 92
     return windowed.map(p => ({ date: p.date, label: labelForDate(p.date, dayLevel), value: p.value }))
-  }, [rawPoints, effectiveFilter, linked, localFilter])
+  }, [rawPoints, effectiveFilter, linked, localFilter, unlinkedPrices, isin, shares])
 
   const { ticks, min: yMin, max: yMax } = useMemo(() => {
     const vals = points.map(p => p.value)
@@ -197,7 +228,9 @@ function AccordionItem({
                 </button>
               </div>
 
-              {points.length === 0 ? (
+              {!linked && !!isin && !unlinkedPrices ? (
+                <p className="text-xs text-white/25 text-center py-6">Lädt Kursdaten…</p>
+              ) : points.length === 0 ? (
                 <p className="text-xs text-white/25 text-center py-6">Keine Daten im Zeitraum</p>
               ) : (
                 <div className="flex items-start">
