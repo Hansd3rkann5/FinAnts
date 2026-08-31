@@ -259,8 +259,8 @@ function AccordionItem({
                         <YAxis domain={[yMin, yMax]} hide />
                         <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
                         <Line
-                          dataKey="value" stroke="#c084fc" strokeWidth={2} dot={false}
-                          activeDot={{ r: 3, fill: '#c084fc', strokeWidth: 0 }}
+                          dataKey="value" stroke="var(--depot-line)" strokeWidth={2} dot={false}
+                          activeDot={{ r: 3, fill: 'var(--depot-line)', strokeWidth: 0 }}
                           isAnimationActive={true}
                           animationDuration={500}
                           animationEasing="ease-out"

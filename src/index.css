@@ -103,6 +103,13 @@
     --acc-blue-rgb: 59,130,246; /* blue-500 alpha composites */
     --acc-soft: #d8b4fe;        /* purple-300 text */
     --acc-blue-soft: #93c5fd;   /* blue-300 text */
+
+    --nav-bg: rgba(39, 0, 105, 0.59);
+    --nav-shadow: 0 4px 24px 10px rgba(10,10,10,0.8), 0 1px 80px 10px rgba(10,10,10,0.8);
+    --nav-tab-active: rgba(255,255,255,0.9);
+    --nav-tab-inactive: #a78bfa;
+
+    --depot-line: #c084fc;
   }
 
   /*
@@ -130,6 +137,13 @@
     --acc-blue-rgb: 255,255,255;
     --acc-soft: rgba(255,255,255,0.9);
     --acc-blue-soft: rgba(255,255,255,0.9);
+
+    --nav-bg: rgba(255,255,255,0.94);
+    --nav-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 1px 0 rgba(0,0,0,0.06);
+    --nav-tab-active: rgba(0,0,0,0.85);
+    --nav-tab-inactive: rgba(0,0,0,0.4);
+
+    --depot-line: #ffffff;
   }
 
   html.theme-mono :is(svg, svg *) {

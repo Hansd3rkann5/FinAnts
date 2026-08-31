@@ -1,7 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, List, Settings } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { clsx } from 'clsx'
 import { useModalContext } from '@/context/ModalContext'
 
 const TABS = [
@@ -30,14 +29,14 @@ export function BottomNav() {
           marginInline: '24px',
         }}
       />
-      <div id="nav-pill" className="relative rounded-pill bg-white/[0.04] border border-white/[0.08] flex"
+      <div id="nav-pill" className="relative rounded-pill border border-white/[0.08] flex"
         style={{
-          backgroundColor: 'rgba(39, 0, 105, 0.59)',
+          backgroundColor: 'var(--nav-bg)',
           backdropFilter: 'blur(5px)',
           WebkitBackdropFilter: 'blur(5px)',
           marginInline: '24px',
           marginBottom: '24px',
-          boxShadow: '0 4px 24px 10px rgba(10,10,10,0.8), 0 1px 80px 10px rgba(10,10,10,0.8)',
+          boxShadow: 'var(--nav-shadow)',
         }}
       >
         {TABS.map(({ to, label, Icon }) => (
@@ -50,10 +49,8 @@ export function BottomNav() {
           >
             {({ isActive }) => (
               <motion.div
-                className={clsx(
-                  'flex flex-col items-center gap-1 py-3 transition-colors duration-200',
-                  isActive ? 'text-white/90' :'text-purple-400',
-                )}
+                className="flex flex-col items-center gap-1 py-3 transition-colors duration-200"
+                style={{ color: isActive ? 'var(--nav-tab-active)' : 'var(--nav-tab-inactive)' }}
                 whileTap={{ scale: 0.92 }}
                 transition={{ duration: 0.1 }}
               >
