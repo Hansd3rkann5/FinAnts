@@ -153,6 +153,18 @@ export async function computeDepotHistory(trades: TradeRow[], days: number, db?:
     if (anyHeld) cumulative.push({ date, value: Math.round(total * 100) / 100 })
   }
 
+  // Trim cumulative to start from the earliest actual trade date. This prevents
+  // the chart from showing history before any position was ever held (e.g. if a
+  // carry-forward edge case or a wrong trade date in D1 pulls the curve back
+  // further than it should go).
+  const firstTradeDate = [...byIsin.values()]
+    .flat()
+    .map(t => t.date)
+    .sort()[0] ?? null
+  const trimmedCumulative = firstTradeDate
+    ? cumulative.filter(p => p.date >= firstTradeDate)
+    : cumulative
+
   positions.sort((a, b) => b.currentValue - a.currentValue)
-  return { cumulative, perStock, positions }
+  return { cumulative: trimmedCumulative, perStock, positions }
 }
