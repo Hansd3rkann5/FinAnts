@@ -48,14 +48,21 @@ export async function computeDepotHistory(trades: TradeRow[], days: number, db?:
   const range = rangeForDays(days)
   const perStock: DepotHistoryResult['perStock'] = []
   const positions: DepotPosition[] = []
-  const cumulativeByDate = new Map<string, number>()
+
+  // Per-ISIN value series: date → portfolio value for that position on that day.
+  // Used to build cumulative with carry-forward (different exchanges have
+  // different holiday calendars, so summing only dates with prices causes
+  // oscillation in the total when any one position is temporarily missing).
+  interface IsinSeries {
+    valueByDate: Map<string, number>
+    lastPriceDate: string | null  // last date with a valid price while held
+    openAtEnd: boolean            // position still held after last price in range
+  }
+  const isinSeries = new Map<string, IsinSeries>()
 
   for (const [isin, isinTrades] of byIsin) {
     const instrument = await resolveInstrument(isin, db)
     if (!instrument) continue
-    // Prefer TR's own instrument name (e.g. "Semiconductor USD (Acc)") over
-    // Yahoo's legal-entity name ("VANECK UCITS ETFS PLC…"); fall back to Yahoo
-    // if a trade somehow has no description.
     const name = isinTrades.find(t => t.description)?.description || instrument.name
     const [prices, currentPrice] = await Promise.all([
       fetchHistoricalPrices(instrument.symbol, range),
@@ -63,9 +70,11 @@ export async function computeDepotHistory(trades: TradeRow[], days: number, db?:
     ])
 
     // ── Historical chart ──────────────────────────────────────────────────────
-    const points: DepotHistoryPoint[] = []
+    const valueByDate = new Map<string, number>()
     let shares = 0
     let tradeIdx = 0
+    let lastPriceDate: string | null = null
+
     for (const p of prices) {
       while (tradeIdx < isinTrades.length && isinTrades[tradeIdx].date <= p.date) {
         shares += isinTrades[tradeIdx].shares
@@ -73,17 +82,23 @@ export async function computeDepotHistory(trades: TradeRow[], days: number, db?:
       }
       if (shares <= 0.000001) continue
       const value = Math.round(shares * p.close * 100) / 100
-      points.push({ date: p.date, value })
-      cumulativeByDate.set(p.date, (cumulativeByDate.get(p.date) ?? 0) + value)
+      valueByDate.set(p.date, value)
+      lastPriceDate = p.date
     }
-    if (points.length > 0) perStock.push({ isin, name, points })
+
+    if (valueByDate.size > 0) {
+      const points = [...valueByDate.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([date, value]) => ({ date, value }))
+      perStock.push({ isin, name, points })
+      isinSeries.set(isin, { valueByDate, lastPriceDate, openAtEnd: shares > 0.000001 })
+    }
 
     // ── Current position + P&L (average cost method) ─────────────────────────
-    // Only include positions still held (netShares > 0) with a valid live price.
     if (currentPrice === null) continue
     let totalShares = 0
     let totalBuyShares = 0
-    let totalBuyCost = 0  // sum of |amount| for buy orders
+    let totalBuyCost = 0
     for (const t of isinTrades) {
       totalShares += t.shares
       if (t.shares > 0) {
@@ -100,12 +115,44 @@ export async function computeDepotHistory(trades: TradeRow[], days: number, db?:
     positions.push({ isin, name, shares: Math.round(totalShares * 1000000) / 1000000, costBasis, currentValue, currentPrice, pnl, pnlPct })
   }
 
-  const cumulative = [...cumulativeByDate.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([date, value]) => ({ date, value: Math.round(value * 100) / 100 }))
+  // ── Cumulative with carry-forward ─────────────────────────────────────────
+  // Collect every date any position has a price for, then iterate in order.
+  // For each date, use the position's price for that day; if there's no price
+  // (stock exchange was closed), carry forward the last known value — but only
+  // while the position is still held (don't resurrect a sold position).
+  const allDates = new Set<string>()
+  for (const { valueByDate } of isinSeries.values()) {
+    for (const date of valueByDate.keys()) allDates.add(date)
+  }
+  const sortedDates = [...allDates].sort()
 
-  // Sort positions by current value descending
+  const lastKnown = new Map<string, number>()
+  const cumulative: DepotHistoryPoint[] = []
+
+  for (const date of sortedDates) {
+    let total = 0
+    let anyHeld = false
+
+    for (const [isin, series] of isinSeries) {
+      if (series.valueByDate.has(date)) {
+        const v = series.valueByDate.get(date)!
+        lastKnown.set(isin, v)
+        total += v
+        anyHeld = true
+      } else if (lastKnown.has(isin)) {
+        // Carry forward if position is still open, or if we're filling a gap
+        // within the held period (holiday on this exchange, not a sell).
+        const stillInRange = series.openAtEnd || (series.lastPriceDate !== null && date <= series.lastPriceDate)
+        if (stillInRange) {
+          total += lastKnown.get(isin)!
+          anyHeld = true
+        }
+      }
+    }
+
+    if (anyHeld) cumulative.push({ date, value: Math.round(total * 100) / 100 })
+  }
+
   positions.sort((a, b) => b.currentValue - a.currentValue)
-
   return { cumulative, perStock, positions }
 }
