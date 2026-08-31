@@ -211,10 +211,11 @@ function AccordionItem({
                           <button
                             key={f.value}
                             onClick={() => setLocalFilter(f.value)}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all duration-150 ${localFilter === f.value
-                              ? 'bg-purple-500/25 text-purple-300'
-                              : 'text-white/30 hover:text-white/55'
-                              }`}
+                            className="px-2 py-0.5 rounded-full text-[10px] font-medium transition-all duration-150"
+                            style={localFilter === f.value
+                              ? { backgroundColor: 'var(--pill-active-bg)', color: 'var(--pill-active-text)' }
+                              : { color: 'var(--pill-inactive-text)' }
+                            }
                           >
                             {f.label}
                           </button>

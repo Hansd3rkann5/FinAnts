@@ -109,6 +109,10 @@
     --nav-tab-active: rgba(255,255,255,0.9);
     --nav-tab-inactive: #a78bfa;
 
+    --pill-active-bg: rgba(168,85,247,0.25);
+    --pill-active-text: #d8b4fe;
+    --pill-inactive-text: rgba(255,255,255,0.3);
+
     --depot-line: #c084fc;
   }
 
@@ -138,10 +142,14 @@
     --acc-soft: rgba(255,255,255,0.9);
     --acc-blue-soft: rgba(255,255,255,0.9);
 
-    --nav-bg: rgba(255,255,255,0.94);
+    --nav-bg: rgba(255,255,255,0.5);
     --nav-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 1px 0 rgba(0,0,0,0.06);
-    --nav-tab-active: rgba(0,0,0,0.85);
-    --nav-tab-inactive: rgba(0,0,0,0.4);
+    --nav-tab-active: rgba(0,0,0,0.9);
+    --nav-tab-inactive: rgba(0,0,0,0.6);
+
+    --pill-active-bg: rgba(255,255,255,1);
+    --pill-active-text: rgba(0,0,0,0.85);
+    --pill-inactive-text: rgba(255,255,255,0.4);
 
     --depot-line: #ffffff;
   }
